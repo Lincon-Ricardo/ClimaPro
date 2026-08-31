@@ -1,0 +1,88 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { Wrench, Plus } from 'lucide-react';
+import { db } from '../lib/db';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
+import { StatusBadge } from '../components/StatusBadge';
+import { PageHeader, EmptyState } from '../components/PageHeader';
+import { formatBRL, formatDate } from '../lib/utils';
+
+const FILTERS = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'pendentes', label: 'Pendentes' },
+  { key: 'agendados', label: 'Agendados' },
+  { key: 'concluidos', label: 'Concluídos' },
+  { key: 'cancelados', label: 'Cancelados' },
+] as const;
+
+export default function Servicos() {
+  const navigate = useNavigate();
+  const [filter, setFilter] = useState<string>('todos');
+  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
+  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+
+  const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
+
+  const filtered = useMemo(() => {
+    const list = orders.slice().sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    if (filter === 'pendentes') return list.filter((o) => !['concluido', 'cancelado'].includes(o.status));
+    if (filter === 'agendados') return list.filter((o) => o.status === 'agendado' || o.status === 'em_andamento');
+    if (filter === 'concluidos') return list.filter((o) => o.status === 'concluido');
+    if (filter === 'cancelados') return list.filter((o) => o.status === 'cancelado');
+    return list;
+  }, [orders, filter]);
+
+  return (
+    <div>
+      <PageHeader
+        title="Serviços"
+        subtitle={`${orders.length} no total`}
+        action={<Button onClick={() => navigate('/app/servicos/novo')}><Plus size={18} /> Novo</Button>}
+      />
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+              filter === f.key ? 'bg-primary-700 text-white' : 'bg-white text-neutral-600 border border-neutral-200'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<Wrench size={26} />}
+          title="Nenhum serviço encontrado"
+          subtitle="Crie um novo serviço para começar."
+          action={<Button onClick={() => navigate('/app/servicos/novo')}><Plus size={18} /> Novo serviço</Button>}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((o) => (
+            <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-neutral-800">{custName(o.customerId)}</span>
+                    <span className="text-xs font-medium text-neutral-400">{o.osNumber}</span>
+                  </div>
+                  <div className="text-sm text-neutral-500">❄️ {o.service}</div>
+                  <div className="text-xs text-neutral-400">
+                    {o.date ? formatDate(o.date) : 'Sem data'}
+                    {o.time ? ` · ${o.time}` : ''} · {formatBRL(o.value)}
+                  </div>
+                </div>
+                <StatusBadge status={o.status} />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

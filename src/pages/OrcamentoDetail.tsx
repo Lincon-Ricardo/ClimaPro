@@ -1,0 +1,266 @@
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { useNavigate, useParams } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { MessageCircle, FileDown, Check, X, CalendarPlus, Pencil } from 'lucide-react';
+import { db } from '../lib/db';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
+import { useToast } from '../components/Toast';
+import { PageHeader } from '../components/PageHeader';
+import { formatBRL, formatDate, telToWhats } from '../lib/utils';
+import type { BudgetItem } from '../types';
+
+const STATUS_STYLE: Record<string, string> = {
+  rascunho: 'bg-neutral-100 text-neutral-600',
+  enviado: 'bg-blue-100 text-blue-700',
+  aprovado: 'bg-green-100 text-green-700',
+  recusado: 'bg-red-100 text-red-700',
+};
+const STATUS_LABEL: Record<string, string> = {
+  rascunho: 'Rascunho',
+  enviado: 'Enviado',
+  aprovado: 'Aprovado',
+  recusado: 'Recusado',
+};
+
+export default function OrcamentoDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const budget = useLiveQuery(() => db.budgets.get(id!), [id]);
+  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+
+  if (!budget) return null;
+  const b = budget;
+  const customer = customers.find((c) => c.id === b.customerId);
+  const company = companies[0];
+
+  async function setStatus(status: 'aprovado' | 'recusado') {
+    if (b.status === 'aprovado') return;
+    await db.budgets.update(b.id, {
+      status,
+      approvedAt: status === 'aprovado' ? new Date().toISOString().slice(0, 10) : undefined,
+    });
+    toast(status === 'aprovado' ? 'success' : 'info', status === 'aprovado' ? 'Orçamento aprovado!' : 'Orçamento recusado.');
+  }
+
+  function generatePDF() {
+    const doc = new jsPDF();
+    const y0 = 14;
+    doc.setFillColor(9, 46, 110);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(company?.name || 'ClimaPro', 14, 14);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(company?.address || '', 14, 20);
+    doc.text(`${company?.phone || ''} · ${company?.email || ''}`, 14, 25);
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ORÇAMENTO', 14, 40);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nº ${b.number}`, 170, 40, { align: 'right' });
+    doc.text(`Data: ${formatDate(b.createdAt)}`, 170, 46, { align: 'right' });
+    doc.text(`Validade: ${b.validity || '7 dias'}`, 170, 52, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CLIENTE', 14, 62);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${customer?.name || ''}`, 14, 68);
+    doc.text(
+      `${customer?.street || ''} ${customer?.number || ''}${customer?.city ? ' - ' + customer.city : ''}`,
+      14,
+      74
+    );
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SERVIÇO', 14, 86);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${b.serviceType}`, 14, 92);
+    if (b.description) {
+      doc.text(doc.splitTextToSize(b.description, 180), 14, 98);
+    }
+
+    autoTable(doc, {
+      startY: 110,
+      head: [['Descrição', 'Qtd', 'Valor unit.', 'Total']],
+      body: b.items.map((i: BudgetItem) => [i.description, String(i.qty), formatBRL(i.unitValue), formatBRL(i.total)]),
+      theme: 'striped',
+      headStyles: { fillColor: [9, 46, 110] },
+      styles: { fontSize: 9 },
+      columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+    });
+
+    const lastY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Mão de obra: ${formatBRL(b.labor)}`, 14, lastY);
+    doc.text(`Deslocamento: ${formatBRL(b.displacement)}`, 14, lastY + 6);
+    if (b.discount > 0) doc.text(`Desconto: ${formatBRL(b.discount)}`, 14, lastY + 12);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text(
+      `TOTAL: ${formatBRL(b.total)}`,
+      196,
+      (b.discount > 0 ? lastY + 12 : lastY + 6),
+      { align: 'right' }
+    );
+
+    if (b.notes) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Observações', 14, (b.discount > 0 ? lastY + 26 : lastY + 20));
+      doc.setFont('helvetica', 'normal');
+      doc.text(doc.splitTextToSize(b.notes, 180), 14, (b.discount > 0 ? lastY + 32 : lastY + 26));
+    }
+
+    doc.save(`orcamento-${b.number}.pdf`);
+    toast('success', 'PDF gerado!');
+  }
+
+  function shareWhatsApp() {
+    const message = [
+      `Olá, ${customer?.name || ''}! 👋`,
+      ``,
+      `Aqui está o seu orçamento de ${b.serviceType.toLowerCase()}:`,
+      ``,
+      ...b.items.map((i: BudgetItem) => `• ${i.description} - ${formatBRL(i.total)}`),
+      `Mão de obra: ${formatBRL(b.labor)}`,
+      `Deslocamento: ${formatBRL(b.displacement)}`,
+      b.discount > 0 ? `Desconto: ${formatBRL(b.discount)}` : null,
+      ``,
+      `💰 TOTAL: ${formatBRL(b.total)}`,
+      `Validade: ${b.validity || '7 dias'}`,
+      ``,
+      `Aprovação: ${window.location.origin}/orcamento/${b.id}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    const num = customer ? telToWhats(customer.phone) : '';
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
+  }
+
+  async function agendarServico() {
+    if (!customer) return;
+    const osId = crypto.randomUUID();
+    await db.serviceOrders.add({
+      id: osId,
+      osNumber: `OS-${String(Date.now()).slice(-5)}`,
+      budgetId: b.id,
+      customerId: customer.id,
+      problem: b.description || '',
+      service: b.serviceType,
+      value: b.total,
+      date: '',
+      time: '',
+      address: `${customer.street || ''} ${customer.number || ''}`.trim(),
+      technician: '',
+      status: 'agendado',
+      checklist: [
+        { id: crypto.randomUUID(), label: 'Equipamento desligado', done: false },
+        { id: crypto.randomUUID(), label: 'Filtros verificados', done: false },
+        { id: crypto.randomUUID(), label: 'Evaporadora higienizada', done: false },
+        { id: crypto.randomUUID(), label: 'Condensadora higienizada', done: false },
+        { id: crypto.randomUUID(), label: 'Dreno verificado', done: false },
+        { id: crypto.randomUUID(), label: 'Pressão verificada', done: false },
+        { id: crypto.randomUUID(), label: 'Teste realizado', done: false },
+        { id: crypto.randomUUID(), label: 'Equipamento funcionando', done: false },
+      ],
+      fotosAntes: [],
+      fotosDurante: [],
+      fotosDepois: [],
+      observacoesTecnicas: '',
+      paymentStatus: 'pendente',
+      createdAt: new Date().toISOString().slice(0, 10),
+    });
+    if (b.status !== 'aprovado') {
+      await db.budgets.update(b.id, { status: 'aprovado', approvedAt: new Date().toISOString().slice(0, 10) });
+    }
+    toast('success', 'Ordem de serviço criada!');
+    navigate(`/app/servicos/${osId}`);
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 hover:text-primary-600">← Voltar</button>
+      <PageHeader
+        title={`Orçamento #${b.number}`}
+        action={<span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_STYLE[b.status] || ''}`}>{STATUS_LABEL[b.status]}</span>}
+      />
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-sm text-neutral-500">Cliente</div>
+            <div className="text-lg font-bold text-neutral-800">{customer?.name || 'Cliente'}</div>
+            <div className="text-sm text-neutral-500">
+              {customer ? `${customer.street || ''} ${customer.number || ''}`.trim() || '—' : ''}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-neutral-500">Total</div>
+            <div className="text-2xl font-extrabold text-primary-800">{formatBRL(b.total)}</div>
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-neutral-100 pt-4">
+          <div className="mb-1 text-sm font-semibold text-neutral-700">{b.serviceType}</div>
+          {b.description && <p className="mb-3 text-sm text-neutral-500">{b.description}</p>}
+          <div className="space-y-1.5">
+            {b.items.map((i: BudgetItem) => (
+              <div key={i.id} className="flex justify-between text-sm">
+                <span className="text-neutral-600">{i.qty}x {i.description}</span>
+                <span className="font-medium text-neutral-800">{formatBRL(i.total)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm text-neutral-500">
+              <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-neutral-500">
+              <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
+            </div>
+            {b.discount > 0 && (
+              <div className="flex justify-between text-sm text-danger">
+                <span>Desconto</span><span>- {formatBRL(b.discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-neutral-100 pt-2 text-base font-bold text-neutral-800">
+              <span>Total</span><span>{formatBRL(b.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {b.notes && (
+          <div className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
+            <span className="font-semibold text-neutral-700">Observações: </span>{b.notes}
+          </div>
+        )}
+        <div className="mt-2 text-xs text-neutral-400">Validade: {b.validity || '7 dias'} · Criado em {formatDate(b.createdAt)}</div>
+      </Card>
+
+      <div className="mt-5 space-y-2">
+        {b.status !== 'aprovado' && (
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="success" onClick={() => setStatus('aprovado')}><Check size={16} /> Aprovar</Button>
+            <Button variant="danger" onClick={() => setStatus('recusado')}><X size={16} /> Recusar</Button>
+          </div>
+        )}
+        <Button variant="secondary" full onClick={generatePDF}><FileDown size={16} /> Gerar PDF</Button>
+        <Button full onClick={shareWhatsApp}><MessageCircle size={16} /> Enviar via WhatsApp</Button>
+        {b.status === 'aprovado' && (
+          <Button variant="success" full onClick={agendarServico}><CalendarPlus size={16} /> Agendar serviço</Button>
+        )}
+      </div>
+    </div>
+  );
+}
