@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { MessageCircle, FileDown, Check, X, CalendarPlus, Pencil } from 'lucide-react';
+import { MessageCircle, FileDown, Check, X, CalendarPlus, Pencil, Save } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { Input, Select, Textarea } from '../components/Fields';
+import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL, formatDate, telToWhats } from '../lib/utils';
-import type { BudgetItem } from '../types';
+import { formatBRL, formatDate, telToWhats, budgetTotal } from '../lib/utils';
+import type { Budget, BudgetItem } from '../types';
 
 const STATUS_STYLE: Record<string, string> = {
   rascunho: 'bg-neutral-100 text-neutral-600',
@@ -36,6 +39,37 @@ export default function OrcamentoDetail() {
   const b = budget;
   const customer = customers.find((c) => c.id === b.customerId);
   const company = companies[0];
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Budget | null>(null);
+
+  function startEdit() {
+    setDraft({ ...b, items: b.items.map((i: BudgetItem) => ({ ...i })) });
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!draft) return;
+    const items = draft.items.filter((i) => i.description);
+    if (items.length === 0) {
+      toast('error', 'Adicione ao menos um item.');
+      return;
+    }
+    const total = budgetTotal(items, draft.labor, draft.displacement, draft.discount);
+    await db.budgets.update(b.id, {
+      serviceType: draft.serviceType,
+      description: draft.description,
+      items,
+      labor: draft.labor,
+      displacement: draft.displacement,
+      discount: draft.discount,
+      validity: draft.validity,
+      notes: draft.notes,
+      total,
+    });
+    toast('success', 'Orçamento atualizado!');
+    setEditing(false);
+  }
 
   async function setStatus(status: 'aprovado' | 'recusado') {
     if (b.status === 'aprovado') return;
@@ -195,10 +229,61 @@ export default function OrcamentoDetail() {
       <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 hover:text-primary-600">← Voltar</button>
       <PageHeader
         title={`Orçamento #${b.number}`}
-        action={<span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_STYLE[b.status] || ''}`}>{STATUS_LABEL[b.status]}</span>}
+        action={
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_STYLE[b.status] || ''}`}>{STATUS_LABEL[b.status]}</span>
+            {!editing && (
+              <Button variant="outline" size="sm" onClick={startEdit}><Pencil size={15} /> Editar</Button>
+            )}
+          </div>
+        }
       />
 
-      <Card>
+      {editing && draft ? (
+        <Card>
+          <div className="space-y-4">
+            <Select
+              label="Tipo de serviço"
+              value={draft.serviceType}
+              onChange={(e) => setDraft({ ...draft, serviceType: e.target.value })}
+            >
+              {['Instalação', 'Manutenção preventiva', 'Manutenção corretiva', 'Higienização', 'Limpeza', 'Reparo', 'Visita técnica', 'Orçamento', 'Gás / Carga'].map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </Select>
+            <Textarea
+              label="Descrição do serviço"
+              rows={2}
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            />
+            <BudgetItemsEditor
+              items={draft.items}
+              onChange={(items: BudgetItem[]) => setDraft({ ...draft, items })}
+            />
+            <div className="grid grid-cols-3 gap-3">
+              <Input label="Mão de obra" type="number" value={draft.labor} onChange={(e) => setDraft({ ...draft, labor: +e.target.value })} />
+              <Input label="Deslocamento" type="number" value={draft.displacement} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
+              <Input label="Desconto" type="number" value={draft.discount} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
+            </div>
+            <Input label="Prazo de validade" value={draft.validity} onChange={(e) => setDraft({ ...draft, validity: e.target.value })} placeholder="7 dias" />
+            <Textarea label="Observações / condições" rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+
+            <div className="flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">
+              <span className="font-semibold text-primary-700">Valor total</span>
+              <span className="text-xl font-extrabold text-primary-800">
+                {formatBRL(budgetTotal(draft.items.filter((i) => i.description), draft.labor, draft.displacement, draft.discount))}
+              </span>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" type="button" onClick={() => setEditing(false)}>Cancelar</Button>
+              <Button type="button" onClick={saveEdit}><Save size={16} /> Salvar alterações</Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-sm text-neutral-500">Cliente</div>
@@ -247,6 +332,7 @@ export default function OrcamentoDetail() {
         )}
         <div className="mt-2 text-xs text-neutral-400">Validade: {b.validity || '7 dias'} · Criado em {formatDate(b.createdAt)}</div>
       </Card>
+      )}
 
       <div className="mt-5 space-y-2">
         {b.status !== 'aprovado' && (

@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
-import { Plus, Trash2, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { db } from '../lib/db';
 import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Fields';
+import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL, uid, SERVICE_TYPES } from '../lib/utils';
+import { formatBRL, uid, budgetTotal, SERVICE_TYPES } from '../lib/utils';
 
 export default function NovoOrcamento() {
   const navigate = useNavigate();
@@ -28,29 +29,10 @@ export default function NovoOrcamento() {
     { id: uid('it'), description: '', qty: 1, unitValue: 0, total: 0 },
   ]);
 
-  const total = useMemo(() => {
-    const itemsTotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unitValue || 0), 0);
-    return itemsTotal + (form.labor || 0) + (form.displacement || 0) - (form.discount || 0);
-  }, [items, form.labor, form.displacement, form.discount]);
-
-  function updateItem(id: string, patch: Partial<typeof items[number]>) {
-    setItems((list) =>
-      list.map((i) => {
-        if (i.id !== id) return i;
-        const next = { ...i, ...patch };
-        next.total = (next.qty || 0) * (next.unitValue || 0);
-        return next;
-      })
-    );
-  }
-
-  function addItem() {
-    setItems((list) => [...list, { id: uid('it'), description: '', qty: 1, unitValue: 0, total: 0 }]);
-  }
-
-  function removeItem(id: string) {
-    setItems((list) => list.filter((i) => i.id !== id));
-  }
+  const total = useMemo(
+    () => budgetTotal(items, form.labor, form.displacement, form.discount),
+    [items, form.labor, form.displacement, form.discount]
+  );
 
   async function handleSave(e: React.FormEvent, status: 'rascunho' | 'enviado') {
     e.preventDefault();
@@ -100,27 +82,7 @@ export default function NovoOrcamento() {
         </div>
         <Textarea label="Descrição do serviço" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descreva o serviço a ser realizado..." />
 
-        <div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-neutral-700">Itens / materiais</span>
-            <Button variant="secondary" size="sm" type="button" onClick={addItem}><Plus size={16} /> Adicionar</Button>
-          </div>
-          <div className="mt-2 space-y-2">
-            {items.map((it) => (
-              <div key={it.id} className="flex items-end gap-2 rounded-xl border border-neutral-200 p-2">
-                <Input placeholder="Descrição" value={it.description} onChange={(e) => updateItem(it.id, { description: e.target.value })} />
-                <Input type="number" placeholder="Qtd" className="w-20" value={it.qty} onChange={(e) => updateItem(it.id, { qty: +e.target.value })} />
-                <Input type="number" placeholder="Valor" className="w-28" value={it.unitValue} onChange={(e) => updateItem(it.id, { unitValue: +e.target.value })} />
-                <div className="w-24 pb-2.5 text-sm font-semibold text-neutral-600">{formatBRL(it.total)}</div>
-                {items.length > 1 && (
-                  <button type="button" onClick={() => removeItem(it.id)} className="pb-2.5 text-neutral-400 hover:text-danger">
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <BudgetItemsEditor items={items} onChange={setItems} />
 
         <div className="grid grid-cols-3 gap-3">
           <Input label="Mão de obra" type="number" value={form.labor} onChange={(e) => setForm({ ...form, labor: +e.target.value })} />

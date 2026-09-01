@@ -73,6 +73,13 @@ export interface BudgetItem {
   total: number;
 }
 
+export interface Material {
+  id: string;
+  name: string;
+  unitValue: number;
+  createdAt?: string;
+}
+
 export interface Budget {
   id: string;
   number: string;

@@ -1,4 +1,4 @@
-import type { ServiceStatus, ChecklistItem } from '../types';
+import type { ServiceStatus, ChecklistItem, BudgetItem } from '../types';
 
 export function toggleChecklistItem(list: ChecklistItem[], id: string): ChecklistItem[] {
   return list.map((i) => (i.id === id ? { ...i, done: !i.done } : i));
@@ -36,6 +36,25 @@ export const STATUS_DOT: Record<ServiceStatus, string> = {
 
 export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+export function brlToNumber(v: string): number {
+  const digits = onlyDigits(v);
+  return digits ? parseInt(digits, 10) / 100 : 0;
+}
+
+export function numberToBRLInput(v: number): string {
+  const cents = Math.round((v || 0) * 100);
+  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function budgetTotal(items: BudgetItem[], labor = 0, displacement = 0, discount = 0): number {
+  const itemsTotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unitValue || 0), 0);
+  return itemsTotal + (labor || 0) + (displacement || 0) - (discount || 0);
+}
+
+export function itemTotal(item: Pick<BudgetItem, 'qty' | 'unitValue'>): number {
+  return (item.qty || 0) * (item.unitValue || 0);
 }
 
 export function formatDate(dateStr?: string): string {
