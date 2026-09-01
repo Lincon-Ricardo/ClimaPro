@@ -1,9 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import type { ComponentType } from 'react';
 
 interface NavItemProps {
   to: string;
-  icon: ComponentType<{ size: number; className?: string }>;
+  icon: any;
   label: string;
   light?: boolean;
   mobile?: boolean;

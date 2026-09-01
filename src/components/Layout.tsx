@@ -55,7 +55,7 @@ function Logo({ light }: { light?: boolean }) {
 }
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const unreadCount = useLiveQuery(

@@ -43,12 +43,6 @@ function Protected({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function FirstTime({ children }: { children: React.ReactNode }) {
-  const { user, seedReady } = useAuth();
-  if (!seedReady) return <Loading />;
-  return <>{user ? children : <Navigate to="/login" replace />}</>;
-}
-
 export default function App() {
   const { user } = useAuth();
 
