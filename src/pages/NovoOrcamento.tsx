@@ -91,6 +91,8 @@ export default function NovoOrcamento() {
               label="Mão de obra"
               type="number"
               value={form.labor}
+              min={0}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setForm({ ...form, labor: +e.target.value })}
               placeholder="0,00"
             />
@@ -99,6 +101,8 @@ export default function NovoOrcamento() {
               type="number"
               hint="Taxa cobrada pelo deslocamento até o local"
               value={form.displacement}
+              min={0}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setForm({ ...form, displacement: +e.target.value })}
               placeholder="0,00"
             />
@@ -112,6 +116,8 @@ export default function NovoOrcamento() {
             type="number"
             hint="Valor a ser descontado do total"
             value={form.discount}
+            min={0}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setForm({ ...form, discount: +e.target.value })}
             placeholder="0,00"
           />

@@ -268,10 +268,10 @@ export default function OrcamentoDetail() {
               onChange={(items: BudgetItem[]) => setDraft({ ...draft, items })}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Mão de obra" type="number" value={draft.labor} onChange={(e) => setDraft({ ...draft, labor: +e.target.value })} />
-              <Input label="Deslocamento" type="number" hint="Taxa cobrada pelo deslocamento até o local" value={draft.displacement} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
+              <Input label="Mão de obra" type="number" value={draft.labor} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, labor: +e.target.value })} />
+              <Input label="Deslocamento" type="number" hint="Taxa cobrada pelo deslocamento até o local" value={draft.displacement} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
             </div>
-            <Input label="Desconto" type="number" hint="Valor a ser descontado do total" value={draft.discount} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
+            <Input label="Desconto" type="number" hint="Valor a ser descontado do total" value={draft.discount} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
             <Input label="Prazo de validade" value={draft.validity} onChange={(e) => setDraft({ ...draft, validity: e.target.value })} placeholder="7 dias" />
             <Textarea label="Observações / condições" rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
 
