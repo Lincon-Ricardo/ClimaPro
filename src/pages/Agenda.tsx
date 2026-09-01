@@ -115,7 +115,7 @@ export default function Agenda() {
         <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-neutral-700">Ocupação do mês</span>
-            <span className="text-xs text-neutral-400">{scheduled.length} serviço(s) no mês</span>
+            <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center">
             {WEEKDAYS.map((w) => (
@@ -164,10 +164,25 @@ export default function Agenda() {
 
       <div className="space-y-3">
         {scheduled
-          .filter((o) => (view === 'mes' ? o.date.startsWith((anchor.getFullYear()) + '-' + String(anchor.getMonth() + 1).padStart(2, '0')) : o.date === orderDate(anchor)))
+          .filter((o) => {
+            if (!o.date) return false;
+            if (view === 'mes') {
+              const monthStr = anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0');
+              return o.date.startsWith(monthStr);
+            }
+            return o.date === orderDate(anchor);
+          })
           .sort((a, b) => a.time.localeCompare(b.time))
           .map(renderDetail)}
-        {scheduled.filter((o) => (view === 'mes' ? o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0')) : o.date === orderDate(anchor))).length === 0 && (
+        {scheduled
+          .filter((o) => {
+            if (!o.date) return false;
+            if (view === 'mes') {
+              const monthStr = anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0');
+              return o.date.startsWith(monthStr);
+            }
+            return o.date === orderDate(anchor);
+          }).length === 0 && (
           <Card>
             <p className="text-sm text-neutral-500">Nenhum serviço agendado neste período.</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/app/servicos/novo')}><Plus size={16} /> Agendar</Button>
