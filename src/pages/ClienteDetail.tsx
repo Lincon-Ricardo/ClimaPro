@@ -8,7 +8,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { useToast } from '../components/Toast';
 import Modal from './_Modal';
 import {
-  Phone, MessageCircle, MapPin, Plus, Snowflake, Pencil, Wallet, Wrench,
+  Phone, MessageCircle, MapPin, Plus, Snowflake, Pencil, Wallet, Wrench, Trash2,
 } from 'lucide-react';
 import { formatBRL, formatDate, telToWhats } from '../lib/utils';
 
@@ -39,6 +39,18 @@ export default function ClienteDetail() {
     setShowAddEq(false);
     setEqForm({ brand: '', model: '', type: 'Split Higien Wall', btus: 9000, serial: '', installLocation: '', installDate: '', warranty: '', notes: '' });
     toast('success', 'Equipamento adicionado!');
+  }
+
+  async function removeOrder(orderId: string) {
+    if (!confirm('Remover este serviço da linha do tempo?')) return;
+    await db.serviceOrders.delete(orderId);
+    toast('success', 'Serviço removido.');
+  }
+
+  async function removeBudget(budgetId: string) {
+    if (!confirm('Remover este orçamento da linha do tempo?')) return;
+    await db.budgets.delete(budgetId);
+    toast('success', 'Orçamento removido.');
   }
 
   return (
@@ -141,6 +153,7 @@ export default function ClienteDetail() {
                       : 'bg-warning',
                 render: () => <StatusBadge status={o.status} />,
                 onClick: () => navigate(`/app/servicos/${o.id}`),
+                onRemove: () => removeOrder(o.id),
               })),
               ...budgets.map((b) => ({
                 id: `orc-${b.id}`,
@@ -155,6 +168,7 @@ export default function ClienteDetail() {
                   <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium capitalize text-neutral-700">{b.status}</span>
                 ),
                 onClick: () => navigate(`/app/orcamentos/${b.id}`),
+                onRemove: () => removeBudget(b.id),
               })),
             ].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
@@ -174,7 +188,17 @@ export default function ClienteDetail() {
                             {ev.date ? formatDate(ev.date) : '—'} · {ev.sub}
                           </div>
                         </div>
-                        {ev.render()}
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {ev.render()}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); ev.onRemove?.(); }}
+                            className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger"
+                            aria-label="Apagar registro"
+                            title="Apagar registro"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </li>
