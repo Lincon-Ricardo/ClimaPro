@@ -11,7 +11,7 @@ import { Input, Select, Textarea } from '../components/Fields';
 import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL, formatDate, telToWhats, budgetTotal } from '../lib/utils';
+import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
 import type { Budget, BudgetItem } from '../types';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -42,10 +42,22 @@ export default function OrcamentoDetail() {
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Budget | null>(null);
+  const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
 
   function startEdit() {
     setDraft({ ...b, items: b.items.map((i: BudgetItem) => ({ ...i })) });
+    setMoneyText({
+      labor: b.labor ? numberToBRLInput(b.labor) : '',
+      displacement: b.displacement ? numberToBRLInput(b.displacement) : '',
+      discount: b.discount ? numberToBRLInput(b.discount) : '',
+    });
     setEditing(true);
+  }
+
+  function setDraftMoney(key: 'labor' | 'displacement' | 'discount', raw: string) {
+    const clean = raw.replace(/[^\d,.]/g, '');
+    setMoneyText((t) => ({ ...t, [key]: clean }));
+    setDraft((d) => (d ? { ...d, [key]: parseMoney(clean) } : d));
   }
 
   async function saveEdit() {
@@ -268,10 +280,10 @@ export default function OrcamentoDetail() {
               onChange={(items: BudgetItem[]) => setDraft({ ...draft, items })}
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input label="Mão de obra" type="number" value={draft.labor} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, labor: +e.target.value })} />
-              <Input label="Deslocamento" type="number" hint="Taxa cobrada pelo deslocamento até o local" value={draft.displacement} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
+              <Input label="Mão de obra" inputMode="decimal" value={moneyText.labor} placeholder="0,00" onChange={(e) => setDraftMoney('labor', e.target.value)} />
+              <Input label="Deslocamento" hint="Taxa cobrada pelo deslocamento até o local" inputMode="decimal" value={moneyText.displacement} placeholder="0,00" onChange={(e) => setDraftMoney('displacement', e.target.value)} />
             </div>
-            <Input label="Desconto" type="number" hint="Valor a ser descontado do total" value={draft.discount} min={0} onFocus={(e) => e.target.select()} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
+            <Input label="Desconto" hint="Valor a ser descontado do total" inputMode="decimal" value={moneyText.discount} placeholder="0,00" onChange={(e) => setDraftMoney('discount', e.target.value)} />
             <Input label="Prazo de validade" value={draft.validity} onChange={(e) => setDraft({ ...draft, validity: e.target.value })} placeholder="7 dias" />
             <Textarea label="Observações / condições" rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
 

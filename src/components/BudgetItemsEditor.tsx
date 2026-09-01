@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from './Button';
 import { Input } from './Fields';
 import { MaterialCatalog } from './MaterialCatalog';
-import { formatBRL, numberToBRLInput, brlToNumber, uid } from '../lib/utils';
+import { formatBRL, numberToBRLInput, parseMoney, uid } from '../lib/utils';
 import type { BudgetItem, Material } from '../types';
 import { ArrowDown, ArrowUp, Copy, Minus, Package, Plus, Trash2 } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export function BudgetItemsEditor({
     setValueTexts((prev) => {
       const next = { ...prev };
       for (const it of items) {
-        if (!(it.id in next)) next[it.id] = numberToBRLInput(it.unitValue);
+        if (!(it.id in next)) next[it.id] = it.unitValue ? numberToBRLInput(it.unitValue) : '';
       }
       return next;
     });
@@ -53,7 +53,7 @@ export function BudgetItemsEditor({
       total: qty * unitValue,
     };
     onChange([...items, it]);
-    setValueTexts((prev) => ({ ...prev, [it.id]: numberToBRLInput(it.unitValue) }));
+    setValueTexts((prev) => ({ ...prev, [it.id]: it.unitValue ? numberToBRLInput(it.unitValue) : '' }));
   }
 
   function removeItem(id: string) {
@@ -67,7 +67,7 @@ export function BudgetItemsEditor({
     const next = [...items];
     next.splice(idx + 1, 0, copy);
     onChange(next);
-    setValueTexts((prev) => ({ ...prev, [copy.id]: numberToBRLInput(copy.unitValue) }));
+    setValueTexts((prev) => ({ ...prev, [copy.id]: copy.unitValue ? numberToBRLInput(copy.unitValue) : '' }));
   }
 
   function moveItem(id: string, dir: -1 | 1) {
@@ -82,7 +82,7 @@ export function BudgetItemsEditor({
 
   function setValueText(id: string, text: string) {
     setValueTexts((prev) => ({ ...prev, [id]: text }));
-    updateItem(id, { unitValue: brlToNumber(text) });
+    updateItem(id, { unitValue: parseMoney(text) });
   }
 
   function handleInsert(m: Pick<Material, 'name' | 'unitValue'>) {

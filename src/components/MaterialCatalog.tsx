@@ -5,7 +5,7 @@ import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Fields';
 import { useToast } from './Toast';
-import { formatBRL, brlToNumber, numberToBRLInput, uid } from '../lib/utils';
+import { formatBRL, parseMoney, numberToBRLInput, uid } from '../lib/utils';
 import type { Material } from '../types';
 import { Package, Plus, Search, Trash2, Pencil, Check, ClipboardList } from 'lucide-react';
 
@@ -23,7 +23,7 @@ export function MaterialCatalog({
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [valueText, setValueText] = useState('0,00');
+  const [valueText, setValueText] = useState('');
 
   const filtered = materials.filter((m) =>
     m.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -38,7 +38,7 @@ export function MaterialCatalog({
   function resetForm() {
     setEditingId(null);
     setName('');
-    setValueText('0,00');
+    setValueText('');
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -48,7 +48,7 @@ export function MaterialCatalog({
       toast('error', 'Informe o nome do material.');
       return;
     }
-    const unitValue = brlToNumber(valueText);
+    const unitValue = parseMoney(valueText);
     if (editingId) {
       await db.materials.update(editingId, { name: trimmed, unitValue });
       toast('success', 'Material atualizado!');

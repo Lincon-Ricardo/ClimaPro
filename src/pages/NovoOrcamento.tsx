@@ -8,7 +8,7 @@ import { Input, Select, Textarea } from '../components/Fields';
 import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL, uid, budgetTotal, SERVICE_TYPES } from '../lib/utils';
+import { formatBRL, uid, budgetTotal, parseMoney, SERVICE_TYPES } from '../lib/utils';
 
 export default function NovoOrcamento() {
   const navigate = useNavigate();
@@ -28,6 +28,14 @@ export default function NovoOrcamento() {
   const [items, setItems] = useState([
     { id: uid('it'), description: '', qty: 1, unitValue: 0, total: 0 },
   ]);
+
+  const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
+
+  function setMoney(key: 'labor' | 'displacement' | 'discount', raw: string) {
+    const clean = raw.replace(/[^\d,.]/g, '');
+    setMoneyText((t) => ({ ...t, [key]: clean }));
+    setForm((f) => ({ ...f, [key]: parseMoney(clean) }));
+  }
 
   const total = useMemo(
     () => budgetTotal(items, form.labor, form.displacement, form.discount),
@@ -89,22 +97,18 @@ export default function NovoOrcamento() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
               label="Mão de obra"
-              type="number"
-              value={form.labor}
-              min={0}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setForm({ ...form, labor: +e.target.value })}
+              inputMode="decimal"
+              value={moneyText.labor}
               placeholder="0,00"
+              onChange={(e) => setMoney('labor', e.target.value)}
             />
             <Input
               label="Deslocamento"
-              type="number"
               hint="Taxa cobrada pelo deslocamento até o local"
-              value={form.displacement}
-              min={0}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setForm({ ...form, displacement: +e.target.value })}
+              inputMode="decimal"
+              value={moneyText.displacement}
               placeholder="0,00"
+              onChange={(e) => setMoney('displacement', e.target.value)}
             />
           </div>
         </div>
@@ -113,13 +117,11 @@ export default function NovoOrcamento() {
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Ajustes (opcional)</div>
           <Input
             label="Desconto"
-            type="number"
             hint="Valor a ser descontado do total"
-            value={form.discount}
-            min={0}
-            onFocus={(e) => e.target.select()}
-            onChange={(e) => setForm({ ...form, discount: +e.target.value })}
+            inputMode="decimal"
+            value={moneyText.discount}
             placeholder="0,00"
+            onChange={(e) => setMoney('discount', e.target.value)}
           />
         </div>
 

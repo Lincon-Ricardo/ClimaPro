@@ -48,6 +48,12 @@ export function numberToBRLInput(v: number): string {
   return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+export function parseMoney(v: string): number {
+  const normalized = v.replace(/\./g, '').replace(',', '.');
+  const n = Number.parseFloat(normalized);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
 export function budgetTotal(items: BudgetItem[], labor = 0, displacement = 0, discount = 0): number {
   const itemsTotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unitValue || 0), 0);
   return itemsTotal + (labor || 0) + (displacement || 0) - (discount || 0);
