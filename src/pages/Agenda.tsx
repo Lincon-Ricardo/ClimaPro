@@ -117,7 +117,7 @@ export default function Agenda() {
             <span className="text-sm font-bold text-neutral-700">Ocupação do mês</span>
             <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center">
+          <div className="grid grid-cols-7 gap-1.5 text-center">
             {WEEKDAYS.map((w) => (
               <div key={w} className="py-1 text-[10px] font-semibold uppercase text-neutral-400">{w}</div>
             ))}
@@ -128,7 +128,7 @@ export default function Agenda() {
                 <button
                   key={i}
                   onClick={() => { setAnchor(cell); setView('dia'); }}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-lg text-sm font-bold transition ${
+                  className={`flex min-h-[44px] flex-col items-center justify-center rounded-lg text-sm font-bold transition touch-manipulation ${
                     heatColor(countFor(orderDate(cell)))
                   } ${orderDate(cell) === todayISO() ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
                 >
@@ -146,12 +146,12 @@ export default function Agenda() {
       {view !== 'mes' && (
         <div className="mb-4 grid grid-cols-7 gap-2">
           {weekDays.map((d, i) => {
-            const active = orderDate(d) === todayISO();
+            const active = orderDate(d) === orderDate(anchor);
             return (
               <button
                 key={i}
                 onClick={() => setAnchor(d)}
-                className={`rounded-xl border p-2 text-center ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-white'}`}
+                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-white'}`}
               >
                 <div className="text-[10px] font-semibold uppercase text-neutral-400">{WEEKDAYS[i]}</div>
                 <div className={`text-base font-bold ${active ? 'text-primary-700' : 'text-neutral-700'}`}>{d.getDate()}</div>

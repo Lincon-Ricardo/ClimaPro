@@ -12,6 +12,10 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+button {
+  touch-action: manipulation;
+}
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background-color: #f8fafc;
