@@ -137,25 +137,31 @@ export default function OrcamentoDetail() {
     const lastY = (doc as any).lastAutoTable.finalY + 8;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Mão de obra: ${formatBRL(b.labor)}`, 14, lastY);
-    doc.text(`Deslocamento: ${formatBRL(b.displacement)}`, 14, lastY + 6);
-    if (b.discount > 0) doc.text(`Desconto: ${formatBRL(b.discount)}`, 14, lastY + 12);
+    let lineY = lastY;
+    if (b.labor > 0) {
+      doc.text(`Mão de obra: ${formatBRL(b.labor)}`, 14, lineY);
+      lineY += 6;
+    }
+    if (b.displacement > 0) {
+      doc.text(`Deslocamento: ${formatBRL(b.displacement)}`, 14, lineY);
+      lineY += 6;
+    }
+    if (b.discount > 0) {
+      doc.text(`Desconto: -${formatBRL(b.discount)}`, 14, lineY);
+      lineY += 6;
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text(
-      `TOTAL: ${formatBRL(b.total)}`,
-      196,
-      (b.discount > 0 ? lastY + 12 : lastY + 6),
-      { align: 'right' }
-    );
+    doc.text(`TOTAL: ${formatBRL(b.total)}`, 196, lineY, { align: 'right' });
 
     if (b.notes) {
+      const notesY = lineY + 14;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.text('Observações', 14, (b.discount > 0 ? lastY + 26 : lastY + 20));
+      doc.text('Observações', 14, notesY);
       doc.setFont('helvetica', 'normal');
-      doc.text(doc.splitTextToSize(b.notes, 180), 14, (b.discount > 0 ? lastY + 32 : lastY + 26));
+      doc.text(doc.splitTextToSize(b.notes, 180), 14, notesY + 6);
     }
 
     doc.save(`orcamento-${b.number}.pdf`);
@@ -169,9 +175,9 @@ export default function OrcamentoDetail() {
       `Aqui está o seu orçamento de ${b.serviceType.toLowerCase()}:`,
       ``,
       ...b.items.map((i: BudgetItem) => `• ${i.description} - ${formatBRL(i.total)}`),
-      `Mão de obra: ${formatBRL(b.labor)}`,
-      `Deslocamento: ${formatBRL(b.displacement)}`,
-      b.discount > 0 ? `Desconto: ${formatBRL(b.discount)}` : null,
+      b.labor > 0 ? `Mão de obra: ${formatBRL(b.labor)}` : null,
+      b.displacement > 0 ? `Deslocamento: ${formatBRL(b.displacement)}` : null,
+      b.discount > 0 ? `Desconto: -${formatBRL(b.discount)}` : null,
       ``,
       `💰 TOTAL: ${formatBRL(b.total)}`,
       `Validade: ${b.validity || '7 dias'}`,
@@ -261,11 +267,11 @@ export default function OrcamentoDetail() {
               items={draft.items}
               onChange={(items: BudgetItem[]) => setDraft({ ...draft, items })}
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input label="Mão de obra" type="number" value={draft.labor} onChange={(e) => setDraft({ ...draft, labor: +e.target.value })} />
-              <Input label="Deslocamento" type="number" value={draft.displacement} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
-              <Input label="Desconto" type="number" value={draft.discount} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
+              <Input label="Deslocamento" type="number" hint="Taxa cobrada pelo deslocamento até o local" value={draft.displacement} onChange={(e) => setDraft({ ...draft, displacement: +e.target.value })} />
             </div>
+            <Input label="Desconto" type="number" hint="Valor a ser descontado do total" value={draft.discount} onChange={(e) => setDraft({ ...draft, discount: +e.target.value })} />
             <Input label="Prazo de validade" value={draft.validity} onChange={(e) => setDraft({ ...draft, validity: e.target.value })} placeholder="7 dias" />
             <Textarea label="Observações / condições" rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
 
@@ -308,12 +314,16 @@ export default function OrcamentoDetail() {
                 <span className="font-medium text-neutral-800">{formatBRL(i.total)}</span>
               </div>
             ))}
-            <div className="flex justify-between text-sm text-neutral-500">
-              <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-500">
-              <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
-            </div>
+            {b.labor > 0 && (
+              <div className="flex justify-between text-sm text-neutral-500">
+                <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
+              </div>
+            )}
+            {b.displacement > 0 && (
+              <div className="flex justify-between text-sm text-neutral-500">
+                <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
+              </div>
+            )}
             {b.discount > 0 && (
               <div className="flex justify-between text-sm text-danger">
                 <span>Desconto</span><span>- {formatBRL(b.discount)}</span>

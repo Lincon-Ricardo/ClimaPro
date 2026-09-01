@@ -84,10 +84,37 @@ export default function NovoOrcamento() {
 
         <BudgetItemsEditor items={items} onChange={setItems} />
 
-        <div className="grid grid-cols-3 gap-3">
-          <Input label="Mão de obra" type="number" value={form.labor} onChange={(e) => setForm({ ...form, labor: +e.target.value })} />
-          <Input label="Deslocamento" type="number" value={form.displacement} onChange={(e) => setForm({ ...form, displacement: +e.target.value })} />
-          <Input label="Desconto" type="number" value={form.discount} onChange={(e) => setForm({ ...form, discount: +e.target.value })} />
+        <div className="rounded-xl border border-neutral-200 p-3.5">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Custos do serviço</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Mão de obra"
+              type="number"
+              value={form.labor}
+              onChange={(e) => setForm({ ...form, labor: +e.target.value })}
+              placeholder="0,00"
+            />
+            <Input
+              label="Deslocamento"
+              type="number"
+              hint="Taxa cobrada pelo deslocamento até o local"
+              value={form.displacement}
+              onChange={(e) => setForm({ ...form, displacement: +e.target.value })}
+              placeholder="0,00"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 p-3.5">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Ajustes (opcional)</div>
+          <Input
+            label="Desconto"
+            type="number"
+            hint="Valor a ser descontado do total"
+            value={form.discount}
+            onChange={(e) => setForm({ ...form, discount: +e.target.value })}
+            placeholder="0,00"
+          />
         </div>
 
         <div className="flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">

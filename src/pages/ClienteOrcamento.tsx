@@ -134,12 +134,16 @@ export default function ClienteOrcamento() {
                 <span className="font-medium text-neutral-800">{formatBRL(i.total)}</span>
               </div>
             ))}
-            <div className="flex justify-between text-sm text-neutral-500">
-              <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-500">
-              <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
-            </div>
+            {b.labor > 0 && (
+              <div className="flex justify-between text-sm text-neutral-500">
+                <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
+              </div>
+            )}
+            {b.displacement > 0 && (
+              <div className="flex justify-between text-sm text-neutral-500">
+                <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
+              </div>
+            )}
             {b.discount > 0 && (
               <div className="flex justify-between text-sm text-danger">
                 <span>Desconto</span><span>- {formatBRL(b.discount)}</span>
