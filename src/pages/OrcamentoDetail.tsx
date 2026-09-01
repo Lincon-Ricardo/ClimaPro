@@ -12,13 +12,14 @@ import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
+import { Loading } from '../components/Loading';
 import type { Budget, BudgetItem } from '../types';
 
 const STATUS_STYLE: Record<string, string> = {
   rascunho: 'bg-neutral-100 dark:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300',
-  enviado: 'bg-blue-100 text-blue-700',
-  aprovado: 'bg-green-100 text-green-700',
-  recusado: 'bg-red-100 text-red-700',
+  enviado: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+  aprovado: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  recusado: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
 };
 const STATUS_LABEL: Record<string, string> = {
   rascunho: 'Rascunho',
@@ -35,14 +36,14 @@ export default function OrcamentoDetail() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
 
-  if (!budget) return null;
-  const b = budget;
-  const customer = customers.find((c) => c.id === b.customerId);
-  const company = companies[0];
-
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Budget | null>(null);
   const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
+
+  if (!budget) return <Loading />;
+  const b = budget;
+  const customer = customers.find((c) => c.id === b.customerId);
+  const company = companies[0];
 
   function startEdit() {
     setDraft({ ...b, items: b.items.map((i: BudgetItem) => ({ ...i })) });
@@ -181,6 +182,10 @@ export default function OrcamentoDetail() {
   }
 
   function shareWhatsApp() {
+    if (!customer) {
+      toast('error', 'Cliente não encontrado. Não é possível enviar o orçamento.');
+      return;
+    }
     const message = [
       `Olá, ${customer?.name || ''}! 👋`,
       ``,
@@ -198,7 +203,7 @@ export default function OrcamentoDetail() {
     ]
       .filter(Boolean)
       .join('\n');
-    const num = customer ? telToWhats(customer.phone) : '';
+    const num = telToWhats(customer.phone);
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(message)}`, '_blank');
   }
 
@@ -337,7 +342,7 @@ export default function OrcamentoDetail() {
               </div>
             )}
             {b.discount > 0 && (
-              <div className="flex justify-between text-sm text-danger">
+              <div className="flex justify-between text-sm text-danger dark:text-red-400">
                 <span>Desconto</span><span>- {formatBRL(b.discount)}</span>
               </div>
             )}

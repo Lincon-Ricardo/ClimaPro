@@ -68,9 +68,6 @@ export default function ResetPassword() {
       } else {
         setSuccess(true);
         toast('success', 'Senha atualizada com sucesso!');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
       }
     } catch (err) {
       console.error('Erro ao resetar senha:', err);
@@ -79,6 +76,12 @@ export default function ResetPassword() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => navigate('/login'), 2000);
+    return () => clearTimeout(timer);
+  }, [success, navigate]);
 
   if (checkingToken) {
     return (
@@ -100,8 +103,8 @@ export default function ResetPassword() {
 
         <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10 flex items-center justify-center">
           <div className="rounded-2xl bg-white p-6 shadow-xl w-full dark:bg-neutral-800">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto">
-              <Lock size={32} className="text-green-600" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40 mx-auto">
+              <Lock size={32} className="text-green-600 dark:text-green-300" />
             </div>
             <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Senha atualizada!</h1>
             <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-300">
@@ -137,7 +140,7 @@ export default function ResetPassword() {
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Digite sua nova senha</p>
 
           {error && (
-            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>
           )}
 
           <div className="mt-5 space-y-4">

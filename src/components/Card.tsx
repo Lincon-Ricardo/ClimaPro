@@ -31,8 +31,8 @@ export function StatCard({
     <div className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${bg} ${color}`}>{icon}</div>
       <div className="min-w-0">
-        <div className={`text-xl font-bold leading-tight ${color}`}>{value}</div>
-        <div className="text-xs text-neutral-500 dark:text-neutral-400">{label}</div>
+        <div className={`truncate text-xl font-bold leading-tight ${color}`}>{value}</div>
+        <div className="truncate text-xs text-neutral-500 dark:text-neutral-400">{label}</div>
       </div>
     </div>
   );

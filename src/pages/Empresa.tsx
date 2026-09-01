@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Input, Textarea } from '../components/Fields';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
+import { Loading } from '../components/Loading';
 
 export default function Empresa() {
   const navigate = useNavigate();
@@ -13,19 +14,28 @@ export default function Empresa() {
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const company = companies[0];
 
-  const [form, setForm] = useState(() => ({
-    name: company?.name || '',
-    cnpj: company?.cnpj || '',
-    phone: company?.phone || '',
-    whatsapp: company?.whatsapp || '',
-    email: company?.email || '',
-    address: company?.address || '',
-    instagram: company?.instagram || '',
-    site: company?.site || '',
-    pix: company?.pix || '',
-  }));
+  const [form, setForm] = useState({
+    name: '', cnpj: '', phone: '', whatsapp: '', email: '',
+    address: '', instagram: '', site: '', pix: '',
+  });
 
-  if (!company) return null;
+  useEffect(() => {
+    if (company) {
+      setForm({
+        name: company.name || '',
+        cnpj: company.cnpj || '',
+        phone: company.phone || '',
+        whatsapp: company.whatsapp || '',
+        email: company.email || '',
+        address: company.address || '',
+        instagram: company.instagram || '',
+        site: company.site || '',
+        pix: company.pix || '',
+      });
+    }
+  }, [company]);
+
+  if (!company) return <Loading />;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();

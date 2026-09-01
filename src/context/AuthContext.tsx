@@ -33,14 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       if (session?.user) {
-        const u = await fetchProfile(session.user.id);
+        const u = await fetchProfile(session.user.id, session.user.email);
         if (u) setUser(u);
       }
       setLoading(false);
 
       const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
         if (s?.user) {
-          fetchProfile(s.user.id).then((u) => u && setUser(u));
+          fetchProfile(s.user.id, s.user.email).then((u) => u && setUser(u));
         } else {
           setUser(null);
         }
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  async function fetchProfile(id: string): Promise<User | null> {
+  async function fetchProfile(id: string, fallbackEmail?: string): Promise<User | null> {
     // O perfil é criado por um trigger após o signup; às vezes demora alguns ms.
     const MAX_ATTEMPTS = 8;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -65,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: data.id,
             name: data.name || 'Dono',
             firstName: data.first_name || data.name?.split(' ')[0] || 'Dono',
-            email: '',
-            role: data.role,
+            email: data.email || fallbackEmail || '',
+            role: data.role || 'tech',
             companyName: '',
           };
         }
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: error?.message || 'E-mail ou senha inválidos.' };
     }
 
-    const u = await fetchProfile(data.user.id);
+    const u = await fetchProfile(data.user.id, data.user.email);
     if (u) {
       setUser(u);
     } else {
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.user.user_metadata?.['name'] || 'Dono',
         firstName: fn,
         email: data.user.email || '',
-        role: 'admin',
+        role: 'tech',
         companyName: '',
       });
     }
@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser);
     console.log('[Auth] Usuário registrado com sucesso, buscando perfil...');
     // Busca perfil em background sem bloquear navegação
-    fetchProfile(data.user.id).then((u) => {
+    fetchProfile(data.user.id, data.user.email).then((u) => {
       if (u) {
         console.log('[Auth] Perfil encontrado após registro, atualizando');
         setUser(u);

@@ -71,27 +71,27 @@ export default function CalculadoraBtu() {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Card>
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-            <Home size={16} className="text-primary-600" /> Área do ambiente
+            <Home size={16} className="text-primary-600 dark:text-primary-400" /> Área do ambiente
           </div>
           <Input
             type="number"
             min={1}
             value={area}
-            onChange={(e) => setArea(+e.target.value)}
+            onChange={(e) => setArea(Number.isFinite(+e.target.value) ? +e.target.value : 0)}
           />
-          <div className="mt-1 text-xs text-neutral-400">m² (largura × comprimento)</div>
+          <div className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">m² (largura × comprimento)</div>
         </Card>
         <Card>
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-            <Users size={16} className="text-primary-600" /> Pessoas
+            <Users size={16} className="text-primary-600 dark:text-primary-400" /> Pessoas
           </div>
           <Input
             type="number"
             min={1}
             value={people}
-            onChange={(e) => setPeople(+e.target.value)}
+            onChange={(e) => setPeople(Number.isFinite(+e.target.value) ? +e.target.value : 0)}
           />
-          <div className="mt-1 text-xs text-neutral-400">Nº de pessoas no ambiente</div>
+          <div className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">Nº de pessoas no ambiente</div>
         </Card>
       </div>
 
@@ -105,7 +105,7 @@ export default function CalculadoraBtu() {
         </label>
         <label className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-700">
           <span className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
-            <Building2 size={16} className="text-primary-600" /> Ambiente comercial / público
+            <Building2 size={16} className="text-primary-600 dark:text-primary-400" /> Ambiente comercial / público
           </span>
           <input type="checkbox" checked={commercial} onChange={(e) => setCommercial(e.target.checked)} className="h-5 w-5 accent-primary-700" />
         </label>

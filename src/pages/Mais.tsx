@@ -49,16 +49,14 @@ export default function Mais() {
       <PageHeader title={`Olá, ${user?.firstName}!`} subtitle="Acesse as ferramentas de gestão" />
 
       {dueReminders.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4">
-          <div className="flex items-center gap-2 font-bold text-orange-800"><Bell size={18} /> Manutenção recomendada</div>
+        <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-900/30">
+          <div className="flex items-center gap-2 font-bold text-orange-800 dark:text-orange-200"><Bell size={18} /> Manutenção recomendada</div>
           {dueReminders.slice(0, 3).map((r) => (
             <div key={r.order.id} className="mt-2 flex items-center justify-between gap-2 text-sm">
-              <span className="text-orange-700">
+              <span className="text-orange-700 dark:text-orange-300">
                 Está na hora de contactar <b>{custName(r.order.customerId)}</b> ({format(new Date(r.due + 'T00:00:00'), 'dd/MM/yyyy')}).
               </span>
-              <a href={`https://wa.me/${customers.find((c) => c.id === r.order.customerId) ? telToWhats(customers.find((c) => c.id === r.order.customerId)!.phone) : ''}`} target="_blank" rel="noreferrer">
-                <Button variant="secondary" size="sm"><MessageCircle size={14} /> Contactar</Button>
-              </a>
+              <Button as="a" href={`https://wa.me/${customers.find((c) => c.id === r.order.customerId) ? telToWhats(customers.find((c) => c.id === r.order.customerId)!.phone) : ''}`} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={14} /> Contactar</Button>
             </div>
           ))}
         </div>
@@ -67,7 +65,7 @@ export default function Mais() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {sections.map((s) => (
           <Card key={s.label} onClick={() => navigate(s.to)} className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">{s.icon}</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/60 dark:text-primary-200">{s.icon}</div>
             <div>
               <div className="font-bold text-neutral-800 dark:text-neutral-100">{s.label}</div>
               <div className="text-xs text-neutral-500 dark:text-neutral-400">{s.sub}</div>
@@ -79,7 +77,7 @@ export default function Mais() {
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Ferramentas</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card onClick={() => navigate('/app/calculadora-btu')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300">
             <Calculator size={20} />
           </div>
           <div>
@@ -88,7 +86,7 @@ export default function Mais() {
           </div>
         </Card>
         <Card onClick={() => navigate('/app/diagnostico')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300">
             <Stethoscope size={20} />
           </div>
           <div>
@@ -101,7 +99,7 @@ export default function Mais() {
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Gestão</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card onClick={() => navigate('/app/administrativo')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
             <LayoutDashboard size={20} />
           </div>
           <div>
@@ -110,7 +108,7 @@ export default function Mais() {
           </div>
         </Card>
         <Card onClick={() => navigate('/app/users')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300">
             <Users size={20} />
           </div>
           <div>

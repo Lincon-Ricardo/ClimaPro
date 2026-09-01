@@ -11,9 +11,9 @@ import { formatDate } from '../lib/utils';
 
 const TYPE_ICON: Record<string, { icon: React.ReactNode; cls: string }> = {
   info: { icon: <Info size={18} />, cls: 'bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400' },
-  success: { icon: <CheckCircle size={18} />, cls: 'bg-green-50 text-green-600' },
-  warning: { icon: <AlertTriangle size={18} />, cls: 'bg-orange-50 text-orange-600' },
-  danger: { icon: <XCircle size={18} />, cls: 'bg-red-50 text-red-600' },
+  success: { icon: <CheckCircle size={18} />, cls: 'bg-green-50 text-green-600 dark:bg-green-900/40 dark:text-green-300' },
+  warning: { icon: <AlertTriangle size={18} />, cls: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300' },
+  danger: { icon: <XCircle size={18} />, cls: 'bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-300' },
 };
 
 export default function Notificacoes() {
@@ -71,7 +71,7 @@ export default function Notificacoes() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-neutral-800 dark:text-neutral-100">{n.title}</span>
-                      <span className="shrink-0 text-xs text-neutral-400">{n.createdAt ? formatDate(n.createdAt) : ''}</span>
+                      <span className="shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{n.createdAt ? formatDate(n.createdAt) : ''}</span>
                     </div>
                     <p className="mt-0.5 text-sm text-neutral-600 dark:text-neutral-300">{n.message}</p>
                   </div>

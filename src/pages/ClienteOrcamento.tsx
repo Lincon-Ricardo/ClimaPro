@@ -71,14 +71,17 @@ export default function ClienteOrcamento() {
               : 'Obrigado pelo retorno! Se precisar de ajustes no orçamento, é só falar com o prestador.'}
           </p>
           {aprovado && customer && company && (
-            <a
+            <Button
+              as="a"
               href={`https://wa.me/${telToWhats(company.whatsapp)}`}
               target="_blank"
               rel="noreferrer"
-              className="mt-4 block"
+              full
+              variant="success"
+              className="mt-4"
             >
-              <Button full variant="success"><MessageCircle size={16} /> Falar com o prestador</Button>
-            </a>
+              <MessageCircle size={16} /> Falar com o prestador
+            </Button>
           )}
         </Card>
       </div>
@@ -158,7 +161,7 @@ export default function ClienteOrcamento() {
               <span className="font-semibold text-neutral-700 dark:text-neutral-200">Observações: </span>{b.notes}
             </div>
           )}
-          <div className="mt-3 flex items-center gap-1 text-xs text-neutral-400">
+          <div className="mt-3 flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
             <CalendarCheck size={14} /> Validade: {b.validity || '7 dias'} · Emitido em {formatDate(b.createdAt)}
           </div>
         </Card>
@@ -166,7 +169,7 @@ export default function ClienteOrcamento() {
         <Card>
           <h2 className="text-center text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Deseja aprovar este orçamento?</h2>
           {b.status === 'aprovado' ? (
-            <p className="mt-2 text-center text-sm text-success">Este orçamento já foi aprovado. O prestador entrará em contato.</p>
+            <p className="mt-2 text-center text-sm text-success dark:text-green-400">Este orçamento já foi aprovado. O prestador entrará em contato.</p>
           ) : b.status === 'recusado' ? (
             <p className="mt-2 text-center text-sm text-neutral-500 dark:text-neutral-400">Este orçamento foi recusado. Fale com o prestador para ajustes.</p>
           ) : (
@@ -175,14 +178,7 @@ export default function ClienteOrcamento() {
                 <Button variant="danger" onClick={() => handleDecision('recusado')}><X size={18} /> Recusar</Button>
                 <Button variant="success" onClick={() => handleDecision('aprovado')}><Check size={18} /> Aprovar</Button>
               </div>
-              <a
-                href={`https://wa.me/${company ? telToWhats(company.whatsapp) : ''}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 block"
-              >
-                <Button variant="secondary" full size="sm"><MessageCircle size={14} /> Tirar dúvidas no WhatsApp</Button>
-              </a>
+              <Button as="a" href={`https://wa.me/${company ? telToWhats(company.whatsapp) : ''}`} target="_blank" rel="noreferrer" variant="secondary" full size="sm" className="mt-2"><MessageCircle size={14} /> Tirar dúvidas no WhatsApp</Button>
             </>
           )}
         </Card>

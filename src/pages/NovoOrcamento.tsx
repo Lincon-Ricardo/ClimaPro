@@ -30,6 +30,7 @@ export default function NovoOrcamento() {
   ]);
 
   const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
+  const [busy, setBusy] = useState(false);
 
   function setMoney(key: 'labor' | 'displacement' | 'discount', raw: string) {
     const clean = raw.replace(/[^\d,.]/g, '');
@@ -44,6 +45,7 @@ export default function NovoOrcamento() {
 
   async function handleSave(e: React.FormEvent, status: 'rascunho' | 'enviado') {
     e.preventDefault();
+    if (busy) return;
     if (!form.customerId) {
       toast('error', 'Selecione um cliente.');
       return;
@@ -52,26 +54,31 @@ export default function NovoOrcamento() {
       toast('error', 'Adicione ao menos um item.');
       return;
     }
-    const id = crypto.randomUUID();
-    const number = String(Date.now()).slice(-6);
-    await db.budgets.add({
-      id,
-      number,
-      customerId: form.customerId,
-      serviceType: form.serviceType,
-      description: form.description,
-      items: items.filter((i) => i.description),
-      labor: form.labor,
-      displacement: form.displacement,
-      discount: form.discount,
-      total,
-      status,
-      validity: form.validity,
-      notes: form.notes,
-      createdAt: new Date().toISOString().slice(0, 10),
-    });
-    toast(status === 'enviado' ? 'success' : 'info', status === 'enviado' ? 'Orçamento enviado!' : 'Orçamento salvo como rascunho.');
-    navigate(`/app/orcamentos/${id}`);
+    setBusy(true);
+    try {
+      const id = crypto.randomUUID();
+      const number = String(Date.now()).slice(-6);
+      await db.budgets.add({
+        id,
+        number,
+        customerId: form.customerId,
+        serviceType: form.serviceType,
+        description: form.description,
+        items: items.filter((i) => i.description),
+        labor: form.labor,
+        displacement: form.displacement,
+        discount: form.discount,
+        total,
+        status,
+        validity: form.validity,
+        notes: form.notes,
+        createdAt: new Date().toISOString().slice(0, 10),
+      });
+      toast(status === 'enviado' ? 'success' : 'info', status === 'enviado' ? 'Orçamento enviado!' : 'Orçamento salvo como rascunho.');
+      navigate(`/app/orcamentos/${id}`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -134,8 +141,8 @@ export default function NovoOrcamento() {
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" type="button" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button variant="secondary" type="button" onClick={(e) => handleSave(e as any, 'rascunho')}>Salvar rascunho</Button>
-          <Button type="submit" full><Send size={16} /> Salvar e enviar</Button>
+          <Button variant="secondary" type="button" disabled={busy} onClick={(e) => handleSave(e as any, 'rascunho')}>Salvar rascunho</Button>
+          <Button type="submit" full disabled={busy}><Send size={16} /> Salvar e enviar</Button>
         </div>
       </form>
     </div>

@@ -57,7 +57,7 @@ export default function Login() {
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar.</p>
 
           {error && (
-            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>
           )}
 
           <div className="mt-5 space-y-4">
@@ -69,7 +69,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              {hasError('email') && <p className="mt-1 text-sm text-red-600">{getError('email')}</p>}
+              {hasError('email') && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getError('email')}</p>}
             </div>
             <div>
               <Input
@@ -79,7 +79,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              {hasError('password') && <p className="mt-1 text-sm text-red-600">{getError('password')}</p>}
+              {hasError('password') && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getError('password')}</p>}
             </div>
             <button
               type="button"

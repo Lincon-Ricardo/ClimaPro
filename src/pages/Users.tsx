@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Fields';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
-import Modal from './_Modal';
+import { Modal } from '../components/Modal';
 
 export default function Users() {
   const toast = useToast();
@@ -81,9 +81,11 @@ export default function Users() {
                   {u.role === 'admin' ? 'Dono' : 'Técnico'}
                 </span>
                 <button
+                  type="button"
                   onClick={() => handleDelete(u.id)}
-                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-danger"
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                   title="Remover"
+                  aria-label={`Remover ${u.name}`}
                 >
                   <Trash2 size={16} />
                 </button>

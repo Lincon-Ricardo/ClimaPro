@@ -47,7 +47,7 @@ export default function Agenda() {
   const heatColor = (count: number) =>
     count === 0 ? 'bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400'
     : count === 1 ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/60 dark:text-primary-200'
-    : count === 2 ? 'bg-primary-300 text-primary-900'
+    : count === 2 ? 'bg-primary-300 text-primary-900 dark:bg-primary-400/60 dark:text-neutral-900'
     : 'bg-primary-600 text-white';
 
   function buildMonthCells(d: Date) {
@@ -71,9 +71,9 @@ export default function Agenda() {
               <span className="text-sm font-extrabold leading-none">{o.time}</span>
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</div>
-              <div className="text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
-              <div className="text-xs text-neutral-400">📍 {o.address}</div>
+              <div className="truncate font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</div>
+              <div className="truncate text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
+              <div className="truncate text-xs text-neutral-400">📍 {o.address}</div>
               <div className="mt-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">{formatBRL(o.value)}</div>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function Agenda() {
         action={<Button onClick={() => navigate('/app/servicos/novo')}><Plus size={18} /> Novo serviço</Button>}
       />
 
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-800">
           {(['dia', 'semana', 'mes'] as const).map((v) => (
             <button
@@ -104,7 +104,7 @@ export default function Agenda() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => move(-1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
-          <span className="min-w-[150px] text-center text-sm font-bold text-neutral-700 dark:text-neutral-200">
+          <span className="min-w-0 whitespace-nowrap text-center text-sm font-bold text-neutral-700 dark:text-neutral-200">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
           <button onClick={() => move(1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>

@@ -23,7 +23,7 @@ export function Modal({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white px-5 py-4 dark:border-neutral-700 dark:bg-neutral-800">
           <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{title}</h3>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700">
+          <button type="button" onClick={onClose} aria-label="Fechar" className="flex h-10 w-10 items-center justify-center rounded-xl text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700">
             <X size={20} />
           </button>
         </div>

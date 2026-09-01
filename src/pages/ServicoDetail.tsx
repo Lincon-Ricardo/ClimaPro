@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import { jsPDF } from 'jspdf';
@@ -106,6 +106,19 @@ export default function ServicoDetail() {
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderMonths, setReminderMonths] = useState(3);
   const sigRef = useRef<SignatureCanvas>(null);
+  const [obs, setObs] = useState('');
+
+  useEffect(() => {
+    setObs(order?.observacoesTecnicas || '');
+  }, [order?.observacoesTecnicas]);
+
+  useEffect(() => {
+    if (!order || obs === order.observacoesTecnicas) return;
+    const t = setTimeout(() => {
+      db.serviceOrders.update(order.id, { observacoesTecnicas: obs }).catch(() => {});
+    }, 600);
+    return () => clearTimeout(t);
+  }, [obs, order]);
 
   if (!order) return null;
   const o = order;
@@ -196,9 +209,7 @@ export default function ServicoDetail() {
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
         action={
           <div className="flex gap-2">
-            <a href={waLink} target="_blank" rel="noreferrer">
-              <Button variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>
-            </a>
+            <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>
             <Button variant="outline" size="sm" onClick={generatePDF}><FileDown size={16} /> PDF</Button>
           </div>
         }
@@ -303,9 +314,9 @@ export default function ServicoDetail() {
           <StickyNote size={18} className="text-primary-600" /> Observações técnicas
         </div>
         <Input
-          value={o.observacoesTecnicas || ''}
+          value={obs}
           placeholder="Anote o que foi feito..."
-          onChange={(e) => setField({ observacoesTecnicas: e.target.value })}
+          onChange={(e) => setObs(e.target.value)}
         />
       </Card>
 

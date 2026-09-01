@@ -62,7 +62,7 @@ export default function Dashboard() {
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700/60">
             <div
               className={`h-full rounded-full ${
-                todaysServiceOrders.every((o) => o.status === 'concluido') ? 'bg-success' : 'bg-primary-600'
+                todaysServiceOrders.every((o) => o.status === 'concluido') ? 'bg-success' : 'bg-primary-600 dark:bg-primary-500'
               }`}
               style={{
                 width: `${(todaysServiceOrders.filter((o) => o.status === 'concluido').length / todaysServiceOrders.length) * 100}%`,
@@ -93,7 +93,7 @@ export default function Dashboard() {
                     </div>
                     <div className="truncate text-xs text-neutral-400">❄️ {o.service}</div>
                   </div>
-                  {done && <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">OK</span>}
+                  {done && <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">OK</span>}
                 </button>
               );
             })}

@@ -130,7 +130,7 @@ export function BudgetItemsEditor({
               </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-[auto_1fr_1fr] items-end gap-2 sm:grid-cols-[auto_150px_190px_auto]">
+            <div className="mt-2 grid grid-cols-2 items-end gap-2 sm:grid-cols-[auto_150px_190px_auto]">
               <div className="flex items-center overflow-hidden rounded-xl border border-neutral-300 dark:border-neutral-600">
                 <button
                   type="button"
@@ -146,7 +146,10 @@ export function BudgetItemsEditor({
                   className="w-14 border-x border-neutral-300 px-1 py-2 text-center text-sm focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
                   value={it.qty}
                   min={0}
-                  onChange={(e) => updateItem(it.id, { qty: +e.target.value })}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    updateItem(it.id, { qty: Number.isFinite(v) && v >= 0 ? v : 0 });
+                  }}
                 />
                 <button
                   type="button"
@@ -176,35 +179,35 @@ export function BudgetItemsEditor({
                 <div className="text-[10px] text-neutral-400">total</div>
               </div>
 
-              <div className="col-span-3 flex justify-end gap-1 border-t border-neutral-100 pt-2 sm:col-span-1 sm:border-t-0 sm:pt-0 dark:border-neutral-700">
+              <div className="flex justify-end gap-1 border-t border-neutral-100 pt-2 sm:col-span-1 sm:border-t-0 sm:pt-0 dark:border-neutral-700">
                 <button
                   type="button"
                   onClick={() => duplicateItem(it.id)}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-900/40 dark:hover:text-primary-300"
+                  className="rounded-lg p-2 text-neutral-400 transition hover:bg-primary-50 hover:text-primary-700 dark:text-neutral-500 dark:hover:bg-primary-900/40 dark:hover:text-primary-300"
                   aria-label="Duplicar item"
                   title="Duplicar"
                 >
-                  <Copy size={15} />
+                  <Copy size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveItem(it.id, -1)}
                   disabled={idx === 0}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-700/60"
+                  className="rounded-lg p-2 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:text-neutral-500 dark:hover:bg-neutral-700/60"
                   aria-label="Mover para cima"
                   title="Mover para cima"
                 >
-                  <ArrowUp size={15} />
+                  <ArrowUp size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveItem(it.id, 1)}
                   disabled={idx === items.length - 1}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-700/60"
+                  className="rounded-lg p-2 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:text-neutral-500 dark:hover:bg-neutral-700/60"
                   aria-label="Mover para baixo"
                   title="Mover para baixo"
                 >
-                  <ArrowDown size={15} />
+                  <ArrowDown size={16} />
                 </button>
               </div>
             </div>

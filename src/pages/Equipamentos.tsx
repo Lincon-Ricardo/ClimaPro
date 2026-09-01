@@ -27,6 +27,7 @@ export default function Equipamentos() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por marca, modelo, serial ou cliente..."
+        aria-label="Buscar equipamentos"
         className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600 dark:placeholder:text-neutral-500"
       />
       {filtered.length === 0 ? (

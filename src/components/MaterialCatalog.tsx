@@ -89,6 +89,7 @@ export function MaterialCatalog({
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             placeholder="Buscar material..."
+            aria-label="Buscar material"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
@@ -102,7 +103,7 @@ export function MaterialCatalog({
             </div>
           )}
           {filtered.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700 dark:bg-neutral-700/40">
+            <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700 dark:bg-neutral-700/40">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                 <Package size={16} />
               </div>
@@ -110,26 +111,31 @@ export function MaterialCatalog({
                 <div className="truncate text-sm font-semibold text-neutral-800 dark:text-neutral-100">{m.name}</div>
                 <div className="text-xs text-neutral-500 dark:text-neutral-400">{formatBRL(m.unitValue)}</div>
               </div>
-              <button
-                onClick={() => onInsert({ name: m.name, unitValue: m.unitValue })}
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary-700 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-800"
-              >
-                <ClipboardList size={13} /> Inserir
-              </button>
-              <button
-                onClick={() => startEdit(m)}
-                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-primary-700 dark:hover:bg-neutral-700/60 dark:hover:text-primary-300"
-                aria-label="Editar material"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                onClick={() => handleDelete(m)}
-                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger"
-                aria-label="Remover material"
-              >
-                <Trash2 size={15} />
-              </button>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onInsert({ name: m.name, unitValue: m.unitValue })}
+                  className="inline-flex items-center gap-1 rounded-lg bg-primary-700 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-800 dark:hover:bg-primary-600"
+                >
+                  <ClipboardList size={13} /> Inserir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startEdit(m)}
+                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-primary-700 dark:hover:bg-neutral-700/60 dark:hover:text-primary-300"
+                  aria-label="Editar material"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(m)}
+                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                  aria-label="Remover material"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

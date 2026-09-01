@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Fields';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
-import { SERVICE_TYPES, toggleChecklistItem } from '../lib/utils';
+import { SERVICE_TYPES, toggleChecklistItem, parseMoney } from '../lib/utils';
 import type { ChecklistItem } from '../types';
 
 const DEFAULT_CHECKLIST = [
@@ -24,6 +24,7 @@ export default function NovaOS() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const [busy, setBusy] = useState(false);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
 
   const preselect = (location.state as any)?.customerId || '';
@@ -39,6 +40,7 @@ export default function NovaOS() {
     technician: '',
     address: '',
   });
+  const [valueText, setValueText] = useState('');
   const [checklist, setChecklist] = useState<ChecklistItem[]>(
     DEFAULT_CHECKLIST.map((label) => ({ id: crypto.randomUUID(), label, done: false }))
   );
@@ -56,33 +58,39 @@ export default function NovaOS() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!form.customerId) {
       toast('error', 'Selecione um cliente.');
       return;
     }
-    await db.serviceOrders.add({
-      id: crypto.randomUUID(),
-      osNumber: `OS-${String(Date.now()).slice(-5)}`,
-      customerId: form.customerId,
-      equipmentId: form.equipmentId || undefined,
-      problem: form.problem,
-      service: form.service,
-      value: form.value,
-      date: form.date,
-      time: form.time,
-      address: form.address || (customer ? `${customer.street || ''} ${customer.number || ''}`.trim() : ''),
-      technician: form.technician,
-      status: 'agendado',
-      checklist,
-      fotosAntes: [],
-      fotosDurante: [],
-      fotosDepois: [],
-      observacoesTecnicas: '',
-      paymentStatus: 'pendente',
-      createdAt: new Date().toISOString().slice(0, 10),
-    });
-    toast('success', 'Serviço agendado!');
-    navigate('/app/agenda');
+    setBusy(true);
+    try {
+      await db.serviceOrders.add({
+        id: crypto.randomUUID(),
+        osNumber: `OS-${String(Date.now()).slice(-5)}`,
+        customerId: form.customerId,
+        equipmentId: form.equipmentId || undefined,
+        problem: form.problem,
+        service: form.service,
+        value: form.value,
+        date: form.date,
+        time: form.time,
+        address: form.address || (customer ? `${customer.street || ''} ${customer.number || ''}`.trim() : ''),
+        technician: form.technician,
+        status: 'agendado',
+        checklist,
+        fotosAntes: [],
+        fotosDurante: [],
+        fotosDepois: [],
+        observacoesTecnicas: '',
+        paymentStatus: 'pendente',
+        createdAt: new Date().toISOString().slice(0, 10),
+      });
+      toast('success', 'Serviço agendado!');
+      navigate('/app/agenda');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -108,7 +116,11 @@ export default function NovaOS() {
           <Input label="Horário" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input label="Valor (R$)" type="number" value={form.value} onChange={(e) => setForm({ ...form, value: +e.target.value })} />
+          <Input label="Valor (R$)" inputMode="decimal" value={valueText} onChange={(e) => {
+            const clean = e.target.value.replace(/[^\d,.]/g, '');
+            setValueText(clean);
+            setForm({ ...form, value: parseMoney(clean) });
+          }} placeholder="0,00" />
           <Input label="Técnico" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} placeholder="Nome do técnico" />
         </div>
         <Input label="Endereço do atendimento" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Endereço onde será o serviço" />
@@ -130,7 +142,7 @@ export default function NovaOS() {
 
         <div className="flex gap-3">
           <Button variant="outline" type="button" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button type="submit" full>Salvar serviço</Button>
+          <Button type="submit" full disabled={busy}>Salvar serviço</Button>
         </div>
       </form>
     </div>

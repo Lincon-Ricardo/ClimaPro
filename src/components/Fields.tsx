@@ -13,7 +13,7 @@ export function Input({ label, hint, className = '', ...rest }: FieldProps & Inp
     <label className="block">
       {label && <span className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>}
       <input className={`${base} ${className}`} {...rest} />
-      {hint && <span className="mt-1 block text-xs text-neutral-400">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-neutral-400 dark:text-neutral-500">{hint}</span>}
     </label>
   );
 }
@@ -23,7 +23,7 @@ export function Textarea({ label, hint, className = '', ...rest }: FieldProps & 
     <label className="block">
       {label && <span className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>}
       <textarea className={`${base} resize-y ${className}`} {...rest} />
-      {hint && <span className="mt-1 block text-xs text-neutral-400">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-neutral-400 dark:text-neutral-500">{hint}</span>}
     </label>
   );
 }

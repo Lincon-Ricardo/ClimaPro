@@ -6,7 +6,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { useToast } from '../components/Toast';
-import Modal from './_Modal';
+import { Modal } from '../components/Modal';
 import {
   Phone, MessageCircle, MapPin, Plus, Snowflake, Pencil, Wallet, Wrench, Trash2,
 } from 'lucide-react';
@@ -61,7 +61,7 @@ export default function ClienteDetail() {
 
   return (
     <div className="max-w-3xl">
-      <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400">← Voltar</button>
+      <button type="button" onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400">← Voltar</button>
 
       <div className="rounded-3xl bg-white dark:bg-neutral-800 p-6 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -77,12 +77,8 @@ export default function ClienteDetail() {
             </div>
           </div>
           <div className="flex gap-2">
-            <a href={`https://wa.me/${telToWhats(customer.phone)}`} target="_blank" rel="noreferrer">
-              <Button variant="success"><MessageCircle size={16} /> WhatsApp</Button>
-            </a>
-            <a href={`tel:${customer.phone}`}>
-              <Button variant="outline"><Phone size={16} /></Button>
-            </a>
+            <Button as="a" href={`https://wa.me/${telToWhats(customer.phone)}`} target="_blank" rel="noreferrer" variant="success"><MessageCircle size={16} /> WhatsApp</Button>
+            <Button as="a" href={`tel:${customer.phone}`} variant="outline" aria-label="Ligar para o cliente"><Phone size={16} /></Button>
           </div>
         </div>
 
@@ -125,13 +121,14 @@ export default function ClienteDetail() {
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-neutral-800 dark:text-neutral-100">{eq.brand} {eq.model}</div>
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">{eq.type} · {eq.btus.toLocaleString('pt-BR')} BTUs</div>
-                <div className="mt-1 text-xs text-neutral-400">
+                <div className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
                   Serial: {eq.serial || '—'} · Local: {eq.installLocation || '—'} · Inst. {formatDate(eq.installDate)}
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => removeEquipment(eq.id)}
-                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger"
+                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                 aria-label="Remover equipamento"
                 title="Remover equipamento"
               >
@@ -163,7 +160,7 @@ export default function ClienteDetail() {
                 kind: 'servico' as const,
                 tone: o.status === 'concluido' ? 'bg-success'
                       : o.status === 'cancelado' ? 'bg-danger'
-                      : o.status === 'agendado' || o.status === 'em_andamento' ? 'bg-primary-600'
+                      : o.status === 'agendado' || o.status === 'em_andamento' ? 'bg-primary-600 dark:bg-primary-500'
                       : 'bg-warning',
                 render: () => <StatusBadge status={o.status} />,
                 onClick: () => navigate(`/app/servicos/${o.id}`),
@@ -177,7 +174,7 @@ export default function ClienteDetail() {
                 kind: 'orcamento' as const,
                 tone: b.status === 'aprovado' ? 'bg-success'
                       : b.status === 'recusado' ? 'bg-danger'
-                      : 'bg-primary-600',
+                      : 'bg-primary-600 dark:bg-primary-500',
                 render: () => (
                   <span className="rounded-full bg-neutral-100 dark:bg-neutral-700/60 px-2.5 py-1 text-xs font-medium capitalize text-neutral-700 dark:text-neutral-200">{b.status}</span>
                 ),
@@ -205,8 +202,9 @@ export default function ClienteDetail() {
                         <div className="flex shrink-0 items-center gap-1.5">
                           {ev.render()}
                           <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); ev.onRemove?.(); }}
-                            className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger"
+                            className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                             aria-label="Apagar registro"
                             title="Apagar registro"
                           >
@@ -226,22 +224,22 @@ export default function ClienteDetail() {
       <Modal open={showAddEq} onClose={() => setShowAddEq(false)} title="Adicionar equipamento" wide>
         <form onSubmit={saveEquipment} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <input className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Marca" value={eqForm.brand} onChange={(e) => setEqForm({ ...eqForm, brand: e.target.value })} />
-            <input className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Modelo" value={eqForm.model} onChange={(e) => setEqForm({ ...eqForm, model: e.target.value })} />
+            <input aria-label="Marca" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Marca" value={eqForm.brand} onChange={(e) => setEqForm({ ...eqForm, brand: e.target.value })} />
+            <input aria-label="Modelo" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Modelo" value={eqForm.model} onChange={(e) => setEqForm({ ...eqForm, model: e.target.value })} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <select className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100" value={eqForm.type} onChange={(e) => setEqForm({ ...eqForm, type: e.target.value })}>
+            <select aria-label="Tipo" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100" value={eqForm.type} onChange={(e) => setEqForm({ ...eqForm, type: e.target.value })}>
               {['Split Higien Wall','Split Piso Teto','Split Cassete','Split Inverter','Janela','Multi Split','VRF / VRV'].map((t) => <option key={t}>{t}</option>)}
             </select>
-            <input type="number" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="BTUs" value={eqForm.btus} onChange={(e) => setEqForm({ ...eqForm, btus: +e.target.value })} />
+            <input type="number" inputMode="numeric" aria-label="BTUs" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="BTUs" value={eqForm.btus} onChange={(e) => setEqForm({ ...eqForm, btus: +e.target.value })} />
           </div>
-          <input className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Número de série" value={eqForm.serial} onChange={(e) => setEqForm({ ...eqForm, serial: e.target.value })} />
+          <input aria-label="Número de série" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Número de série" value={eqForm.serial} onChange={(e) => setEqForm({ ...eqForm, serial: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
-            <input className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Local de instalação" value={eqForm.installLocation} onChange={(e) => setEqForm({ ...eqForm, installLocation: e.target.value })} />
-            <input type="date" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" value={eqForm.installDate} onChange={(e) => setEqForm({ ...eqForm, installDate: e.target.value })} />
+            <input aria-label="Local de instalação" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Local de instalação" value={eqForm.installLocation} onChange={(e) => setEqForm({ ...eqForm, installLocation: e.target.value })} />
+            <input type="date" aria-label="Data de instalação" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" value={eqForm.installDate} onChange={(e) => setEqForm({ ...eqForm, installDate: e.target.value })} />
           </div>
-          <input className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Garantia (ex.: 12 meses)" value={eqForm.warranty} onChange={(e) => setEqForm({ ...eqForm, warranty: e.target.value })} />
-          <input className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Observações" value={eqForm.notes} onChange={(e) => setEqForm({ ...eqForm, notes: e.target.value })} />
+          <input aria-label="Garantia" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Garantia (ex.: 12 meses)" value={eqForm.warranty} onChange={(e) => setEqForm({ ...eqForm, warranty: e.target.value })} />
+          <input aria-label="Observações" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Observações" value={eqForm.notes} onChange={(e) => setEqForm({ ...eqForm, notes: e.target.value })} />
           <Button type="submit" full>Salvar equipamento</Button>
         </form>
       </Modal>

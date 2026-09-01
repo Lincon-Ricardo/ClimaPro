@@ -124,7 +124,8 @@ export function Layout() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/app/notificacoes')}
-              className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/10"
+              aria-label="Notificações"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -135,14 +136,15 @@ export function Layout() {
             </button>
             <button
               onClick={() => navigate('/app/busca')}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10"
+              aria-label="Buscar"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
             >
               <Search size={18} />
             </button>
             <button
               onClick={() => setTheme(resolved ? 'light' : 'dark')}
               aria-label="Alternar tema"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
             >
               {resolved ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -151,7 +153,7 @@ export function Layout() {
         <main className="px-4 pb-24 pt-4">
           <Outlet />
         </main>
-        <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-800 dark:bg-neutral-900">
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-700 dark:bg-neutral-900">
           {bottomItems.map((it) => (
             <NavItem
               key={it.to}

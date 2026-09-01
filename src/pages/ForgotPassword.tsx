@@ -62,8 +62,8 @@ export default function ForgotPassword() {
 
         <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
           <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto">
-              <Mail size={32} className="text-green-600" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40 mx-auto">
+              <Mail size={32} className="text-green-600 dark:text-green-300" />
             </div>
             <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800 dark:text-neutral-100">E-mail enviado!</h1>
             <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-300">

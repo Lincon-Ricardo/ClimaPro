@@ -152,7 +152,7 @@ function makeTable(table: string): Table {
       emitDataChanged(table);
     },
     clear: async () => {
-      const { error } = await supabase.from(table).delete().neq(table === 'profiles' ? 'id' : 'id', '');
+      const { error } = await supabase.from(table).delete().neq('id', '');
       if (error) throw error;
       emitDataChanged(table);
     },

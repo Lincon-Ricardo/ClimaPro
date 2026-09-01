@@ -18,7 +18,6 @@ export function useLiveQuery<T>(
     let active = true;
 
     async function run() {
-      setResult(undefined);
       const configured = await isSupabaseConfigured();
       if (!configured) {
         if (active) setResult(undefined);
@@ -28,7 +27,7 @@ export function useLiveQuery<T>(
         const v = await fnRef.current();
         if (active) setResult(v);
       } catch {
-        if (active) setResult(undefined);
+        // keep previous result on failure to avoid flicker
       }
     }
 

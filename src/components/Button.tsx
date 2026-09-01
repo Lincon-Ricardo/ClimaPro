@@ -1,4 +1,4 @@
-import type { ReactNode, ButtonHTMLAttributes } from 'react';
+import type { ReactNode, ButtonHTMLAttributes, AnchorHTMLAttributes } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
@@ -19,26 +19,38 @@ const sizes: Record<Size, string> = {
   lg: 'text-base px-5 py-3.5',
 };
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
+type CommonProps = {
   variant?: Variant;
   size?: Size;
   full?: boolean;
+  as?: 'button' | 'a';
   children: ReactNode;
-}
+  className?: string;
+  href?: string;
+};
 
+export function Button(props: CommonProps & ButtonHTMLAttributes<HTMLButtonElement> & { as?: 'button' | undefined; href?: never }): ReactNode;
+export function Button(props: CommonProps & AnchorHTMLAttributes<HTMLAnchorElement> & { as: 'a'; href: string }): ReactNode;
 export function Button({
   variant = 'primary',
   size = 'md',
   full,
+  as = 'button',
   children,
   className = '',
+  href,
   ...rest
-}: Props) {
+}: CommonProps & ButtonHTMLAttributes<HTMLButtonElement> | CommonProps & AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const classes = `inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${full ? 'w-full' : ''} ${className}`;
+  if (as === 'a') {
+    return (
+      <a className={classes} href={href} {...(rest as AnchorHTMLAttributes<HTMLAnchorElement>)}>
+        {children}
+      </a>
+    );
+  }
   return (
-    <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${full ? 'w-full' : ''} ${className}`}
-      {...rest}
-    >
+    <button type="button" {...(rest as ButtonHTMLAttributes<HTMLButtonElement>)} className={classes}>
       {children}
     </button>
   );

@@ -15,13 +15,13 @@ export const STATUS_LABEL: Record<ServiceStatus, string> = {
 };
 
 export const STATUS_STYLE: Record<ServiceStatus, string> = {
-  solicitacao: 'bg-yellow-100 text-yellow-800',
-  orcamento_enviado: 'bg-blue-100 text-blue-800',
-  aguardando_aprovacao: 'bg-orange-100 text-orange-800',
-  agendado: 'bg-purple-100 text-purple-800',
-  em_andamento: 'bg-sky-100 text-sky-800',
-  concluido: 'bg-green-100 text-green-700',
-  cancelado: 'bg-red-100 text-red-700',
+  solicitacao: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300',
+  orcamento_enviado: 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
+  aguardando_aprovacao: 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300',
+  agendado: 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300',
+  em_andamento: 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300',
+  concluido: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  cancelado: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
 };
 
 export const STATUS_DOT: Record<ServiceStatus, string> = {
@@ -56,7 +56,7 @@ export function parseMoney(v: string): number {
 
 export function budgetTotal(items: BudgetItem[], labor = 0, displacement = 0, discount = 0): number {
   const itemsTotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unitValue || 0), 0);
-  return itemsTotal + (labor || 0) + (displacement || 0) - (discount || 0);
+  return Math.max(0, itemsTotal + (labor || 0) + (displacement || 0) - (discount || 0));
 }
 
 export function itemTotal(item: Pick<BudgetItem, 'qty' | 'unitValue'>): number {
