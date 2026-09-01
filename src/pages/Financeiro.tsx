@@ -51,6 +51,8 @@ export default function Financeiro() {
           {(['hoje', 'semana', 'mes'] as Range[]).map((r) => (
             <button
               key={r}
+              type="button"
+              aria-pressed={range === r}
               onClick={() => setRange(r)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === r ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'}`}
             >
@@ -58,6 +60,8 @@ export default function Financeiro() {
             </button>
           ))}
           <button
+            type="button"
+            aria-pressed={range === 'periodo'}
             onClick={() => setRange('periodo')}
             className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === 'periodo' ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'}`}
           >
@@ -69,8 +73,8 @@ export default function Financeiro() {
 
       {range === 'periodo' && (
         <div className="mb-4 grid grid-cols-2 gap-3">
-          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={start} onChange={(e) => setStart(e.target.value)} />
-          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <input aria-label="Data inicial" type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={start} onChange={(e) => setStart(e.target.value)} />
+          <input aria-label="Data final" type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={end} onChange={(e) => setEnd(e.target.value)} />
         </div>
       )}
 
@@ -97,7 +101,7 @@ export default function Financeiro() {
                       <span className="font-semibold text-neutral-800 dark:text-neutral-100">{formatBRL(val)}</span>
                     </div>
                     <div className="mt-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700/60">
-                      <div className="h-2 rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
+                      <div className="h-2 rounded-full bg-primary-600 dark:bg-primary-500" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                 );

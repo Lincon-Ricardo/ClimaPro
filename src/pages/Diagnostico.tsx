@@ -45,7 +45,7 @@ export default function Diagnostico() {
 
       {selected && (
         <div>
-          <button onClick={reset} className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400">
+          <button type="button" onClick={reset} className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400">
             <ChevronLeft size={16} /> Todos os sintomas
           </button>
 
@@ -75,9 +75,9 @@ export default function Diagnostico() {
           <Card className="mt-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
-                <CheckSquare size={18} className="text-primary-600" /> Checklist de verificação
+                <CheckSquare size={18} className="text-primary-600 dark:text-primary-400" /> Checklist de verificação
               </div>
-              <span className="text-xs text-neutral-400">
+              <span className="text-xs text-neutral-400 dark:text-neutral-500">
                 {selected.checklist.filter((c) => checked[c]).length}/{selected.checklist.length}
               </span>
             </div>

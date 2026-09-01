@@ -283,7 +283,7 @@ export default function ServicoDetail() {
         </div>
         <div className="space-y-1.5">
           {(o.checklist || []).map((it: ChecklistItem) => (
-            <label key={it.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${it.done ? 'border-green-200 bg-green-50 text-neutral-500 line-through dark:text-neutral-400' : 'border-neutral-200 text-neutral-700 dark:border-neutral-700 dark:text-neutral-200'}`}>
+            <label key={it.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${it.done ? 'border-green-200 bg-green-50 text-neutral-500 line-through dark:border-green-900/50 dark:bg-green-900/20 dark:text-neutral-400' : 'border-neutral-200 text-neutral-700 dark:border-neutral-700 dark:text-neutral-200'}`}>
               <input type="checkbox" checked={!!it.done} onChange={() => toggleItem(it)} className="h-4 w-4 accent-primary-700" />
               {it.label}
             </label>

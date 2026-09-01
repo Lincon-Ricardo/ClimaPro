@@ -43,14 +43,14 @@ export default function Perfil() {
       <Card className="mt-4">
         <h2 className="mb-3 text-base font-bold text-neutral-800 dark:text-neutral-100">Dados da empresa</h2>
         {infos.length === 0 ? (
-          <p className="text-sm text-neutral-400">Complete os dados da sua empresa.</p>
+          <p className="text-sm text-neutral-400 dark:text-neutral-500">Complete os dados da sua empresa.</p>
         ) : (
           <div className="space-y-3">
             {infos.map((I, i) => (
               <div key={i} className="flex items-center gap-3 text-sm">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400">{I.icon}</span>
                 <div>
-                  <div className="text-xs text-neutral-400">{I.label}</div>
+                  <div className="text-xs text-neutral-400 dark:text-neutral-500">{I.label}</div>
                   <div className="font-medium text-neutral-800 dark:text-neutral-100">{I.value || '—'}</div>
                 </div>
               </div>

@@ -47,7 +47,7 @@ export default function Relatorios() {
       <Card className="mt-6">
         <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Serviços por categoria</h2>
         {byService.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-400">Sem dados ainda.</p>
+          <p className="mt-2 text-sm text-neutral-400 dark:text-neutral-500">Sem dados ainda.</p>
         ) : (
           <div className="mt-3 space-y-2">
             {byService.map(([name, count]) => (

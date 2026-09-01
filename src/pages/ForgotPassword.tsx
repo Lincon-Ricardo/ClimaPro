@@ -106,7 +106,7 @@ export default function ForgotPassword() {
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Informe o e-mail associado à sua conta</p>
 
           {error && (
-            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>
           )}
 
           <div className="mt-5 space-y-4">

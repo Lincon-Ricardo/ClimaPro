@@ -59,6 +59,8 @@ export default function Config() {
               return (
                 <button
                   key={o.value}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => setTheme(o.value)}
                   className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition ${
                     active

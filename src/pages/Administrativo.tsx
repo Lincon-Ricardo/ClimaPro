@@ -83,10 +83,10 @@ export default function Administrativo() {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
-            <TrendingUp size={18} className="text-primary-600" /> Receita mensal
+            <TrendingUp size={18} className="text-primary-600 dark:text-primary-400" /> Receita mensal
           </h2>
           {monthly.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-400">Sem dados ainda.</p>
+            <p className="mt-2 text-sm text-neutral-400 dark:text-neutral-500">Sem dados ainda.</p>
           ) : (
             <div className="mt-4 flex h-40 items-end gap-3">
               {monthly.map(([m, v]) => (
@@ -105,7 +105,7 @@ export default function Administrativo() {
 
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
-            <Wrench size={18} className="text-primary-600" /> Distribuição de serviços
+            <Wrench size={18} className="text-primary-600 dark:text-primary-400" /> Distribuição de serviços
           </h2>
           <div className="mt-4 space-y-3">
             {statusDist.map((s) => (
@@ -125,9 +125,9 @@ export default function Administrativo() {
 
       <div className="mt-6 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-extrabold text-neutral-800 dark:text-neutral-100">
-          <UserRound size={20} className="text-primary-600" /> Desempenho por técnico
+          <UserRound size={20} className="text-primary-600 dark:text-primary-400" /> Desempenho por técnico
         </h2>
-        <span className="text-xs text-neutral-400">{users.length} usuário(s) cadastrado(s)</span>
+        <span className="text-xs text-neutral-400 dark:text-neutral-500">{users.length} usuário(s) cadastrado(s)</span>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {byTechnician.length === 0 && (
@@ -146,7 +146,7 @@ export default function Administrativo() {
             </div>
             <div className="text-right">
               <div className="text-lg font-bold text-primary-700 dark:text-primary-300">{formatBRL(t.revenue)}</div>
-              <div className="text-[10px] text-neutral-400">faturou</div>
+              <div className="text-[10px] text-neutral-400 dark:text-neutral-500">faturou</div>
             </div>
           </Card>
         ))}
