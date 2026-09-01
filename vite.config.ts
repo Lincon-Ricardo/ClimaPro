@@ -12,4 +12,16 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          icons: ['lucide-react'],
+          schema: ['zod'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 });
