@@ -53,6 +53,12 @@ export default function ClienteDetail() {
     toast('success', 'Orçamento removido.');
   }
 
+  async function removeEquipment(equipmentId: string) {
+    if (!confirm('Remover este equipamento?')) return;
+    await db.equipment.delete(equipmentId);
+    toast('success', 'Equipamento removido.');
+  }
+
   return (
     <div className="max-w-3xl">
       <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 hover:text-primary-600">← Voltar</button>
@@ -123,6 +129,14 @@ export default function ClienteDetail() {
                   Serial: {eq.serial || '—'} · Local: {eq.installLocation || '—'} · Inst. {formatDate(eq.installDate)}
                 </div>
               </div>
+              <button
+                onClick={() => removeEquipment(eq.id)}
+                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger"
+                aria-label="Remover equipamento"
+                title="Remover equipamento"
+              >
+                <Trash2 size={15} />
+              </button>
             </div>
           </Card>
         ))}
