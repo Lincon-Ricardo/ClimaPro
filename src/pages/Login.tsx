@@ -81,7 +81,11 @@ export default function Login() {
               />
               {hasError('password') && <p className="mt-1 text-sm text-red-600">{getError('password')}</p>}
             </div>
-            <button type="button" className="text-sm font-medium text-primary-600 hover:underline">
+            <button
+              type="button"
+              onClick={() => navigate('/forgot-password')}
+              className="text-sm font-medium text-primary-600 hover:underline"
+            >
               Esqueci minha senha
             </button>
             <Button type="submit" full size="lg" disabled={busy}>

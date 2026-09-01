@@ -4,6 +4,8 @@ import { useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
@@ -49,6 +51,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <Login />} />
+      <Route path="/forgot-password" element={user ? <Navigate to="/app" replace /> : <ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route
         path="/app"
