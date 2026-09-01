@@ -81,7 +81,7 @@ export default function Onboarding() {
               <h1 className="text-2xl font-extrabold text-white">Vamos começar?</h1>
               <p className="mt-1 text-primary-100">Crie seu perfil para iniciar.</p>
               {error && <div className="mt-4 rounded-xl bg-red-500/20 px-4 py-3 text-sm text-red-100">{error}</div>}
-              <div className="mt-5 space-y-3 rounded-2xl bg-white p-5">
+              <div className="mt-5 space-y-3 rounded-2xl bg-white p-5 dark:bg-neutral-800">
                 <div>
                   <Input
                     label="Seu nome"

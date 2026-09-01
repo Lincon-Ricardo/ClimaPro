@@ -47,7 +47,7 @@ export default function Servicos() {
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-              filter === f.key ? 'bg-primary-700 text-white' : 'bg-white text-neutral-600 border border-neutral-200'
+              filter === f.key ? 'bg-primary-700 text-white' : 'bg-white text-neutral-600 border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
             }`}
           >
             {f.label}
@@ -68,10 +68,10 @@ export default function Servicos() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-800">{custName(o.customerId)}</span>
+                    <span className="font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</span>
                     <span className="text-xs font-medium text-neutral-400">{o.osNumber}</span>
                   </div>
-                  <div className="text-sm text-neutral-500">❄️ {o.service}</div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
                   <div className="text-xs text-neutral-400">
                     {o.date ? formatDate(o.date) : 'Sem data'}
                     {o.time ? ` · ${o.time}` : ''} · {formatBRL(o.value)}

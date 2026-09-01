@@ -9,7 +9,7 @@ import { formatBRL, formatDate } from '../lib/utils';
 import { useState } from 'react';
 
 const STATUS_STYLE: Record<string, string> = {
-  rascunho: 'bg-neutral-100 text-neutral-600',
+  rascunho: 'bg-neutral-100 dark:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300',
   enviado: 'bg-blue-100 text-blue-700',
   aprovado: 'bg-green-100 text-green-700',
   recusado: 'bg-red-100 text-red-700',
@@ -45,7 +45,7 @@ export default function Orcamentos() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por cliente ou número..."
-        className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="mb-4 w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-4 py-2.5 text-sm dark:text-neutral-100 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
       {filtered.length === 0 ? (
         <EmptyState
@@ -61,14 +61,14 @@ export default function Orcamentos() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-neutral-800">{custName(b.customerId)}</span>
+                    <span className="font-bold text-neutral-800 dark:text-neutral-100">{custName(b.customerId)}</span>
                     <span className="text-xs font-medium text-neutral-400">#{b.number}</span>
                   </div>
-                  <div className="mt-0.5 text-sm text-neutral-500">{b.serviceType}</div>
+                  <div className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">{b.serviceType}</div>
                   <div className="mt-0.5 text-xs text-neutral-400">Criado em {formatDate(b.createdAt)}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-neutral-800">{formatBRL(b.total)}</div>
+                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(b.total)}</div>
                   <span className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[b.status] || ''}`}>
                     {STATUS_LABEL[b.status] || b.status}
                   </span>

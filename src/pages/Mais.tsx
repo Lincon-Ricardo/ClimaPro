@@ -67,24 +67,24 @@ export default function Mais() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {sections.map((s) => (
           <Card key={s.label} onClick={() => navigate(s.to)} className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700">{s.icon}</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">{s.icon}</div>
             <div>
-              <div className="font-bold text-neutral-800">{s.label}</div>
-              <div className="text-xs text-neutral-500">{s.sub}</div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">{s.label}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">{s.sub}</div>
             </div>
           </Card>
         ))}
       </div>
 
-      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800">Ferramentas</h2>
+      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Ferramentas</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card onClick={() => navigate('/app/calculadora-btu')} className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
             <Calculator size={20} />
           </div>
           <div>
-            <div className="font-bold text-neutral-800">Calculadora de BTUs</div>
-            <div className="text-xs text-neutral-500">Capacidade ideal do aparelho</div>
+            <div className="font-bold text-neutral-800 dark:text-neutral-100">Calculadora de BTUs</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Capacidade ideal do aparelho</div>
           </div>
         </Card>
         <Card onClick={() => navigate('/app/diagnostico')} className="flex items-center gap-4">
@@ -92,21 +92,21 @@ export default function Mais() {
             <Stethoscope size={20} />
           </div>
           <div>
-            <div className="font-bold text-neutral-800">Guia de diagnóstico</div>
-            <div className="text-xs text-neutral-500">Checklist por sintoma relatado</div>
+            <div className="font-bold text-neutral-800 dark:text-neutral-100">Guia de diagnóstico</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Checklist por sintoma relatado</div>
           </div>
         </Card>
       </div>
 
-      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800">Gestão</h2>
+      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Gestão</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card onClick={() => navigate('/app/administrativo')} className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             <LayoutDashboard size={20} />
           </div>
           <div>
-            <div className="font-bold text-neutral-800">Painel administrativo</div>
-            <div className="text-xs text-neutral-500">Visão do dono e desempenho da equipe</div>
+            <div className="font-bold text-neutral-800 dark:text-neutral-100">Painel administrativo</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Visão do dono e desempenho da equipe</div>
           </div>
         </Card>
         <Card onClick={() => navigate('/app/users')} className="flex items-center gap-4">
@@ -114,20 +114,20 @@ export default function Mais() {
             <Users size={20} />
           </div>
           <div>
-            <div className="font-bold text-neutral-800">Técnicos</div>
-            <div className="text-xs text-neutral-500">Gerenciar equipe e acessos</div>
+            <div className="font-bold text-neutral-800 dark:text-neutral-100">Técnicos</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">Gerenciar equipe e acessos</div>
           </div>
         </Card>
       </div>
 
-      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800">Conta e empresa</h2>
+      <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Conta e empresa</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {account.map((s) => (
           <Card key={s.label} onClick={() => navigate(s.to)} className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">{s.icon}</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300">{s.icon}</div>
             <div>
-              <div className="font-bold text-neutral-800">{s.label}</div>
-              <div className="text-xs text-neutral-500">{s.sub}</div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">{s.label}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">{s.sub}</div>
             </div>
           </Card>
         ))}

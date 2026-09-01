@@ -61,15 +61,15 @@ export default function ForgotPassword() {
         <p className="mt-1 text-center text-sm text-primary-200">Gestão profissional para climatização</p>
 
         <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
-          <div className="rounded-2xl bg-white p-6 shadow-xl">
+          <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto">
               <Mail size={32} className="text-green-600" />
             </div>
-            <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800">E-mail enviado!</h1>
-            <p className="mt-2 text-center text-sm text-neutral-600">
+            <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800 dark:text-neutral-100">E-mail enviado!</h1>
+            <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-300">
               Verificamos sua conta. Você receberá um e-mail com instruções para redefinir sua senha em breve.
             </p>
-            <p className="mt-4 text-center text-xs text-neutral-500">
+            <p className="mt-4 text-center text-xs text-neutral-500 dark:text-neutral-400">
               Verifique sua pasta de spam se não encontrar o e-mail.
             </p>
 
@@ -93,17 +93,17 @@ export default function ForgotPassword() {
       <p className="mt-1 text-center text-sm text-primary-200">Gestão profissional para climatização</p>
 
       <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-xl">
+        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="mb-4 flex items-center gap-2 text-sm font-medium text-primary-600 hover:underline"
+            className="mb-4 flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
             <ArrowLeft size={16} /> Voltar
           </button>
 
-          <h1 className="text-xl font-extrabold text-neutral-800">Recuperar senha</h1>
-          <p className="mt-1 text-sm text-neutral-500">Informe o e-mail associado à sua conta</p>
+          <h1 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Recuperar senha</h1>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Informe o e-mail associado à sua conta</p>
 
           {error && (
             <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>

@@ -10,7 +10,7 @@ import { useToast } from '../components/Toast';
 import { formatDate } from '../lib/utils';
 
 const TYPE_ICON: Record<string, { icon: React.ReactNode; cls: string }> = {
-  info: { icon: <Info size={18} />, cls: 'bg-primary-50 text-primary-600' },
+  info: { icon: <Info size={18} />, cls: 'bg-primary-50 text-primary-600 dark:bg-primary-900/40 dark:text-primary-400' },
   success: { icon: <CheckCircle size={18} />, cls: 'bg-green-50 text-green-600' },
   warning: { icon: <AlertTriangle size={18} />, cls: 'bg-orange-50 text-orange-600' },
   danger: { icon: <XCircle size={18} />, cls: 'bg-red-50 text-red-600' },
@@ -65,20 +65,20 @@ export default function Notificacoes() {
           {sorted.map((n) => {
             const t = TYPE_ICON[n.type] || TYPE_ICON.info;
             return (
-              <Card key={n.id} className={!n.read ? 'border-primary-200 bg-primary-50/40' : ''}>
+              <Card key={n.id} className={!n.read ? 'border-primary-200 bg-primary-50/40 dark:border-primary-900/60 dark:bg-primary-900/20' : ''}>
                 <div className="flex items-start gap-3">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.cls}`}>{t.icon}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-neutral-800">{n.title}</span>
+                      <span className="font-bold text-neutral-800 dark:text-neutral-100">{n.title}</span>
                       <span className="shrink-0 text-xs text-neutral-400">{n.createdAt ? formatDate(n.createdAt) : ''}</span>
                     </div>
-                    <p className="mt-0.5 text-sm text-neutral-600">{n.message}</p>
+                    <p className="mt-0.5 text-sm text-neutral-600 dark:text-neutral-300">{n.message}</p>
                   </div>
                   {!n.read && (
                     <button
                       onClick={() => markRead(n)}
-                      className="shrink-0 rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+                      className="shrink-0 rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300 dark:hover:bg-primary-900/60"
                     >
                       Marcar lida
                     </button>
@@ -91,7 +91,7 @@ export default function Notificacoes() {
       )}
 
       <Modal open={confirmClear} onClose={() => setConfirmClear(false)} title="Limpar notificações">
-        <p className="text-sm text-neutral-600">Tem certeza que deseja apagar todas as notificações?</p>
+        <p className="text-sm text-neutral-600 dark:text-neutral-300">Tem certeza que deseja apagar todas as notificações?</p>
         <div className="mt-4 flex gap-3">
           <Button variant="outline" type="button" onClick={() => setConfirmClear(false)}>Cancelar</Button>
           <Button variant="danger" onClick={clearAll}>Apagar tudo</Button>

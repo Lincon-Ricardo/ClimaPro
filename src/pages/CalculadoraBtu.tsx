@@ -70,7 +70,7 @@ export default function CalculadoraBtu() {
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Card>
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
             <Home size={16} className="text-primary-600" /> Área do ambiente
           </div>
           <Input
@@ -82,7 +82,7 @@ export default function CalculadoraBtu() {
           <div className="mt-1 text-xs text-neutral-400">m² (largura × comprimento)</div>
         </Card>
         <Card>
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
             <Users size={16} className="text-primary-600" /> Pessoas
           </div>
           <Input
@@ -96,15 +96,15 @@ export default function CalculadoraBtu() {
       </div>
 
       <Card className="mt-3 space-y-3">
-        <div className="text-sm font-semibold text-neutral-700">Ajustes</div>
-        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm text-neutral-700">
+        <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Ajustes</div>
+        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-700">
+          <span className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
             <Sun size={16} className="text-warning" /> Incidência de sol forte
           </span>
           <input type="checkbox" checked={sun} onChange={(e) => setSun(e.target.checked)} className="h-5 w-5 accent-primary-700" />
         </label>
-        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm text-neutral-700">
+        <label className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-700">
+          <span className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-200">
             <Building2 size={16} className="text-primary-600" /> Ambiente comercial / público
           </span>
           <input type="checkbox" checked={commercial} onChange={(e) => setCommercial(e.target.checked)} className="h-5 w-5 accent-primary-700" />
@@ -113,13 +113,13 @@ export default function CalculadoraBtu() {
 
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Button variant="outline" onClick={reset}><RefreshCw size={16} /> Limpar</Button>
-        <div className="rounded-xl bg-primary-50 px-4 py-3 text-center">
-          <div className="text-sm text-primary-700">Modelo recomendado</div>
-          <div className="text-lg font-extrabold text-primary-800">{suggestion.label}</div>
+        <div className="rounded-xl bg-primary-50 px-4 py-3 text-center dark:bg-primary-900/40">
+          <div className="text-sm text-primary-700 dark:text-primary-300">Modelo recomendado</div>
+          <div className="text-lg font-extrabold text-primary-800 dark:text-primary-200">{suggestion.label}</div>
         </div>
       </div>
 
-      <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-xs text-neutral-500">
+      <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-xs text-neutral-500 dark:bg-neutral-700/40 dark:text-neutral-400">
         * Cálculo estimado: ±600 BTUs por m², +600 por pessoa extra, +15% para sol forte e +40% para ambientes
         comerciais. Valores de referência — confirme as condições reais da instalação.
       </p>

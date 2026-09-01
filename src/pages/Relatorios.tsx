@@ -45,15 +45,15 @@ export default function Relatorios() {
         ))}
       </div>
       <Card className="mt-6">
-        <h2 className="text-base font-bold text-neutral-800">Serviços por categoria</h2>
+        <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Serviços por categoria</h2>
         {byService.length === 0 ? (
           <p className="mt-2 text-sm text-neutral-400">Sem dados ainda.</p>
         ) : (
           <div className="mt-3 space-y-2">
             {byService.map(([name, count]) => (
-              <div key={name} className="flex justify-between border-b border-neutral-100 pb-2 text-sm">
-                <span className="text-neutral-600">{name}</span>
-                <span className="font-semibold text-neutral-800">{count} serviço(s)</span>
+              <div key={name} className="flex justify-between border-b border-neutral-100 pb-2 text-sm dark:border-neutral-800">
+                <span className="text-neutral-600 dark:text-neutral-300">{name}</span>
+                <span className="font-semibold text-neutral-800 dark:text-neutral-100">{count} serviço(s)</span>
               </div>
             ))}
           </div>

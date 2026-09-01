@@ -34,7 +34,7 @@ export default function NovoCliente() {
   return (
     <div className="max-w-2xl">
       <PageHeader title="Novo cliente" subtitle="Preencha os dados básicos" />
-      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card">
+      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
         <Input label="Nome completo *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: João da Silva" />
         <div className="grid grid-cols-2 gap-3">
           <Input label="Telefone" value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} placeholder="(11) 99999-0000" />

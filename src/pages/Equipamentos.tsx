@@ -27,7 +27,7 @@ export default function Equipamentos() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por marca, modelo, serial ou cliente..."
-        className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600 dark:placeholder:text-neutral-500"
       />
       {filtered.length === 0 ? (
         <EmptyState
@@ -41,16 +41,16 @@ export default function Equipamentos() {
           {filtered.map((eq) => (
             <Card key={eq.id} onClick={() => navigate(`/app/clientes/${eq.customerId}`)}>
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                   <Snowflake size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-neutral-800">{eq.brand} {eq.model}</div>
-                  <div className="text-sm text-neutral-500">{eq.type} · {eq.btus.toLocaleString('pt-BR')} BTUs</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{eq.brand} {eq.model}</div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">{eq.type} · {eq.btus.toLocaleString('pt-BR')} BTUs</div>
                   <div className="mt-1 text-xs text-neutral-400">
                     Serial: {eq.serial || '—'} · Local: {eq.installLocation || '—'} · Inst. {formatDate(eq.installDate)}
                   </div>
-                  <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
+                  <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300">
                     <Users size={12} /> {custName(eq.customerId)}
                   </div>
                 </div>

@@ -75,14 +75,14 @@ export default function Administrativo() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={<TrendingUp size={20} />} label="Faturamento total" value={formatBRL(stats.revenueTotal)} />
-        <StatCard icon={<Target size={20} />} color="text-success" bg="bg-green-50" label="Aprovação de orçamentos" value={`${stats.approvalRate}%`} />
-        <StatCard icon={<Wallet size={20} />} color="text-warning" bg="bg-orange-50" label="A receber" value={formatBRL(stats.toReceive)} />
+        <StatCard icon={<Target size={20} />} color="text-success" bg="bg-green-50 dark:bg-green-900/30" label="Aprovação de orçamentos" value={`${stats.approvalRate}%`} />
+        <StatCard icon={<Wallet size={20} />} color="text-warning" bg="bg-orange-50 dark:bg-orange-900/30" label="A receber" value={formatBRL(stats.toReceive)} />
         <StatCard icon={<Activity size={20} />} label="Ticket médio" value={formatBRL(stats.ticket)} />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800">
+          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <TrendingUp size={18} className="text-primary-600" /> Receita mensal
           </h2>
           {monthly.length === 0 ? (
@@ -91,7 +91,7 @@ export default function Administrativo() {
             <div className="mt-4 flex h-40 items-end gap-3">
               {monthly.map(([m, v]) => (
                 <div key={m} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-[10px] font-semibold text-neutral-500">{formatBRL(v).replace(/R\$\s?/, '')}</span>
+                  <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">{formatBRL(v).replace(/R\$\s?/, '')}</span>
                   <div
                     className="w-full rounded-t-lg bg-gradient-to-t from-primary-700 to-primary-400"
                     style={{ height: `${Math.max(8, (v / maxMonth) * 120)}px` }}
@@ -104,17 +104,17 @@ export default function Administrativo() {
         </Card>
 
         <Card>
-          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800">
+          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <Wrench size={18} className="text-primary-600" /> Distribuição de serviços
           </h2>
           <div className="mt-4 space-y-3">
             {statusDist.map((s) => (
               <div key={s.label}>
                 <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600">{s.label}</span>
-                  <span className="font-semibold text-neutral-800">{s.value}</span>
+                  <span className="text-neutral-600 dark:text-neutral-300">{s.label}</span>
+                  <span className="font-semibold text-neutral-800 dark:text-neutral-100">{s.value}</span>
                 </div>
-                <div className="mt-1 h-2 w-full rounded-full bg-neutral-100">
+                <div className="mt-1 h-2 w-full rounded-full bg-neutral-100 dark:bg-neutral-700">
                   <div className={`h-2 rounded-full ${s.color}`} style={{ width: `${(s.value / statusTotal) * 100}%` }} />
                 </div>
               </div>
@@ -124,28 +124,28 @@ export default function Administrativo() {
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-extrabold text-neutral-800">
+        <h2 className="flex items-center gap-2 text-lg font-extrabold text-neutral-800 dark:text-neutral-100">
           <UserRound size={20} className="text-primary-600" /> Desempenho por técnico
         </h2>
         <span className="text-xs text-neutral-400">{users.length} usuário(s) cadastrado(s)</span>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {byTechnician.length === 0 && (
-          <Card><p className="text-sm text-neutral-500">Nenhum serviço vinculado a técnico ainda.</p></Card>
+          <Card><p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum serviço vinculado a técnico ainda.</p></Card>
         )}
         {byTechnician.map(([name, t]) => (
           <Card key={name} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                 {name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="font-bold text-neutral-800">{name}</div>
-                <div className="text-xs text-neutral-500">{t.done} concluído(s) de {t.count}</div>
+                <div className="font-bold text-neutral-800 dark:text-neutral-100">{name}</div>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">{t.done} concluído(s) de {t.count}</div>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-lg font-bold text-primary-700">{formatBRL(t.revenue)}</div>
+              <div className="text-lg font-bold text-primary-700 dark:text-primary-300">{formatBRL(t.revenue)}</div>
               <div className="text-[10px] text-neutral-400">faturou</div>
             </div>
           </Card>
@@ -155,12 +155,12 @@ export default function Administrativo() {
       <div className="mt-6">
         <Card onClick={() => navigate('/app/users')} className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300">
               <Users size={20} />
             </div>
             <div>
-              <div className="font-bold text-neutral-800">Gerenciar técnicos</div>
-              <div className="text-xs text-neutral-500">Cadastre e gerencie os usuários da sua equipe</div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Gerenciar técnicos</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">Cadastre e gerencie os usuários da sua equipe</div>
             </div>
           </div>
           <ChevronRight size={18} className="text-neutral-400" />

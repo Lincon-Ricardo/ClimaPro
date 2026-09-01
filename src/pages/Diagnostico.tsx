@@ -26,16 +26,16 @@ export default function Diagnostico() {
 
       {!selected && (
         <>
-          <p className="mb-4 text-sm text-neutral-500">
+          <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
             Selecione o sintoma relatado pelo cliente e veja as causas prováveis, o que verificar e como orientar.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SYMPTOMS.map((s) => (
               <Card key={s.id} onClick={() => setSelectedId(s.id)} className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-2xl">{s.icon}</div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-2xl dark:bg-primary-900/40">{s.icon}</div>
                 <div className="min-w-0">
-                  <div className="font-bold text-neutral-800">{s.symptom}</div>
-                  <div className="text-xs text-neutral-500">{s.short}</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{s.symptom}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">{s.short}</div>
                 </div>
               </Card>
             ))}
@@ -45,7 +45,7 @@ export default function Diagnostico() {
 
       {selected && (
         <div>
-          <button onClick={reset} className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600">
+          <button onClick={reset} className="mb-4 flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400">
             <ChevronLeft size={16} /> Todos os sintomas
           </button>
 
@@ -60,12 +60,12 @@ export default function Diagnostico() {
           </div>
 
           <Card className="mt-4">
-            <div className="flex items-center gap-2 text-base font-bold text-neutral-800">
+            <div className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
               <AlertTriangle size={18} className="text-warning" /> Causas prováveis
             </div>
             <ul className="mt-3 space-y-2">
               {selected.causes.map((c, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-neutral-600">
+                <li key={i} className="flex items-start gap-2 text-sm text-neutral-600 dark:text-neutral-300">
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warning" /> {c}
                 </li>
               ))}
@@ -74,7 +74,7 @@ export default function Diagnostico() {
 
           <Card className="mt-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-base font-bold text-neutral-800">
+              <div className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
                 <CheckSquare size={18} className="text-primary-600" /> Checklist de verificação
               </div>
               <span className="text-xs text-neutral-400">
@@ -83,7 +83,7 @@ export default function Diagnostico() {
             </div>
             <div className="mt-3 space-y-1.5">
               {selected.checklist.map((item) => (
-                <label key={item} className="flex items-center gap-2.5 rounded-xl border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700">
+                <label key={item} className="flex items-center gap-2.5 rounded-xl border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-200">
                   <input
                     type="checkbox"
                     checked={!!checked[item]}
@@ -97,12 +97,12 @@ export default function Diagnostico() {
           </Card>
 
           <Card className="mt-3">
-            <div className="flex items-center gap-2 text-base font-bold text-neutral-800">
+            <div className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
               <Lightbulb size={18} className="text-warning" /> Orientações
             </div>
             <ul className="mt-3 space-y-2">
               {selected.fix.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-neutral-600">
+                <li key={i} className="flex items-start gap-2 text-sm text-neutral-600 dark:text-neutral-300">
                   <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" /> {f}
                 </li>
               ))}

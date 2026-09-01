@@ -92,7 +92,7 @@ export function BudgetItemsEditor({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-neutral-700">Itens / materiais</span>
+        <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Itens / materiais</span>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" type="button" onClick={() => setCatalogOpen(true)}>
             <Package size={16} /> Catálogo
@@ -105,13 +105,13 @@ export function BudgetItemsEditor({
 
       <div className="mt-2 space-y-3">
         {items.length === 0 && (
-          <div className="rounded-xl border border-dashed border-neutral-200 p-4 text-center text-sm text-neutral-400">
+          <div className="rounded-xl border border-dashed border-neutral-200 p-4 text-center text-sm text-neutral-400 dark:border-neutral-700 dark:text-neutral-500">
             Nenhum item adicionado ainda.
           </div>
         )}
 
         {items.map((it, idx) => (
-          <div key={it.id} className="rounded-xl border border-neutral-200 bg-white p-3 shadow-card">
+          <div key={it.id} className="rounded-xl border border-neutral-200 bg-white p-3 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <Input
@@ -131,11 +131,11 @@ export function BudgetItemsEditor({
             </div>
 
             <div className="mt-2 grid grid-cols-[auto_1fr_1fr] items-end gap-2 sm:grid-cols-[auto_150px_190px_auto]">
-              <div className="flex items-center overflow-hidden rounded-xl border border-neutral-300">
+              <div className="flex items-center overflow-hidden rounded-xl border border-neutral-300 dark:border-neutral-600">
                 <button
                   type="button"
                   onClick={() => updateItem(it.id, { qty: Math.max(0, (it.qty || 0) - 1) })}
-                  className="px-2.5 py-2.5 text-neutral-500 transition hover:bg-neutral-100"
+                  className="px-2.5 py-2.5 text-neutral-500 transition hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60"
                   aria-label="Diminuir quantidade"
                 >
                   <Minus size={14} />
@@ -143,7 +143,7 @@ export function BudgetItemsEditor({
                 <input
                   type="number"
                   inputMode="decimal"
-                  className="w-14 border-x border-neutral-300 px-1 py-2 text-center text-sm focus:outline-none"
+                  className="w-14 border-x border-neutral-300 px-1 py-2 text-center text-sm focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
                   value={it.qty}
                   min={0}
                   onChange={(e) => updateItem(it.id, { qty: +e.target.value })}
@@ -151,7 +151,7 @@ export function BudgetItemsEditor({
                 <button
                   type="button"
                   onClick={() => updateItem(it.id, { qty: (it.qty || 0) + 1 })}
-                  className="px-2.5 py-2.5 text-neutral-500 transition hover:bg-neutral-100"
+                  className="px-2.5 py-2.5 text-neutral-500 transition hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60"
                   aria-label="Aumentar quantidade"
                 >
                   <Plus size={14} />
@@ -167,20 +167,20 @@ export function BudgetItemsEditor({
                   value={valueTexts[it.id] ?? ''}
                   onChange={(e) => setValueText(it.id, e.target.value)}
                   placeholder="0,00"
-                  className="w-full rounded-xl border border-neutral-300 py-2.5 pl-8 pr-3 text-right text-sm font-semibold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full rounded-xl border border-neutral-300 py-2.5 pl-8 pr-3 text-right text-sm font-semibold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
                 />
               </div>
 
               <div className="pb-2.5 text-right">
-                <div className="text-sm font-bold text-primary-700">{formatBRL(it.total)}</div>
+                <div className="text-sm font-bold text-primary-700 dark:text-primary-300">{formatBRL(it.total)}</div>
                 <div className="text-[10px] text-neutral-400">total</div>
               </div>
 
-              <div className="col-span-3 flex justify-end gap-1 border-t border-neutral-100 pt-2 sm:col-span-1 sm:border-t-0 sm:pt-0">
+              <div className="col-span-3 flex justify-end gap-1 border-t border-neutral-100 pt-2 sm:col-span-1 sm:border-t-0 sm:pt-0 dark:border-neutral-700">
                 <button
                   type="button"
                   onClick={() => duplicateItem(it.id)}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-primary-50 hover:text-primary-700"
+                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-900/40 dark:hover:text-primary-300"
                   aria-label="Duplicar item"
                   title="Duplicar"
                 >
@@ -190,7 +190,7 @@ export function BudgetItemsEditor({
                   type="button"
                   onClick={() => moveItem(it.id, -1)}
                   disabled={idx === 0}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30"
+                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-700/60"
                   aria-label="Mover para cima"
                   title="Mover para cima"
                 >
@@ -200,7 +200,7 @@ export function BudgetItemsEditor({
                   type="button"
                   onClick={() => moveItem(it.id, 1)}
                   disabled={idx === items.length - 1}
-                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30"
+                  className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 disabled:opacity-30 dark:hover:bg-neutral-700/60"
                   aria-label="Mover para baixo"
                   title="Mover para baixo"
                 >
@@ -212,9 +212,9 @@ export function BudgetItemsEditor({
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">
-        <span className="text-sm font-semibold text-primary-700">Subtotal (itens)</span>
-        <span className="text-lg font-extrabold text-primary-800">{formatBRL(total)}</span>
+      <div className="mt-3 flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3 dark:bg-primary-900/40">
+        <span className="text-sm font-semibold text-primary-700 dark:text-primary-300">Subtotal (itens)</span>
+        <span className="text-lg font-extrabold text-primary-800 dark:text-primary-200">{formatBRL(total)}</span>
       </div>
 
       <MaterialCatalog

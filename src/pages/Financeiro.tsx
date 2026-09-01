@@ -52,38 +52,38 @@ export default function Financeiro() {
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === r ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600'}`}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === r ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'}`}
             >
               {r === 'hoje' ? 'Hoje' : r === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
           <button
             onClick={() => setRange('periodo')}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === 'periodo' ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600'}`}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${range === 'periodo' ? 'bg-primary-700 text-white' : 'bg-white border border-neutral-200 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'}`}
           >
             Período
           </button>
         </div>
-        <div className="text-sm font-bold text-neutral-700 capitalize">{label}</div>
+        <div className="text-sm font-bold text-neutral-700 capitalize dark:text-neutral-200">{label}</div>
       </div>
 
       {range === 'periodo' && (
         <div className="mb-4 grid grid-cols-2 gap-3">
-          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm" value={start} onChange={(e) => setStart(e.target.value)} />
-          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={start} onChange={(e) => setStart(e.target.value)} />
+          <input type="date" className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600" value={end} onChange={(e) => setEnd(e.target.value)} />
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={<TrendingUp size={20} />} label="Faturamento" value={formatBRL(revenue)} />
-        <StatCard icon={<CheckCircle2 size={20} />} color="text-success" bg="bg-green-50" label="Recebido" value={formatBRL(paid)} />
-        <StatCard icon={<Clock size={20} />} color="text-warning" bg="bg-orange-50" label="A receber" value={formatBRL(toReceive)} />
+        <StatCard icon={<CheckCircle2 size={20} />} color="text-success" bg="bg-green-50 dark:bg-green-900/30" label="Recebido" value={formatBRL(paid)} />
+        <StatCard icon={<Clock size={20} />} color="text-warning" bg="bg-orange-50 dark:bg-orange-900/30" label="A receber" value={formatBRL(toReceive)} />
         <StatCard icon={<Wallet size={20} />} label="Serviços" value={`${doneCount} concluídos`} />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="text-base font-bold text-neutral-800">Faturamento por serviço</h2>
+          <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Faturamento por serviço</h2>
           {byService.length === 0 ? (
             <p className="mt-2 text-sm text-neutral-400">Sem dados neste período.</p>
           ) : (
@@ -93,10 +93,10 @@ export default function Financeiro() {
                 return (
                   <div key={name}>
                     <div className="flex justify-between text-sm">
-                      <span className="text-neutral-600">{name}</span>
-                      <span className="font-semibold text-neutral-800">{formatBRL(val)}</span>
+                      <span className="text-neutral-600 dark:text-neutral-300">{name}</span>
+                      <span className="font-semibold text-neutral-800 dark:text-neutral-100">{formatBRL(val)}</span>
                     </div>
-                    <div className="mt-1 h-2 rounded-full bg-neutral-100">
+                    <div className="mt-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-700/60">
                       <div className="h-2 rounded-full bg-primary-600" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
@@ -106,11 +106,11 @@ export default function Financeiro() {
           )}
         </Card>
         <Card>
-          <h2 className="text-base font-bold text-neutral-800">Resumo</h2>
+          <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Resumo</h2>
           <div className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between border-b border-neutral-100 pb-2"><span className="text-neutral-500">Serviços no período</span><b>{periodOrders.length}</b></div>
-            <div className="flex justify-between border-b border-neutral-100 pb-2"><span className="text-neutral-500">Serviços pendentes</span><b>{pendingCount}</b></div>
-            <div className="flex justify-between"><span className="text-neutral-500">Ticket médio</span><b>{periodOrders.length ? formatBRL(revenue / periodOrders.length) : '—'}</b></div>
+            <div className="flex justify-between border-b border-neutral-100 pb-2 dark:border-neutral-800"><span className="text-neutral-500 dark:text-neutral-400">Serviços no período</span><b>{periodOrders.length}</b></div>
+            <div className="flex justify-between border-b border-neutral-100 pb-2 dark:border-neutral-800"><span className="text-neutral-500 dark:text-neutral-400">Serviços pendentes</span><b>{pendingCount}</b></div>
+            <div className="flex justify-between"><span className="text-neutral-500 dark:text-neutral-400">Ticket médio</span><b>{periodOrders.length ? formatBRL(revenue / periodOrders.length) : '—'}</b></div>
           </div>
         </Card>
       </div>

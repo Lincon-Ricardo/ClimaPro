@@ -15,9 +15,12 @@ import {
   Briefcase,
   FileText,
   Bell,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
+import { useTheme } from '../context/ThemeContext';
 import { NavItem } from './NavItem';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
@@ -58,6 +61,7 @@ export function Layout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const { resolved, setTheme } = useTheme();
   const unreadCount = useLiveQuery(
     () => db.notifications.filter((n) => n.read === false).count(),
     []
@@ -74,7 +78,7 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       <div className="hidden lg:flex">
         <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-primary-800 text-white">
           <div className="px-5 py-6">
@@ -135,12 +139,19 @@ export function Layout() {
             >
               <Search size={18} />
             </button>
+            <button
+              onClick={() => setTheme(resolved ? 'light' : 'dark')}
+              aria-label="Alternar tema"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10"
+            >
+              {resolved ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
           </div>
         </header>
         <main className="px-4 pb-24 pt-4">
           <Outlet />
         </main>
-        <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]">
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-800 dark:bg-neutral-900">
           {bottomItems.map((it) => (
             <NavItem
               key={it.to}

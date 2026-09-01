@@ -69,7 +69,7 @@ export default function NovoOrcamento() {
   return (
     <div className="max-w-3xl">
       <PageHeader title="Novo orçamento" subtitle="Monte os itens e o valor total" />
-      <form onSubmit={(e) => handleSave(e, 'enviado')} className="space-y-4 rounded-2xl bg-white p-5 shadow-card">
+      <form onSubmit={(e) => handleSave(e, 'enviado')} className="space-y-4 rounded-2xl bg-white dark:bg-neutral-800 p-5 shadow-card">
         <Select label="Cliente *" required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
           <option value="">Selecione o cliente...</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -84,7 +84,7 @@ export default function NovoOrcamento() {
 
         <BudgetItemsEditor items={items} onChange={setItems} />
 
-        <div className="rounded-xl border border-neutral-200 p-3.5">
+        <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-3.5">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Custos do serviço</div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
@@ -109,7 +109,7 @@ export default function NovoOrcamento() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 p-3.5">
+        <div className="rounded-xl border border-dashed border-neutral-200 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-700/40 p-3.5">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Ajustes (opcional)</div>
           <Input
             label="Desconto"
@@ -123,9 +123,9 @@ export default function NovoOrcamento() {
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">
-          <span className="font-semibold text-primary-700">Valor total</span>
-          <span className="text-xl font-extrabold text-primary-800">{formatBRL(total)}</span>
+        <div className="flex items-center justify-between rounded-xl bg-primary-50 dark:bg-primary-900/40 px-4 py-3">
+          <span className="font-semibold text-primary-700 dark:text-primary-300">Valor total</span>
+          <span className="text-xl font-extrabold text-primary-800 dark:text-primary-200">{formatBRL(total)}</span>
         </div>
 
         <Textarea label="Observações / condições" rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />

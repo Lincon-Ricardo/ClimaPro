@@ -45,8 +45,8 @@ export default function Agenda() {
 
   const countFor = (iso: string) => scheduled.filter((o) => o.date === iso).length;
   const heatColor = (count: number) =>
-    count === 0 ? 'bg-neutral-100 text-neutral-500'
-    : count === 1 ? 'bg-primary-100 text-primary-800'
+    count === 0 ? 'bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400'
+    : count === 1 ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/60 dark:text-primary-200'
     : count === 2 ? 'bg-primary-300 text-primary-900'
     : 'bg-primary-600 text-white';
 
@@ -67,14 +67,14 @@ export default function Agenda() {
       <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary-50 text-primary-700">
+            <div className="flex h-10 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
               <span className="text-sm font-extrabold leading-none">{o.time}</span>
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-neutral-800">{custName(o.customerId)}</div>
-              <div className="text-sm text-neutral-500">❄️ {o.service}</div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</div>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
               <div className="text-xs text-neutral-400">📍 {o.address}</div>
-              <div className="mt-1 text-xs font-semibold text-neutral-500">{formatBRL(o.value)}</div>
+              <div className="mt-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">{formatBRL(o.value)}</div>
             </div>
           </div>
           <StatusBadge status={o.status} />
@@ -91,30 +91,30 @@ export default function Agenda() {
       />
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex rounded-xl border border-neutral-200 bg-white p-1">
+        <div className="flex rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-800">
           {(['dia', 'semana', 'mes'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize ${view === v ? 'bg-primary-700 text-white' : 'text-neutral-500 hover:bg-neutral-100'}`}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize ${view === v ? 'bg-primary-700 text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60'}`}
             >
               {v === 'dia' ? 'Dia' : v === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => move(-1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100"><ChevronLeft size={18} /></button>
-          <span className="min-w-[150px] text-center text-sm font-bold text-neutral-700">
+          <button onClick={() => move(-1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
+          <span className="min-w-[150px] text-center text-sm font-bold text-neutral-700 dark:text-neutral-200">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
-          <button onClick={() => move(1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100"><ChevronRight size={18} /></button>
+          <button onClick={() => move(1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
         </div>
       </div>
 
       {view === 'mes' && (
-        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card">
+        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold text-neutral-700">Ocupação do mês</span>
+            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">Ocupação do mês</span>
             <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
           </div>
           <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -151,10 +151,10 @@ export default function Agenda() {
               <button
                 key={i}
                 onClick={() => setAnchor(d)}
-                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${active ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 bg-white'}`}
+                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${active ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/40' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
               >
                 <div className="text-[10px] font-semibold uppercase text-neutral-400">{WEEKDAYS[i]}</div>
-                <div className={`text-base font-bold ${active ? 'text-primary-700' : 'text-neutral-700'}`}>{d.getDate()}</div>
+                <div className={`text-base font-bold ${active ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-200'}`}>{d.getDate()}</div>
                 <div className={`mt-0.5 h-1.5 w-1.5 rounded-full mx-auto ${scheduled.some((o) => o.date === orderDate(d)) ? 'bg-success' : 'bg-transparent'}`} />
               </button>
             );
@@ -184,7 +184,7 @@ export default function Agenda() {
             return o.date === orderDate(anchor);
           }).length === 0 && (
           <Card>
-            <p className="text-sm text-neutral-500">Nenhum serviço agendado neste período.</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum serviço agendado neste período.</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/app/servicos/novo')}><Plus size={16} /> Agendar</Button>
           </Card>
         )}

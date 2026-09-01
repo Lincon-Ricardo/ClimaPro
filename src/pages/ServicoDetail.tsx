@@ -53,7 +53,7 @@ function PhotoUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className={className}>
-      <div className="mb-2 text-sm font-medium text-neutral-700">{label}</div>
+      <div className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">{label}</div>
       <div className="flex flex-wrap gap-2">
         {photos.map((p) => (
           <div key={p} className="relative">
@@ -70,7 +70,7 @@ function PhotoUpload({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500"
+          className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500 dark:border-neutral-600"
         >
           <Camera size={20} />
         </button>
@@ -206,10 +206,10 @@ export default function ServicoDetail() {
 
       <Card className="mb-3">
         <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-neutral-800">
+          <div className="flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
             <Wrench size={18} className="text-primary-600" /> Status
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLE[o.status as keyof typeof STATUS_STYLE] || 'bg-neutral-100 text-neutral-600'}`}>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLE[o.status as keyof typeof STATUS_STYLE] || 'bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300'}`}>
             {STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status}
           </span>
         </div>
@@ -219,7 +219,7 @@ export default function ServicoDetail() {
               key={s.value}
               onClick={() => setStatus(s.value)}
               className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition ${
-                o.status === s.value ? 'bg-primary-700 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50'
+                o.status === s.value ? 'bg-primary-700 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50 dark:bg-neutral-700/60 dark:text-neutral-300 dark:hover:bg-primary-900/40'
               }`}
             >
               {s.value === 'concluido' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
@@ -231,35 +231,35 @@ export default function ServicoDetail() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card>
-          <div className="font-bold text-neutral-800">Cliente</div>
+          <div className="font-bold text-neutral-800 dark:text-neutral-100">Cliente</div>
           <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-neutral-500">Nome</dt><dd className="font-medium">{customer?.name || '-'}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500">Telefone</dt><dd className="font-medium">{customer?.phone || '-'}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500">Endereço</dt><dd className="font-medium">{o.address || customer?.street || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Nome</dt><dd className="font-medium">{customer?.name || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Telefone</dt><dd className="font-medium">{customer?.phone || '-'}</dd></div>
+            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Endereço</dt><dd className="font-medium">{o.address || customer?.street || '-'}</dd></div>
           </dl>
           {eq && (
-            <div className="mt-3 border-t border-neutral-100 pt-3">
+            <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
               <div className="text-xs font-semibold uppercase text-neutral-400">Equipamento</div>
-              <div className="mt-1 text-sm font-medium text-neutral-700">{eq.brand} {eq.model} · {eq.btus} BTU</div>
-              <div className="text-xs text-neutral-500">{eq.installLocation}</div>
+              <div className="mt-1 text-sm font-medium text-neutral-700 dark:text-neutral-200">{eq.brand} {eq.model} · {eq.btus} BTU</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">{eq.installLocation}</div>
             </div>
           )}
         </Card>
 
         <Card>
-          <div className="font-bold text-neutral-800">Valores</div>
+          <div className="font-bold text-neutral-800 dark:text-neutral-100">Valores</div>
           <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-neutral-500">Valor do serviço</dt><dd className="font-bold text-primary-700">{formatBRL(Number(o.value) || 0)}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500">Pagamento</dt>
+            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Valor do serviço</dt><dd className="font-bold text-primary-700 dark:text-primary-300">{formatBRL(Number(o.value) || 0)}</dd></div>
+            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Pagamento</dt>
               <dd>
-                <button onClick={() => setPayOpen(true)} className="font-medium text-primary-600 hover:underline">
+                <button onClick={() => setPayOpen(true)} className="font-medium text-primary-600 hover:underline dark:text-primary-400">
                   {o.paymentStatus === 'pago' ? 'Pago ✓' : 'Pendente'}
                 </button>
               </dd>
             </div>
           </dl>
           {o.reminderMonths ? (
-            <p className="mt-2 text-xs text-neutral-500">🔁 Lembrete de manutenção: {o.reminderMonths} meses</p>
+            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">🔁 Lembrete de manutenção: {o.reminderMonths} meses</p>
           ) : (
             <Button variant="ghost" size="sm" className="mt-2" onClick={() => setReminderOpen(true)}>Configurar lembrete</Button>
           )}
@@ -267,12 +267,12 @@ export default function ServicoDetail() {
       </div>
 
       <Card className="mt-3">
-        <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800">
+        <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
           <CheckCircle2 size={18} className="text-primary-600" /> Checklist
         </div>
         <div className="space-y-1.5">
           {(o.checklist || []).map((it: ChecklistItem) => (
-            <label key={it.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${it.done ? 'border-green-200 bg-green-50 text-neutral-500 line-through' : 'border-neutral-200 text-neutral-700'}`}>
+            <label key={it.id} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${it.done ? 'border-green-200 bg-green-50 text-neutral-500 line-through dark:text-neutral-400' : 'border-neutral-200 text-neutral-700 dark:border-neutral-700 dark:text-neutral-200'}`}>
               <input type="checkbox" checked={!!it.done} onChange={() => toggleItem(it)} className="h-4 w-4 accent-primary-700" />
               {it.label}
             </label>
@@ -282,7 +282,7 @@ export default function ServicoDetail() {
       </Card>
 
       <Card className="mt-3">
-        <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800">
+        <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
           <Camera size={18} className="text-primary-600" /> Fotos
         </div>
         <div className="space-y-4">
@@ -299,7 +299,7 @@ export default function ServicoDetail() {
       </Card>
 
       <Card className="mt-3">
-        <div className="mb-2 flex items-center gap-2 font-bold text-neutral-800">
+        <div className="mb-2 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
           <StickyNote size={18} className="text-primary-600" /> Observações técnicas
         </div>
         <Input
@@ -312,15 +312,15 @@ export default function ServicoDetail() {
       <Card className="mt-3">
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-bold text-neutral-800">Assinatura do cliente</div>
-            <div className="text-xs text-neutral-500">{o.signatureDate ? `Assinado em ${formatDate(o.signatureDate)}` : 'Ainda não assinado'}</div>
+            <div className="font-bold text-neutral-800 dark:text-neutral-100">Assinatura do cliente</div>
+            <div className="text-xs text-neutral-500 dark:text-neutral-400">{o.signatureDate ? `Assinado em ${formatDate(o.signatureDate)}` : 'Ainda não assinado'}</div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setSignOpen(true)}>
             <Pencil size={15} /> {o.customerSignature ? 'Refazer' : 'Assinar'}
           </Button>
         </div>
         {o.customerSignature && (
-          <img src={o.customerSignature} alt="Assinatura" className="mt-3 h-24 w-full rounded-xl border border-neutral-200 bg-white object-contain" />
+          <img src={o.customerSignature} alt="Assinatura" className="mt-3 h-24 w-full rounded-xl border border-neutral-200 bg-white object-contain dark:border-neutral-700 dark:bg-neutral-800" />
         )}
       </Card>
 
@@ -357,7 +357,7 @@ export default function ServicoDetail() {
       </Modal>
 
       <Modal open={signOpen} onClose={() => setSignOpen(false)} title="Assinatura do cliente">
-        <div className="rounded-xl border-2 border-dashed border-neutral-300 bg-white">
+        <div className="rounded-xl border-2 border-dashed border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-800">
           <SignatureCanvas ref={sigRef} canvasProps={{ className: 'h-40 w-full' }} />
         </div>
         <div className="mt-4 flex gap-3">

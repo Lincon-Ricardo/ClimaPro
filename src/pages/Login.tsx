@@ -52,9 +52,9 @@ export default function Login() {
       <p className="mt-1 text-center text-sm text-primary-200">Gestão profissional para climatização</p>
 
       <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
-        <form onSubmit={handleLogin} className="rounded-2xl bg-white p-6 shadow-xl">
-          <h1 className="text-xl font-extrabold text-neutral-800">Entrar</h1>
-          <p className="mt-1 text-sm text-neutral-500">Acesse sua conta para continuar.</p>
+        <form onSubmit={handleLogin} className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
+          <h1 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Entrar</h1>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar.</p>
 
           {error && (
             <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
@@ -84,7 +84,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => navigate('/forgot-password')}
-              className="text-sm font-medium text-primary-600 hover:underline"
+              className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
             >
               Esqueci minha senha
             </button>

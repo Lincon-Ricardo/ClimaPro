@@ -68,7 +68,7 @@ export function MaterialCatalog({
   return (
     <Modal open={open} onClose={onClose} title="Catálogo de materiais" wide>
       <div className="space-y-4">
-        <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-[1fr_140px_auto]">
+        <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
           <Input
             placeholder="Nome do material (ex.: Filtro TCL)"
             value={name}
@@ -91,24 +91,24 @@ export function MaterialCatalog({
             placeholder="Buscar material..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full rounded-xl border border-neutral-300 pl-9 pr-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
           />
         </div>
 
         <div className="space-y-2">
           {filtered.length === 0 && (
-            <div className="rounded-xl border border-dashed border-neutral-200 p-4 text-center text-sm text-neutral-400">
+            <div className="rounded-xl border border-dashed border-neutral-200 p-4 text-center text-sm text-neutral-400 dark:border-neutral-700 dark:text-neutral-500">
               Nenhum material no catálogo. Adicione os materiais que você usa com frequência.
             </div>
           )}
           {filtered.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 rounded-xl border border-neutral-200 p-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
+            <div key={m.id} className="flex items-center gap-2 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700 dark:bg-neutral-700/40">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                 <Package size={16} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-neutral-800">{m.name}</div>
-                <div className="text-xs text-neutral-500">{formatBRL(m.unitValue)}</div>
+                <div className="truncate text-sm font-semibold text-neutral-800 dark:text-neutral-100">{m.name}</div>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">{formatBRL(m.unitValue)}</div>
               </div>
               <button
                 onClick={() => onInsert({ name: m.name, unitValue: m.unitValue })}
@@ -118,7 +118,7 @@ export function MaterialCatalog({
               </button>
               <button
                 onClick={() => startEdit(m)}
-                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-primary-700"
+                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-primary-700 dark:hover:bg-neutral-700/60 dark:hover:text-primary-300"
                 aria-label="Editar material"
               >
                 <Pencil size={15} />

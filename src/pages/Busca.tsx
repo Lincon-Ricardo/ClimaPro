@@ -56,7 +56,7 @@ export default function Busca() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="🔎 Busque por cliente, telefone, OS, orçamento, endereço, modelo..."
-        className="mb-5 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="mb-5 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
 
       {!term && (
@@ -68,17 +68,17 @@ export default function Busca() {
 
       {term && foundCustomers.length > 0 && (
         <div className="mb-5">
-          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800"><Users size={18} /> Clientes</h2>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100"><Users size={18} /> Clientes</h2>
           {foundCustomers.map((c) => {
             const cnt = orders.filter((o) => o.customerId === c.id).length;
             const last = orders.filter((o) => o.customerId === c.id && o.status === 'concluido').sort((a, b) => b.date.localeCompare(a.date))[0];
             return (
               <Card key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)} className="mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700">{c.name.charAt(0).toUpperCase()}</div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">{c.name.charAt(0).toUpperCase()}</div>
                   <div className="flex-1">
-                    <div className="font-bold text-neutral-800">{c.name}</div>
-                    <div className="text-xs text-neutral-500">
+                    <div className="font-bold text-neutral-800 dark:text-neutral-100">{c.name}</div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
                       {cnt} serviço(s) · Último atendimento: {last ? formatDate(last.date) : '—'} · {c.phone}
                     </div>
                   </div>
@@ -91,13 +91,13 @@ export default function Busca() {
 
       {term && foundOrders.length > 0 && (
         <div className="mb-5">
-          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800"><Wrench size={18} /> Serviços</h2>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100"><Wrench size={18} /> Serviços</h2>
           {foundOrders.map((o) => (
             <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)} className="mb-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="font-bold text-neutral-800">{custName(o.customerId)} <span className="text-xs font-medium text-neutral-400">{o.osNumber}</span></div>
-                  <div className="text-sm text-neutral-500">❄️ {o.service} · {o.date ? formatDate(o.date) : '—'}</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)} <span className="text-xs font-medium text-neutral-400">{o.osNumber}</span></div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service} · {o.date ? formatDate(o.date) : '—'}</div>
                   <div className="text-xs text-neutral-400">{formatBRL(o.value)}</div>
                 </div>
                 <StatusBadge status={o.status} />
@@ -109,16 +109,16 @@ export default function Busca() {
 
       {term && foundBudgets.length > 0 && (
         <div>
-          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800"><Wallet size={18} /> Orçamentos</h2>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100"><Wallet size={18} /> Orçamentos</h2>
           {foundBudgets.map((b) => (
             <Card key={b.id} onClick={() => navigate(`/app/orcamentos/${b.id}`)} className="mb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-neutral-800">{custName(b.customerId)} <span className="text-xs font-medium text-neutral-400">#{b.number}</span></div>
-                  <div className="text-sm text-neutral-500">{b.serviceType}</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{custName(b.customerId)} <span className="text-xs font-medium text-neutral-400">#{b.number}</span></div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400">{b.serviceType}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-neutral-800">{formatBRL(b.total)}</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(b.total)}</div>
                   <div className="text-xs text-neutral-400 capitalize">{b.status}</div>
                 </div>
               </div>

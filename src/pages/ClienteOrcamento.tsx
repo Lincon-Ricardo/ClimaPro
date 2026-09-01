@@ -26,13 +26,13 @@ export default function ClienteOrcamento() {
 
   if (!budget) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
         <Card className="w-full max-w-sm text-center">
           <div className="text-neutral-400">
             <Snowflake size={28} className="mx-auto" />
           </div>
-          <h1 className="mt-3 text-lg font-bold text-neutral-800">Orçamento não encontrado</h1>
-          <p className="mt-1 text-sm text-neutral-500">O link que você acessou é inválido ou expirou.</p>
+          <h1 className="mt-3 text-lg font-bold text-neutral-800 dark:text-neutral-100">Orçamento não encontrado</h1>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">O link que você acessou é inválido ou expirou.</p>
         </Card>
       </div>
     );
@@ -53,7 +53,7 @@ export default function ClienteOrcamento() {
   if (decision) {
     const aprovado = decision === 'aprovado';
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
         <Card className="w-full max-w-md text-center">
           <div
             className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full text-white ${
@@ -62,10 +62,10 @@ export default function ClienteOrcamento() {
           >
             {aprovado ? <Check size={32} /> : <X size={32} />}
           </div>
-          <h1 className="mt-4 text-xl font-extrabold text-neutral-800">
+          <h1 className="mt-4 text-xl font-extrabold text-neutral-800 dark:text-neutral-100">
             {aprovado ? 'Orçamento aprovado!' : 'Orçamento recusado'}
           </h1>
-          <p className="mt-2 text-sm text-neutral-500">
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             {aprovado
               ? `Obrigado, ${customer?.name || ''}! O ${company?.name || 'prestador'} recebeu sua aprovação e entrará em contato para agendar o serviço.`
               : 'Obrigado pelo retorno! Se precisar de ajustes no orçamento, é só falar com o prestador.'}
@@ -88,7 +88,7 @@ export default function ClienteOrcamento() {
   const badge = BUDGET_STATUS[b.status] || { label: b.status, dot: 'bg-neutral-400' };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       <header className="bg-gradient-to-r from-primary-800 to-primary-600 px-5 py-6 text-white">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
           <div className="flex items-center gap-3">
@@ -105,18 +105,18 @@ export default function ClienteOrcamento() {
         <Card className="mb-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <div className="text-sm text-neutral-500">Cliente</div>
-              <div className="text-lg font-bold text-neutral-800">{customer?.name || 'Cliente'}</div>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">Cliente</div>
+              <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{customer?.name || 'Cliente'}</div>
               {customer && (
-                <div className="mt-0.5 flex items-center gap-1 text-sm text-neutral-500">
+                <div className="mt-0.5 flex items-center gap-1 text-sm text-neutral-500 dark:text-neutral-400">
                   <MapPin size={14} /> {customer.street || ''} {customer.number || ''} {customer.city ? `- ${customer.city}` : ''}
                 </div>
               )}
             </div>
             <div className="text-right">
-              <div className="text-sm text-neutral-500">Total</div>
-              <div className="text-2xl font-extrabold text-primary-800">{formatBRL(b.total)}</div>
-              <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-700`}>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">Total</div>
+              <div className="text-2xl font-extrabold text-primary-800 dark:text-primary-200">{formatBRL(b.total)}</div>
+              <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full bg-neutral-100 dark:bg-neutral-700/60 px-2.5 py-0.5 text-xs font-medium text-neutral-700 dark:text-neutral-200`}>
                 <span className={`h-2 w-2 rounded-full ${badge.dot}`} />
                 {badge.label}
               </span>
@@ -125,22 +125,22 @@ export default function ClienteOrcamento() {
         </Card>
 
         <Card className="mb-4">
-          <h2 className="text-base font-bold text-neutral-800">{b.serviceType}</h2>
-          {b.description && <p className="mt-1 text-sm text-neutral-500">{b.description}</p>}
-          <div className="mt-3 space-y-1.5 border-t border-neutral-100 pt-3">
+          <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">{b.serviceType}</h2>
+          {b.description && <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{b.description}</p>}
+          <div className="mt-3 space-y-1.5 border-t border-neutral-100 dark:border-neutral-700 pt-3">
             {b.items.map((i: BudgetItem) => (
               <div key={i.id} className="flex justify-between text-sm">
-                <span className="text-neutral-600">{i.qty}x {i.description}</span>
-                <span className="font-medium text-neutral-800">{formatBRL(i.total)}</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{i.qty}x {i.description}</span>
+                <span className="font-medium text-neutral-800 dark:text-neutral-100">{formatBRL(i.total)}</span>
               </div>
             ))}
             {b.labor > 0 && (
-              <div className="flex justify-between text-sm text-neutral-500">
+              <div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
                 <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
               </div>
             )}
             {b.displacement > 0 && (
-              <div className="flex justify-between text-sm text-neutral-500">
+              <div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
                 <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
               </div>
             )}
@@ -149,13 +149,13 @@ export default function ClienteOrcamento() {
                 <span>Desconto</span><span>- {formatBRL(b.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between border-t border-neutral-100 pt-2 text-base font-bold text-neutral-800">
+            <div className="flex justify-between border-t border-neutral-100 dark:border-neutral-700 pt-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
               <span>Total</span><span>{formatBRL(b.total)}</span>
             </div>
           </div>
           {b.notes && (
-            <div className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
-              <span className="font-semibold text-neutral-700">Observações: </span>{b.notes}
+            <div className="mt-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/40 p-3 text-sm text-neutral-600 dark:text-neutral-300">
+              <span className="font-semibold text-neutral-700 dark:text-neutral-200">Observações: </span>{b.notes}
             </div>
           )}
           <div className="mt-3 flex items-center gap-1 text-xs text-neutral-400">
@@ -164,11 +164,11 @@ export default function ClienteOrcamento() {
         </Card>
 
         <Card>
-          <h2 className="text-center text-lg font-extrabold text-neutral-800">Deseja aprovar este orçamento?</h2>
+          <h2 className="text-center text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Deseja aprovar este orçamento?</h2>
           {b.status === 'aprovado' ? (
             <p className="mt-2 text-center text-sm text-success">Este orçamento já foi aprovado. O prestador entrará em contato.</p>
           ) : b.status === 'recusado' ? (
-            <p className="mt-2 text-center text-sm text-neutral-500">Este orçamento foi recusado. Fale com o prestador para ajustes.</p>
+            <p className="mt-2 text-center text-sm text-neutral-500 dark:text-neutral-400">Este orçamento foi recusado. Fale com o prestador para ajustes.</p>
           ) : (
             <>
               <div className="mt-4 grid grid-cols-2 gap-3">

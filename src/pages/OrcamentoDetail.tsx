@@ -15,7 +15,7 @@ import { formatBRL, formatDate, telToWhats, budgetTotal } from '../lib/utils';
 import type { Budget, BudgetItem } from '../types';
 
 const STATUS_STYLE: Record<string, string> = {
-  rascunho: 'bg-neutral-100 text-neutral-600',
+  rascunho: 'bg-neutral-100 dark:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300',
   enviado: 'bg-blue-100 text-blue-700',
   aprovado: 'bg-green-100 text-green-700',
   recusado: 'bg-red-100 text-red-700',
@@ -232,7 +232,7 @@ export default function OrcamentoDetail() {
 
   return (
     <div className="max-w-3xl">
-      <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 hover:text-primary-600">← Voltar</button>
+      <button onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400">← Voltar</button>
       <PageHeader
         title={`Orçamento #${b.number}`}
         action={
@@ -275,9 +275,9 @@ export default function OrcamentoDetail() {
             <Input label="Prazo de validade" value={draft.validity} onChange={(e) => setDraft({ ...draft, validity: e.target.value })} placeholder="7 dias" />
             <Textarea label="Observações / condições" rows={2} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
 
-            <div className="flex items-center justify-between rounded-xl bg-primary-50 px-4 py-3">
-              <span className="font-semibold text-primary-700">Valor total</span>
-              <span className="text-xl font-extrabold text-primary-800">
+            <div className="flex items-center justify-between rounded-xl bg-primary-50 dark:bg-primary-900/40 px-4 py-3">
+              <span className="font-semibold text-primary-700 dark:text-primary-300">Valor total</span>
+              <span className="text-xl font-extrabold text-primary-800 dark:text-primary-200">
                 {formatBRL(budgetTotal(draft.items.filter((i) => i.description), draft.labor, draft.displacement, draft.discount))}
               </span>
             </div>
@@ -292,35 +292,35 @@ export default function OrcamentoDetail() {
         <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-sm text-neutral-500">Cliente</div>
-            <div className="text-lg font-bold text-neutral-800">{customer?.name || 'Cliente'}</div>
-            <div className="text-sm text-neutral-500">
+            <div className="text-sm text-neutral-500 dark:text-neutral-400">Cliente</div>
+            <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{customer?.name || 'Cliente'}</div>
+            <div className="text-sm text-neutral-500 dark:text-neutral-400">
               {customer ? `${customer.street || ''} ${customer.number || ''}`.trim() || '—' : ''}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-neutral-500">Total</div>
-            <div className="text-2xl font-extrabold text-primary-800">{formatBRL(b.total)}</div>
+            <div className="text-sm text-neutral-500 dark:text-neutral-400">Total</div>
+            <div className="text-2xl font-extrabold text-primary-800 dark:text-primary-200">{formatBRL(b.total)}</div>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-neutral-100 pt-4">
-          <div className="mb-1 text-sm font-semibold text-neutral-700">{b.serviceType}</div>
-          {b.description && <p className="mb-3 text-sm text-neutral-500">{b.description}</p>}
+        <div className="mt-4 border-t border-neutral-100 dark:border-neutral-700 pt-4">
+          <div className="mb-1 text-sm font-semibold text-neutral-700 dark:text-neutral-200">{b.serviceType}</div>
+          {b.description && <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">{b.description}</p>}
           <div className="space-y-1.5">
             {b.items.map((i: BudgetItem) => (
               <div key={i.id} className="flex justify-between text-sm">
-                <span className="text-neutral-600">{i.qty}x {i.description}</span>
-                <span className="font-medium text-neutral-800">{formatBRL(i.total)}</span>
+                <span className="text-neutral-600 dark:text-neutral-300">{i.qty}x {i.description}</span>
+                <span className="font-medium text-neutral-800 dark:text-neutral-100">{formatBRL(i.total)}</span>
               </div>
             ))}
             {b.labor > 0 && (
-              <div className="flex justify-between text-sm text-neutral-500">
+              <div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
                 <span>Mão de obra</span><span>{formatBRL(b.labor)}</span>
               </div>
             )}
             {b.displacement > 0 && (
-              <div className="flex justify-between text-sm text-neutral-500">
+              <div className="flex justify-between text-sm text-neutral-500 dark:text-neutral-400">
                 <span>Deslocamento</span><span>{formatBRL(b.displacement)}</span>
               </div>
             )}
@@ -329,15 +329,15 @@ export default function OrcamentoDetail() {
                 <span>Desconto</span><span>- {formatBRL(b.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between border-t border-neutral-100 pt-2 text-base font-bold text-neutral-800">
+            <div className="flex justify-between border-t border-neutral-100 dark:border-neutral-700 pt-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
               <span>Total</span><span>{formatBRL(b.total)}</span>
             </div>
           </div>
         </div>
 
         {b.notes && (
-          <div className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm text-neutral-600">
-            <span className="font-semibold text-neutral-700">Observações: </span>{b.notes}
+          <div className="mt-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/40 p-3 text-sm text-neutral-600 dark:text-neutral-300">
+            <span className="font-semibold text-neutral-700 dark:text-neutral-200">Observações: </span>{b.notes}
           </div>
         )}
         <div className="mt-2 text-xs text-neutral-400">Validade: {b.validity || '7 dias'} · Criado em {formatDate(b.createdAt)}</div>

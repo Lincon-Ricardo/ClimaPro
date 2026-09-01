@@ -27,13 +27,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-lg"
+            className="pointer-events-auto flex w-full max-w-sm items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
           >
             {t.type === 'success' && <CheckCircle size={18} className="shrink-0 text-success" />}
             {t.type === 'info' && <Info size={18} className="shrink-0 text-primary-600" />}
             {t.type === 'warning' && <AlertTriangle size={18} className="shrink-0 text-warning" />}
             {t.type === 'error' && <XCircle size={18} className="shrink-0 text-danger" />}
-            <span className="text-sm text-neutral-700">{t.message}</span>
+            <span className="text-sm text-neutral-700 dark:text-neutral-200">{t.message}</span>
           </div>
         ))}
       </div>

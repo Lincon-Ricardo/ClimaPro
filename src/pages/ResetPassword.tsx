@@ -99,12 +99,12 @@ export default function ResetPassword() {
         </div>
 
         <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10 flex items-center justify-center">
-          <div className="rounded-2xl bg-white p-6 shadow-xl w-full">
+          <div className="rounded-2xl bg-white p-6 shadow-xl w-full dark:bg-neutral-800">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mx-auto">
               <Lock size={32} className="text-green-600" />
             </div>
-            <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800">Senha atualizada!</h1>
-            <p className="mt-2 text-center text-sm text-neutral-600">
+            <h1 className="mt-4 text-center text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Senha atualizada!</h1>
+            <p className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-300">
               Sua senha foi redefinida com sucesso. Você será redirecionado para o login em breve.
             </p>
           </div>
@@ -124,17 +124,17 @@ export default function ResetPassword() {
       <p className="mt-1 text-center text-sm text-primary-200">Gestão profissional para climatização</p>
 
       <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-xl">
+        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="mb-4 flex items-center gap-2 text-sm font-medium text-primary-600 hover:underline"
+            className="mb-4 flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
             <ArrowLeft size={16} /> Voltar
           </button>
 
-          <h1 className="text-xl font-extrabold text-neutral-800">Redefinir senha</h1>
-          <p className="mt-1 text-sm text-neutral-500">Digite sua nova senha</p>
+          <h1 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Redefinir senha</h1>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Digite sua nova senha</p>
 
           {error && (
             <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>

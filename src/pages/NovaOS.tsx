@@ -88,7 +88,7 @@ export default function NovaOS() {
   return (
     <div className="max-w-2xl">
       <PageHeader title="Novo serviço" subtitle="Crie uma ordem de serviço" />
-      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card">
+      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
         <Select label="Cliente *" required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value, equipmentId: '' })}>
           <option value="">Selecione o cliente...</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -115,13 +115,13 @@ export default function NovaOS() {
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold text-neutral-700">Checklist</span>
+            <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">Checklist</span>
             <span className="text-xs text-neutral-400">{checklist.filter((c) => c.done).length}/{checklist.length}</span>
           </div>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             {checklist.map((item) => (
-              <label key={item.id} className="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-700">
-                <input type="checkbox" checked={item.done} onChange={() => toggle(item.id)} className="h-4 w-4 rounded border-neutral-300 accent-primary-700" />
+              <label key={item.id} className="flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-700 dark:text-neutral-200">
+                <input type="checkbox" checked={item.done} onChange={() => toggle(item.id)} className="h-4 w-4 rounded border-neutral-300 accent-primary-700 dark:border-neutral-600 dark:bg-neutral-800" />
                 {item.label}
               </label>
             ))}

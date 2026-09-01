@@ -37,7 +37,7 @@ export default function Empresa() {
   return (
     <div className="max-w-2xl">
       <PageHeader title="Editar perfil da empresa" subtitle="Essas informações aparecem nos orçamentos e documentos" />
-      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card">
+      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
         <Input label="Nome da empresa" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
           <Input label="CNPJ/CPF" value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} />

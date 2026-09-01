@@ -39,7 +39,7 @@ export default function Clientes() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por nome, telefone ou cidade..."
-        className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
 
       {filtered.length === 0 ? (
@@ -57,18 +57,18 @@ export default function Clientes() {
               <Card key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                       {c.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-bold text-neutral-800">{c.name}</div>
-                      <div className="flex items-center gap-1 text-xs text-neutral-500">
+                      <div className="font-bold text-neutral-800 dark:text-neutral-100">{c.name}</div>
+                      <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
                         <MapPin size={12} /> {c.city || 'Sem cidade'}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-500">
+                <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
                   <span>
                     {orders.filter((o) => o.customerId === c.id).length} serviços · {budgets.filter((b) => b.customerId === c.id).length} orçamentos
                   </span>

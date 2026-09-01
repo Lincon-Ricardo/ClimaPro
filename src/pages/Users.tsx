@@ -68,16 +68,16 @@ export default function Users() {
           {users.map((u) => (
             <Card key={u.id} className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                   {u.role === 'admin' ? <ShieldCheck size={20} /> : <Wrench size={20} />}
                 </div>
                 <div>
-                  <div className="font-bold text-neutral-800">{u.name}</div>
-                  <div className="text-xs text-neutral-500">{u.email}</div>
+                  <div className="font-bold text-neutral-800 dark:text-neutral-100">{u.name}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">{u.email}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-primary-50 text-primary-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300' : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300'}`}>
                   {u.role === 'admin' ? 'Dono' : 'Técnico'}
                 </span>
                 <button
