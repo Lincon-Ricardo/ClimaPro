@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useLiveQuery } from '../hooks/useLiveQuery';
 import { Snowflake, Check, X, MapPin, CalendarCheck, MessageCircle } from 'lucide-react';
-import { db } from '../lib/db';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { Loading } from '../components/Loading';
 import { formatBRL, formatDate, telToWhats } from '../lib/utils';
+import { fetchPublicBudget, decidePublicBudget, type PublicBudgetData } from '../lib/publicBudget';
 import type { BudgetItem } from '../types';
 
 const BUDGET_STATUS: Record<string, { label: string; dot: string }> = {
@@ -19,12 +19,39 @@ type Decision = 'aprovado' | 'recusado' | undefined;
 
 export default function ClienteOrcamento() {
   const { id } = useParams();
+  const [data, setData] = useState<PublicBudgetData | null | undefined>(undefined);
   const [decision, setDecision] = useState<Decision>();
-  const budget = useLiveQuery(() => db.budgets.get(id!), [id]);
-  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  if (!budget) {
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!id) {
+        if (active) setData(null);
+        return;
+      }
+      try {
+        const res = await fetchPublicBudget(id);
+        if (active) setData(res);
+      } catch {
+        if (active) setData(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (data === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (data === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 p-4">
         <Card className="w-full max-w-sm text-center">
@@ -38,16 +65,21 @@ export default function ClienteOrcamento() {
     );
   }
 
-  const b = budget;
-  const company = companies[0];
-  const customer = customers.find((c) => c.id === b.customerId);
+  const { budget: b, company, customer } = data;
 
   async function handleDecision(d: 'aprovado' | 'recusado') {
-    setDecision(d);
-    await db.budgets.update(b.id, {
-      status: d,
-      approvedAt: d === 'aprovado' ? new Date().toISOString().slice(0, 10) : undefined,
-    });
+    if (busy || !id) return;
+    setBusy(true);
+    setError('');
+    try {
+      const status = await decidePublicBudget(id, d);
+      setDecision(status);
+      setData((prev) => (prev ? { ...prev, budget: { ...prev.budget, status } } : prev));
+    } catch (e: any) {
+      setError(e?.message || 'Não foi possível registrar sua decisão. Tente novamente.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (decision) {
@@ -70,10 +102,10 @@ export default function ClienteOrcamento() {
               ? `Obrigado, ${customer?.name || ''}! O ${company?.name || 'prestador'} recebeu sua aprovação e entrará em contato para agendar o serviço.`
               : 'Obrigado pelo retorno! Se precisar de ajustes no orçamento, é só falar com o prestador.'}
           </p>
-          {aprovado && customer && company && (
+          {aprovado && customer && company && (company.whatsapp || company.phone) && (
             <Button
               as="a"
-              href={`https://wa.me/${telToWhats(company.whatsapp)}`}
+              href={`https://wa.me/${telToWhats(company.whatsapp || company.phone)}`}
               target="_blank"
               rel="noreferrer"
               full
@@ -168,6 +200,9 @@ export default function ClienteOrcamento() {
 
         <Card>
           <h2 className="text-center text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Deseja aprovar este orçamento?</h2>
+          {error && (
+            <p className="mt-2 text-center text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
           {b.status === 'aprovado' ? (
             <p className="mt-2 text-center text-sm text-success dark:text-green-400">Este orçamento já foi aprovado. O prestador entrará em contato.</p>
           ) : b.status === 'recusado' ? (
@@ -175,10 +210,12 @@ export default function ClienteOrcamento() {
           ) : (
             <>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button variant="danger" onClick={() => handleDecision('recusado')}><X size={18} /> Recusar</Button>
-                <Button variant="success" onClick={() => handleDecision('aprovado')}><Check size={18} /> Aprovar</Button>
+                <Button variant="danger" disabled={busy} onClick={() => handleDecision('recusado')}><X size={18} /> Recusar</Button>
+                <Button variant="success" disabled={busy} onClick={() => handleDecision('aprovado')}><Check size={18} /> Aprovar</Button>
               </div>
-              <Button as="a" href={`https://wa.me/${company ? telToWhats(company.whatsapp) : ''}`} target="_blank" rel="noreferrer" variant="secondary" full size="sm" className="mt-2"><MessageCircle size={14} /> Tirar dúvidas no WhatsApp</Button>
+              {company && (company.whatsapp || company.phone) && (
+                <Button as="a" href={`https://wa.me/${telToWhats(company.whatsapp || company.phone)}`} target="_blank" rel="noreferrer" variant="secondary" full size="sm" className="mt-2"><MessageCircle size={14} /> Tirar dúvidas no WhatsApp</Button>
+              )}
             </>
           )}
         </Card>

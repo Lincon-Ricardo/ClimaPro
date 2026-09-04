@@ -22,7 +22,7 @@ export default function Agenda() {
 
   const weekDays = useMemo(() => {
     const start = new Date(anchor);
-    const dow = (start.getDay() + 6) % 7;
+    const dow = start.getDay();
     start.setDate(start.getDate() - dow);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
@@ -35,13 +35,34 @@ export default function Agenda() {
 
   function move(dir: number) {
     const n = new Date(anchor);
-    if (view === 'dia') n.setDate(n.getDate() + dir);
+    if (view === 'dia') n.setDate(n.getDate() + dir * 7);
     else if (view === 'semana') n.setDate(n.getDate() + dir * 7);
     else n.setMonth(n.getMonth() + dir);
     setAnchor(n);
   }
 
+  function goToday() {
+    setAnchor(new Date());
+  }
+
   const scheduled = orders.filter((o) => o.status === 'agendado' || o.status === 'em_andamento');
+  const finished = orders.filter((o) => o.status === 'concluido' || o.status === 'cancelado');
+  const noDate = scheduled.filter((o) => !o.date);
+
+  const anchorISO = orderDate(anchor);
+  const weekISOs = useMemo(() => new Set(weekDays.map(orderDate)), [weekDays]);
+  const monthStr = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}`;
+
+  function matchesPeriod(o: any): boolean {
+    if (!o.date) return false;
+    if (view === 'dia') return o.date === anchorISO;
+    if (view === 'semana') return weekISOs.has(o.date);
+    return o.date.startsWith(monthStr);
+  }
+
+  const active = scheduled.filter(matchesPeriod).sort((a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`));
+  const done = finished.filter(matchesPeriod).sort((a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`));
+  const inProgress = active.filter((o) => o.status === 'em_andamento').length;
 
   const countFor = (iso: string) => scheduled.filter((o) => o.date === iso).length;
   const heatColor = (count: number) =>
@@ -63,12 +84,14 @@ export default function Agenda() {
 
 
   function renderDetail(o: any) {
+    const showDate = view !== 'dia';
     return (
       <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
-              <span className="text-sm font-extrabold leading-none">{o.time}</span>
+              <span className="text-sm font-extrabold leading-none">{o.time || '--:--'}</span>
+              {showDate && o.date ? <span className="text-[10px] font-semibold leading-none opacity-80">{o.date.slice(8, 10)}/{o.date.slice(5, 7)}</span> : null}
             </div>
             <div className="min-w-0">
               <div className="truncate font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</div>
@@ -103,11 +126,14 @@ export default function Agenda() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => move(-1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
+          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Semana anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'mes' ? 'Mês anterior' : 'Semana anterior (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
           <span className="min-w-0 whitespace-nowrap text-center text-sm font-bold text-neutral-700 dark:text-neutral-200">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
-          <button onClick={() => move(1)} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
+          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próxima semana' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'mes' ? 'Próximo mês' : 'Próxima semana (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
+          {orderDate(anchor) !== todayISO() && (
+            <button onClick={goToday} className="rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-primary-300 dark:hover:bg-primary-900/40">Hoje</button>
+          )}
         </div>
       </div>
 
@@ -115,7 +141,7 @@ export default function Agenda() {
         <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">Ocupação do mês</span>
-            <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
+            <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date && o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
           </div>
           <div className="grid grid-cols-7 gap-1.5 text-center">
             {WEEKDAYS.map((w) => (
@@ -146,15 +172,15 @@ export default function Agenda() {
       {view !== 'mes' && (
         <div className="mb-4 grid grid-cols-7 gap-2">
           {weekDays.map((d, i) => {
-            const active = orderDate(d) === orderDate(anchor);
+            const activeDay = orderDate(d) === anchorISO;
             return (
               <button
                 key={i}
                 onClick={() => setAnchor(d)}
-                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${active ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/40' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${activeDay ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/40' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
               >
-                <div className="text-[10px] font-semibold uppercase text-neutral-400">{WEEKDAYS[i]}</div>
-                <div className={`text-base font-bold ${active ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-200'}`}>{d.getDate()}</div>
+                <div className="text-[10px] font-semibold uppercase text-neutral-400">{WEEKDAYS[d.getDay()]}</div>
+                <div className={`text-base font-bold ${activeDay ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-200'}`}>{d.getDate()}</div>
                 <div className={`mt-0.5 h-1.5 w-1.5 rounded-full mx-auto ${scheduled.some((o) => o.date === orderDate(d)) ? 'bg-success' : 'bg-transparent'}`} />
               </button>
             );
@@ -162,31 +188,39 @@ export default function Agenda() {
         </div>
       )}
 
+      {view === 'dia' && (
+        <div className="mb-4 flex flex-wrap gap-2 text-xs font-medium">
+          <span className="rounded-full bg-purple-100 px-3 py-1 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200">{active.length} agendado(s)</span>
+          {inProgress > 0 && <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200">{inProgress} em andamento</span>}
+          {done.length > 0 && <span className="rounded-full bg-green-100 px-3 py-1 text-green-800 dark:bg-green-900/40 dark:text-green-200">{done.length} concluído(s)/cancelado(s)</span>}
+        </div>
+      )}
+
+      {view !== 'dia' && (
+        <div className="mb-2 text-sm font-bold text-neutral-700 dark:text-neutral-200">
+          {active.length} serviço(s) {view === 'semana' ? 'nesta semana' : 'neste mês'}
+        </div>
+      )}
+
       <div className="space-y-3">
-        {scheduled
-          .filter((o) => {
-            if (!o.date) return false;
-            if (view === 'mes') {
-              const monthStr = anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0');
-              return o.date.startsWith(monthStr);
-            }
-            return o.date === orderDate(anchor);
-          })
-          .sort((a, b) => a.time.localeCompare(b.time))
-          .map(renderDetail)}
-        {scheduled
-          .filter((o) => {
-            if (!o.date) return false;
-            if (view === 'mes') {
-              const monthStr = anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0');
-              return o.date.startsWith(monthStr);
-            }
-            return o.date === orderDate(anchor);
-          }).length === 0 && (
+        {active.map(renderDetail)}
+        {done.length > 0 && (
+          <>
+            <div className="pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Encerrados neste período</div>
+            {done.map(renderDetail)}
+          </>
+        )}
+        {active.length === 0 && done.length === 0 && (
           <Card>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum serviço agendado neste período.</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/app/servicos/novo')}><Plus size={16} /> Agendar</Button>
           </Card>
+        )}
+        {noDate.length > 0 && (
+          <>
+            <div className="pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Sem data definida</div>
+            {noDate.map(renderDetail)}
+          </>
         )}
       </div>
     </div>

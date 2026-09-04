@@ -10,7 +10,7 @@ import { Modal } from '../components/Modal';
 import {
   Phone, MessageCircle, MapPin, Plus, Snowflake, Pencil, Wallet, Wrench, Trash2,
 } from 'lucide-react';
-import { formatBRL, formatDate, telToWhats } from '../lib/utils';
+import { formatBRL, formatDate, telToWhats, onlyDigits } from '../lib/utils';
 
 export default function ClienteDetail() {
   const { id } = useParams();
@@ -22,6 +22,7 @@ export default function ClienteDetail() {
   const budgets = useLiveQuery(() => db.budgets.where('customerId').equals(id!).toArray(), [id]) || [];
 
   const [showAddEq, setShowAddEq] = useState(false);
+  const [editingEqId, setEditingEqId] = useState<string | null>(null);
   const [eqForm, setEqForm] = useState({
     brand: '', model: '', type: 'Split Higien Wall', btus: 9000, serial: '',
     installLocation: '', installDate: '', warranty: '', notes: '',
@@ -31,14 +32,38 @@ export default function ClienteDetail() {
 
   const done = orders.filter((o) => o.status === 'concluido');
   const totalGasto = done.reduce((s, o) => s + o.value, 0);
-  const lastVisit = done.slice().sort((a, b) => b.date.localeCompare(a.date))[0];
+  const lastVisit = done.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+  const emptyEqForm = { brand: '', model: '', type: 'Split Higien Wall', btus: 9000, serial: '', installLocation: '', installDate: '', warranty: '', notes: '' };
+
+  function openAddEq() {
+    setEditingEqId(null);
+    setEqForm(emptyEqForm);
+    setShowAddEq(true);
+  }
+
+  function openEditEq(eq: any) {
+    setEditingEqId(eq.id);
+    setEqForm({
+      brand: eq.brand || '', model: eq.model || '', type: eq.type || 'Split Higien Wall', btus: eq.btus || 9000,
+      serial: eq.serial || '', installLocation: eq.installLocation || '', installDate: eq.installDate || '',
+      warranty: eq.warranty || '', notes: eq.notes || '',
+    });
+    setShowAddEq(true);
+  }
 
   async function saveEquipment(e: React.FormEvent) {
     e.preventDefault();
-    await db.equipment.add({ ...eqForm, customerId: id!, photos: [], id: crypto.randomUUID() });
+    if (editingEqId) {
+      await db.equipment.update(editingEqId, { ...eqForm });
+      toast('success', 'Equipamento atualizado!');
+    } else {
+      await db.equipment.add({ ...eqForm, customerId: id!, photos: [], id: crypto.randomUUID() });
+      toast('success', 'Equipamento adicionado!');
+    }
     setShowAddEq(false);
-    setEqForm({ brand: '', model: '', type: 'Split Higien Wall', btus: 9000, serial: '', installLocation: '', installDate: '', warranty: '', notes: '' });
-    toast('success', 'Equipamento adicionado!');
+    setEditingEqId(null);
+    setEqForm(emptyEqForm);
   }
 
   async function removeOrder(orderId: string) {
@@ -59,6 +84,19 @@ export default function ClienteDetail() {
     toast('success', 'Equipamento removido.');
   }
 
+  async function deleteCustomer() {
+    if (!confirm(`Excluir o cliente "${customer!.name}"?\n\nIsso remove também equipamentos, serviços e orçamentos dele.`)) return;
+    const eqs = await db.equipment.where('customerId').equals(id!).toArray();
+    await Promise.all(eqs.map((eq) => db.equipment.delete(eq.id)));
+    const sos = await db.serviceOrders.where('customerId').equals(id!).toArray();
+    await Promise.all(sos.map((o) => db.serviceOrders.delete(o.id)));
+    const buds = await db.budgets.where('customerId').equals(id!).toArray();
+    await Promise.all(buds.map((b) => db.budgets.delete(b.id)));
+    await db.customers.delete(id!);
+    toast('success', 'Cliente excluído.');
+    navigate('/app/clientes');
+  }
+
   return (
     <div className="max-w-3xl">
       <button type="button" onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400">← Voltar</button>
@@ -76,9 +114,15 @@ export default function ClienteDetail() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button as="a" href={`https://wa.me/${telToWhats(customer.phone)}`} target="_blank" rel="noreferrer" variant="success"><MessageCircle size={16} /> WhatsApp</Button>
-            <Button as="a" href={`tel:${customer.phone}`} variant="outline" aria-label="Ligar para o cliente"><Phone size={16} /></Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => navigate(`/app/clientes/${customer.id}/editar`)}><Pencil size={16} /> Editar</Button>
+            {(customer.whatsapp || customer.phone) && (
+              <Button as="a" href={`https://wa.me/${telToWhats(customer.whatsapp || customer.phone)}`} target="_blank" rel="noreferrer" variant="success"><MessageCircle size={16} /> WhatsApp</Button>
+            )}
+            {customer.phone && (
+              <Button as="a" href={`tel:${onlyDigits(customer.phone)}`} variant="outline" aria-label="Ligar para o cliente"><Phone size={16} /></Button>
+            )}
+            <Button variant="danger" onClick={deleteCustomer} aria-label="Excluir cliente" title="Excluir cliente"><Trash2 size={16} /></Button>
           </div>
         </div>
 
@@ -104,7 +148,7 @@ export default function ClienteDetail() {
 
       <div className="mt-6 flex items-center justify-between">
         <h2 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Equipamentos</h2>
-        <Button variant="secondary" size="sm" onClick={() => setShowAddEq(true)}>
+        <Button variant="secondary" size="sm" onClick={openAddEq}>
           <Plus size={16} /> Adicionar
         </Button>
       </div>
@@ -125,15 +169,26 @@ export default function ClienteDetail() {
                   Serial: {eq.serial || '—'} · Local: {eq.installLocation || '—'} · Inst. {formatDate(eq.installDate)}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => removeEquipment(eq.id)}
-                className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
-                aria-label="Remover equipamento"
-                title="Remover equipamento"
-              >
-                <Trash2 size={15} />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => openEditEq(eq)}
+                  className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/40 dark:hover:text-primary-300"
+                  aria-label="Editar equipamento"
+                  title="Editar equipamento"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeEquipment(eq.id)}
+                  className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-danger/10 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                  aria-label="Remover equipamento"
+                  title="Remover equipamento"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
           </Card>
         ))}
@@ -221,7 +276,7 @@ export default function ClienteDetail() {
         )}
       </div>
 
-      <Modal open={showAddEq} onClose={() => setShowAddEq(false)} title="Adicionar equipamento" wide>
+      <Modal open={showAddEq} onClose={() => { setShowAddEq(false); setEditingEqId(null); }} title={editingEqId ? 'Editar equipamento' : 'Adicionar equipamento'} wide>
         <form onSubmit={saveEquipment} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input aria-label="Marca" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Marca" value={eqForm.brand} onChange={(e) => setEqForm({ ...eqForm, brand: e.target.value })} />
@@ -240,7 +295,7 @@ export default function ClienteDetail() {
           </div>
           <input aria-label="Garantia" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Garantia (ex.: 12 meses)" value={eqForm.warranty} onChange={(e) => setEqForm({ ...eqForm, warranty: e.target.value })} />
           <input aria-label="Observações" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Observações" value={eqForm.notes} onChange={(e) => setEqForm({ ...eqForm, notes: e.target.value })} />
-          <Button type="submit" full>Salvar equipamento</Button>
+          <Button type="submit" full>{editingEqId ? 'Salvar alterações' : 'Salvar equipamento'}</Button>
         </form>
       </Modal>
     </div>

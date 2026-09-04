@@ -1,23 +1,61 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SignatureCanvas from 'react-signature-canvas';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Input, Textarea } from '../components/Fields';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { Loading } from '../components/Loading';
+import { Eraser, Upload, PenLine } from 'lucide-react';
+
+const emptyForm = {
+  name: '', cnpj: '', phone: '', whatsapp: '', email: '',
+  address: '', instagram: '', site: '', pix: '', logo: '', signature: '',
+  paymentCondition: '', executionTerm: '', warranty: '', defaultValidity: '',
+};
 
 export default function Empresa() {
   const navigate = useNavigate();
   const toast = useToast();
-  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const { user } = useAuth();
+  const companiesRaw = useLiveQuery(() => db.companies.toArray(), []);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    if (companiesRaw !== undefined) setLoaded(true);
+  }, [companiesRaw]);
+  const companies = companiesRaw || [];
   const company = companies[0];
+  const sigRef = useRef<SignatureCanvas>(null);
+  const [sigMode, setSigMode] = useState<'draw' | 'upload' | null>(null);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({
-    name: '', cnpj: '', phone: '', whatsapp: '', email: '',
-    address: '', instagram: '', site: '', pix: '',
-  });
+  const [form, setForm] = useState(emptyForm);
+
+  // Cria automaticamente o registro da empresa se ele ainda não existir.
+  useEffect(() => {
+    (async () => {
+      if (!ready) return;
+      try {
+        if (!company) {
+          const id = crypto.randomUUID();
+          await db.companies.add({ ...emptyForm, id, name: user?.name || 'Minha empresa' });
+          toast('info', 'Perfil de empresa criado. Preencha os dados e salve.');
+          return;
+        }
+        // eslint-disable-next-line no-empty
+      } catch {
+        // empresa será criada no salvamento manual
+      }
+    })();
+  }, [ready, company, user]);
+
+  useEffect(() => {
+    if (loaded) setReady(true);
+  }, [loaded]);
 
   useEffect(() => {
     if (company) {
@@ -31,23 +69,107 @@ export default function Empresa() {
         instagram: company.instagram || '',
         site: company.site || '',
         pix: company.pix || '',
+        logo: company.logo || '',
+        signature: company.signature || '',
+        paymentCondition: company.paymentCondition || '',
+        executionTerm: company.executionTerm || '',
+        warranty: company.warranty || '',
+        defaultValidity: company.defaultValidity || '',
       });
     }
   }, [company]);
 
-  if (!company) return <Loading />;
+  if (!ready) return <Loading />;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    await db.companies.update(company.id, { ...form });
-    toast('success', 'Perfil atualizado!');
-    navigate('/app/perfil');
+    setSaving(true);
+    try {
+      if (company) {
+        await db.companies.update(company.id, { ...form });
+      } else {
+        await db.companies.add({ ...emptyForm, id: crypto.randomUUID(), ...form });
+      }
+      toast('success', 'Perfil atualizado!');
+      navigate('/app/perfil');
+    } catch (err: any) {
+      toast('error', `Erro ao salvar: ${err?.message || 'tente novamente'}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function onLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) {
+      toast('error', 'A logo deve ter no máximo 512KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((f) => ({ ...f, logo: String(reader.result || '') }));
+    reader.readAsDataURL(file);
+  }
+
+  function onSigUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) {
+      toast('error', 'A assinatura deve ter no máximo 512KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((f) => ({ ...f, signature: String(reader.result || '') }));
+      setSigMode(null);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function saveDrawnSignature() {
+    if (!sigRef.current || sigRef.current.isEmpty()) {
+      toast('error', 'Desenhe a assinatura antes de salvar.');
+      return;
+    }
+    const dataUrl = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+    setForm((f) => ({ ...f, signature: dataUrl }));
+    setSigMode(null);
+    toast('success', 'Assinatura salva!');
+  }
+
+  function clearSignature() {
+    setForm((f) => ({ ...f, signature: '' }));
+    sigRef.current?.clear();
+    setSigMode(null);
   }
 
   return (
     <div className="max-w-2xl">
       <PageHeader title="Editar perfil da empresa" subtitle="Essas informações aparecem nos orçamentos e documentos" />
-      <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
+      <form onSubmit={handleSave} className="space-y-5 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
+        {/* Logo */}
+        <div className="flex items-center gap-4">
+          {form.logo ? (
+            <img src={form.logo} alt="Logo" className="h-16 w-16 rounded-xl object-contain bg-neutral-100 dark:bg-neutral-700" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400 dark:bg-neutral-700">
+              Logo
+            </div>
+          )}
+          <div className="space-y-2">
+            <label className="inline-block cursor-pointer rounded-lg border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 dark:border-neutral-600 dark:text-neutral-200">
+              Enviar logo
+              <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onLogoChange} />
+            </label>
+            {form.logo && (
+              <button type="button" onClick={() => setForm((f) => ({ ...f, logo: '' }))} className="block text-sm text-danger">
+                Remover logo
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dados */}
         <Input label="Nome da empresa" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
           <Input label="CNPJ/CPF" value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} />
@@ -63,9 +185,123 @@ export default function Empresa() {
           <Input label="Site" value={form.site} onChange={(e) => setForm({ ...form, site: e.target.value })} />
         </div>
         <Input label="Chave PIX" value={form.pix} onChange={(e) => setForm({ ...form, pix: e.target.value })} />
+
+        {/* ── Condições comerciais ── */}
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
+          <p className="mb-1 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Condições comerciais</p>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Essas condições aparecem automaticamente nos PDFs de orçamento.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Forma de pagamento"
+              value={form.paymentCondition}
+              onChange={(e) => setForm({ ...form, paymentCondition: e.target.value })}
+              placeholder="Ex.: PIX, dinheiro ou cartão"
+            />
+            <Input
+              label="Prazo de execução"
+              value={form.executionTerm}
+              onChange={(e) => setForm({ ...form, executionTerm: e.target.value })}
+              placeholder="Ex.: em até 2 dias úteis após aprovação"
+            />
+            <Input
+              label="Garantia"
+              value={form.warranty}
+              onChange={(e) => setForm({ ...form, warranty: e.target.value })}
+              placeholder="Ex.: 90 dias para mão de obra"
+            />
+            <Input
+              label="Validade padrão"
+              value={form.defaultValidity}
+              onChange={(e) => setForm({ ...form, defaultValidity: e.target.value })}
+              placeholder="Ex.: 7 dias"
+            />
+          </div>
+        </div>
+
+        {/* ── Assinatura ── */}
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
+          <p className="mb-3 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+            Assinatura do responsável
+          </p>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Essa assinatura aparece nos PDFs de orçamento e ordem de serviço.
+          </p>
+
+          {form.signature && sigMode !== 'draw' && sigMode !== 'upload' ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-white p-3 dark:border-neutral-600 dark:bg-neutral-800">
+                <img src={form.signature} alt="Assinatura" className="max-h-20 object-contain" />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setSigMode('draw')}>
+                  <PenLine size={14} /> Assinar manualmente
+                </Button>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-700">
+                  <Upload size={14} /> Enviar imagem
+                  <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onSigUpload} />
+                </label>
+                <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
+                  <Eraser size={14} /> Remover
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={sigMode === 'draw' ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setSigMode('draw')}
+                >
+                  <PenLine size={14} /> Assinar manualmente
+                </Button>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-700">
+                  <Upload size={14} /> Enviar imagem
+                  <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onSigUpload} />
+                </label>
+                {form.signature && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setSigMode(null)}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+
+              {sigMode === 'draw' && (
+                <div className="space-y-2">
+                  <div className="rounded-lg border border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-800">
+                    <SignatureCanvas
+                      ref={sigRef}
+                      canvasProps={{ className: 'w-full h-24 rounded-lg cursor-crosshair' }}
+                      backgroundColor="rgb(255,255,255)"
+                      penColor="#1e293b"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="secondary" size="sm" onClick={() => sigRef.current?.clear()}>
+                      <Eraser size={14} /> Limpar
+                    </Button>
+                    <Button type="button" size="sm" onClick={saveDrawnSignature}>
+                      Salvar assinatura
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!sigMode && (
+                <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-white text-neutral-400 dark:border-neutral-600 dark:bg-neutral-800">
+                  Nenhuma assinatura configurada
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-3">
           <Button variant="outline" type="button" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button type="submit" full>Salvar</Button>
+          <Button type="submit" full disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
         </div>
       </form>
     </div>

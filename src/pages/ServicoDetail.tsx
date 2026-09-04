@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
-  Sun, CheckCircle2, Clock, Trash2,
+  CheckCircle2, Clock, Trash2,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
+import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -19,6 +19,11 @@ import {
   STATUS_LABEL, STATUS_STYLE, STATUS_DOT, formatBRL, formatDate, telToWhats,
   toggleChecklistItem, todayISO,
 } from '../lib/utils';
+import {
+  createPdf, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter, textHeight, drawSignature, HEADER_SPACE,
+  FOOTER_SPACE, fitOneLine, measureLines, newBrandedPage, stampFooters,
+} from '../lib/pdf/theme';
+import { setPdfFont } from '../lib/pdf/fonts';
 import type { ChecklistItem } from '../types';
 
 const STEP_OPTIONS: { value: string; label: string }[] = [
@@ -96,9 +101,11 @@ export default function ServicoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const order = useLiveQuery(() => db.serviceOrders.get(id!), [id]);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const equipment = useLiveQuery(() => db.equipment.toArray(), []) || [];
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
 
   const [signOpen, setSignOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -124,6 +131,7 @@ export default function ServicoDetail() {
   const o = order;
   const customer = customers.find((c) => c.id === o.customerId);
   const eq = equipment.find((e) => e.id === o.equipmentId);
+  const company = companies[0];
 
   async function setField(changes: Record<string, any>) {
     await db.serviceOrders.update(o.id, changes);
@@ -152,55 +160,197 @@ export default function ServicoDetail() {
 
   async function markPaid() {
     await setField({ paymentStatus: 'pago', paymentMethod });
+    await db.payments.add({
+      id: crypto.randomUUID(),
+      serviceOrderId: o.id,
+      customerId: o.customerId,
+      value: Number(o.value) || 0,
+      method: paymentMethod || 'outro',
+      status: 'pago',
+      paidAt: todayISO(),
+      createdAt: new Date().toISOString(),
+    });
     setPayOpen(false);
     toast('success', 'Pagamento registrado como pago.');
   }
 
   function generatePDF() {
-    const doc = new jsPDF();
-    doc.setFillColor(9, 46, 110);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ORDEM DE SERVIÇO', 14, 14);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`OS Nº ${o.osNumber}`, 14, 20);
-    doc.text(`Data atendimento: ${formatDate(o.date)}`, 14, 25);
+    const ctx = createPdf(company);
+    const { doc, c, ML, MR, CW, PH } = ctx;
 
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Cliente', 14, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`${customer?.name || ''}`, 14, 46);
-    doc.text(`${customer?.phone || ''} · ${customer?.email || ''}`, 14, 52);
-    doc.text(`${customer ? [customer.street, customer.number, customer.city].filter(Boolean).join(', ') : ''}`, 14, 58);
+    const payLabel = o.paymentStatus === 'pago' ? 'Pago' : 'Pendente';
+    const payMethod = o.paymentStatus === 'pago' && o.paymentMethod ? ` · ${o.paymentMethod}` : '';
+    const rightLines = [
+      `Técnico: ${o.technician || user?.firstName || '-'}`,
+      `Data: ${formatDate(o.date)}`,
+      `OS Nº ${o.osNumber}`,
+    ];
+    const headerArgs = {
+      company,
+      title: 'ORDEM DE SERVIÇO',
+      docName: 'Atendimento técnico',
+      rightLines,
+    };
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('Serviço', 14, 70);
-    doc.setFont('helvetica', 'normal');
-    autoTable(doc, {
-      startY: 74,
-      head: [['Problema relatado', 'Serviço', 'Valor']],
-      body: [[o.problem || '-', o.service || '-', formatBRL(Number(o.value) || 0)]],
-      theme: 'striped',
-    });
-    const after = (doc as any).lastAutoTable.finalY || 90;
-    doc.text(`Status: ${STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status}`, 14, after + 10);
-    if (o.observacoesTecnicas) doc.text(`Observações técnicas: ${o.observacoesTecnicas}`, 14, after + 16);
-    if (o.customerSignature) {
-      doc.addImage(o.customerSignature, 'PNG', 14, after + 22, 60, 30);
-      doc.setFontSize(8);
-      doc.text('Assinatura do cliente', 14, after + 55);
+    const header = () => {
+      drawBrandHeader(ctx, headerArgs);
+      drawBrandFooter(ctx, company);
+    };
+    header();
+
+    let y = HEADER_SPACE;
+
+    // ── cliente + equipamento ───────────────────────────────────
+    const colW = (CW - 6) / 2;
+    const drawBox = (x: number, label: string, title: string, s1?: string, s2?: string, s3?: string) => {
+      const innerW = colW - 14;
+      const labelTop = y - 4;
+      const titleLines = measureLines(doc, title, 10, 'semibold', innerW).length;
+      const len1 = s1 ? measureLines(doc, s1, 8, 'normal', innerW).length : 0;
+      const len2 = s2 ? measureLines(doc, s2, 8, 'normal', innerW).length : 0;
+      const len3 = s3 ? measureLines(doc, s3, 8, 'normal', innerW).length : 0;
+      const contentH = 10 + titleLines * 4.2 + (len1 + len2 + len3) * 3.8 + 2;
+      const boxHeight = Math.max(26, contentH);
+      doc.setFillColor(c.soft[0], c.soft[1], c.soft[2]);
+      doc.setDrawColor(c.line[0], c.line[1], c.line[2]);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(x, labelTop, colW, boxHeight, 2, 2, 'FD');
+      doc.setFillColor(c.brand[0], c.brand[1], c.brand[2]);
+      doc.roundedRect(x, labelTop, 2.2, 6, 1, 1, 'F');
+      sectionLabel(doc, label, x + 5, y + 1, c.muted);
+      let ty = y + 7.5;
+      const n0 = text(doc, { x: x + 5, y: ty, str: title, size: 10, weight: 'semibold', color: c.ink, w: innerW });
+      ty += n0 * 4.2 + 1.5;
+      if (s1) { const n = text(doc, { x: x + 5, y: ty, str: s1, size: 8, weight: 'normal', color: c.muted, w: innerW }); ty += n * 3.8 + 0.8; }
+      if (s2) { const n = text(doc, { x: x + 5, y: ty, str: s2, size: 8, weight: 'normal', color: c.muted, w: innerW }); ty += n * 3.8 + 0.8; }
+      if (s3) text(doc, { x: x + 5, y: ty, str: s3, size: 8, weight: 'normal', color: c.muted, w: innerW });
+      return boxHeight;
+    };
+
+    const custAddr = [customer?.street, customer?.number, customer?.district, customer?.city].filter(Boolean).join(', ') || o.address;
+    const custContact = [customer?.phone, customer?.email].filter(Boolean).join('   ·   ');
+    const eqTitle = eq ? [`${eq.brand} ${eq.model}`.trim(), `${eq.btus} BTU`].filter(Boolean).join(' · ') : (o.service || '-');
+    const eqSub = eq ? [eq.type, eq.installLocation, eq.serial && `S/N ${eq.serial}`].filter(Boolean).join('   ·   ') : '';
+    const boxH = Math.max(drawBox(ML, 'CLIENTE', customer?.name || '-', custAddr || undefined, custContact || undefined), drawBox(ML + colW + 6, 'EQUIPAMENTO', eqTitle, eqSub || undefined, eq?.warranty || undefined));
+    y += boxH + 8;
+
+    // ── serviço solicitado ──────────────────────────────────────
+    sectionLabel(doc, 'Serviço solicitado', ML, y, c.brand);
+    const problemTxt = (o.service || '') + (o.problem ? ` — ${o.problem}` : '');
+    text(doc, { x: ML, y: y + 6, str: problemTxt || '-', size: 9, weight: 'normal', color: c.ink, w: CW });
+    y += 6 + textHeight(doc, problemTxt || '-', 9, CW);
+
+    // ── checklist executado ─────────────────────────────────────
+    const doneItems = (o.checklist || []).filter((it: ChecklistItem) => it.done);
+    if (doneItems.length > 0) {
+      y += 6;
+      divider(doc, c, y - 2, ML, MR);
+      sectionLabel(doc, 'Executado', ML, y, c.brand);
+      y += 2;
+      const half = Math.ceil(doneItems.length / 2);
+      setPdfFont(doc, 'normal', 8);
+      doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
+      let cy = y + 6;
+      const colMax = Math.max(half, doneItems.length - half);
+      const itemW = CW / 2 - 10;
+      for (let i = 0; i < colMax; i++) {
+        if (cy > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); cy = y + 6; setPdfFont(doc, 'normal', 8); doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]); }
+        if (doneItems[i]) { doc.setFillColor(c.success[0], c.success[1], c.success[2]); doc.circle(ML + 1.5, cy - 1.5, 1.1, 'F'); doc.text(fitOneLine(doc, doneItems[i].label, itemW), ML + 5, cy); }
+        if (doneItems[half + i]) {
+          const x2 = ML + CW / 2 + 5;
+          doc.setFillColor(c.success[0], c.success[1], c.success[2]); doc.circle(x2 - 3, cy - 1.5, 1.1, 'F');
+          doc.text(fitOneLine(doc, doneItems[half + i].label, itemW), x2 + 1, cy);
+        }
+        cy += 5;
+      }
+      y = cy + 4;
     }
+
+    // ── observações técnicas ────────────────────────────────────
+    if (o.observacoesTecnicas) {
+      const obsH = 6 + textHeight(doc, o.observacoesTecnicas, 8.5, CW);
+      if (y + obsH > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
+      sectionLabel(doc, 'Observações técnicas', ML, y, c.brand);
+      text(doc, { x: ML, y: y + 6, str: o.observacoesTecnicas, size: 8.5, weight: 'normal', color: c.muted, w: CW });
+      y += 6 + textHeight(doc, o.observacoesTecnicas, 8.5, CW);
+    }
+
+    // ── valores ─────────────────────────────────────────────────
+    y += 6;
+    const valRows: Array<[string, string]> = [
+      ['Valor do serviço', formatBRL(Number(o.value) || 0)],
+      ['Status', STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status],
+      ['Pagamento', payLabel + payMethod],
+    ];
+    const boxW2 = 120;
+    const bx2X = MR - boxW2;
+    const boxH2 = valRows.length * 6 + 6;
+    if (y + boxH2 > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
+    doc.setFillColor(c.soft[0], c.soft[1], c.soft[2]);
+    doc.setDrawColor(c.line[0], c.line[1], c.line[2]);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(bx2X, y - 4, boxW2, boxH2, 2, 2, 'FD');
+    let vy = y;
+    setPdfFont(doc, 'normal', 8.5);
+    for (const [k, v] of valRows) {
+      text(doc, { x: bx2X + 5, y: vy + 3, str: k, size: 8.5, weight: 'normal', color: c.muted });
+      text(doc, { x: MR - 5, y: vy + 3, str: v, size: 8.5, weight: 'semibold', color: c.ink, align: 'right' });
+      vy += 6;
+    }
+    y = vy + 2;
+
+    // ── assinaturas (bloco no fluxo, com respiro antes do rodapé)
+    const sigNeed = 42;
+    if (y + sigNeed > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
+    const sigTop = y + 6;
+    const sigW = (CW - 16) / 2;
+    const sigGap = 16;
+    const sigY = sigTop + 24;
+    divider(doc, c, sigTop, ML, MR);
+    // cliente
+    const ccol = ML + sigW / 2;
+    setPdfFont(doc, 'semibold', 8);
+    doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
+    doc.text(fitOneLine(doc, customer?.name || 'Cliente', sigW - 10), ccol, sigTop + 7, { align: 'center' });
+    if (o.customerSignature && o.customerSignature !== 'undefined') {
+      drawSignature(doc, o.customerSignature, ccol, sigY, sigW - 4, 11);
+    }
+    doc.setDrawColor(c.ink[0], c.ink[1], c.ink[2]);
+    doc.setLineWidth(0.45);
+    doc.line(ML, sigY, ML + sigW, sigY);
+    text(doc, { x: ccol, y: sigY + 5, str: 'Assinatura do cliente', size: 6.5, weight: 'normal', color: c.muted, align: 'center' });
+    // empresa
+    const sx2 = ML + sigW + sigGap;
+    const scol = sx2 + sigW / 2;
+    setPdfFont(doc, 'semibold', 8);
+    doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
+    doc.text(fitOneLine(doc, company?.name || 'Empresa', sigW - 10), scol, sigTop + 7, { align: 'center' });
+    if (company?.signature) {
+      drawSignature(doc, company.signature, scol, sigY, sigW - 4, 11);
+    }
+    doc.setDrawColor(c.ink[0], c.ink[1], c.ink[2]);
+    doc.setLineWidth(0.45);
+    doc.line(sx2, sigY, sx2 + sigW, sigY);
+    text(doc, { x: scol, y: sigY + 5, str: 'Responsável', size: 6.5, weight: 'normal', color: c.muted, align: 'center' });
+
+    stampFooters(ctx, company);
     doc.save(`OS-${o.osNumber}.pdf`);
+    toast('success', 'PDF gerado!');
   }
 
-  const phone = customer?.phone;
-  const waLink = phone ? `https://wa.me/${telToWhats(phone)}` : '#';
+  async function handleDelete() {
+    if (!confirm(`Excluir a OS "${o.osNumber}"?\n\nEssa ação não pode ser desfeita.`)) return;
+    try {
+      await db.serviceOrders.delete(o.id);
+      toast('success', 'Serviço excluído!');
+      navigate('/app/servicos');
+    } catch {
+      toast('error', 'Não foi possível excluir. Tente novamente.');
+    }
+  }
+
+  const phone = customer?.whatsapp || customer?.phone;
+  const waLink = phone ? `https://wa.me/${telToWhats(phone)}` : null;
 
   return (
     <div className="max-w-2xl">
@@ -209,8 +359,9 @@ export default function ServicoDetail() {
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
         action={
           <div className="flex gap-2">
-            <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>
+            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>}
             <Button variant="outline" size="sm" onClick={generatePDF}><FileDown size={16} /> PDF</Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
           </div>
         }
       />

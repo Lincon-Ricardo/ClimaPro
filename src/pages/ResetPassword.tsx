@@ -69,8 +69,7 @@ export default function ResetPassword() {
         setSuccess(true);
         toast('success', 'Senha atualizada com sucesso!');
       }
-    } catch (err) {
-      console.error('Erro ao resetar senha:', err);
+    } catch {
       setError('Erro ao processar sua solicitação');
     } finally {
       setLoading(false);

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Users, LogOut, RefreshCw, Trash2, Sun, Moon, Monitor } from 'lucide-react';
+import { LogOut, Trash2, Sun, Moon, Monitor } from 'lucide-react';
 import { db } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -30,18 +30,9 @@ export default function Config() {
       db.payments.clear(),
       db.appointments.clear(),
       db.notifications.clear(),
+      db.materials.clear(),
     ]);
     toast('info', 'Dados apagados.');
-  }
-
-  async function reseed() {
-    await db.equipment.clear();
-    await db.customers.clear();
-    await db.budgets.clear();
-    await db.serviceOrders.clear();
-    await db.payments.clear();
-    await db.appointments.clear();
-    await db.notifications.clear();
     window.location.reload();
   }
 
@@ -82,8 +73,7 @@ export default function Config() {
         </Card>
         <Card>
           <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Dados</h2>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button variant="secondary" onClick={reseed}><RefreshCw size={16} /> Restaurar dados de exemplo</Button>
+          <div className="mt-3">
             <Button variant="danger" onClick={wipe}><Trash2 size={16} /> Apagar todos os dados</Button>
           </div>
         </Card>

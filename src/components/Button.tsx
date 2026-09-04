@@ -1,6 +1,6 @@
 import type { ReactNode, ButtonHTMLAttributes, AnchorHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline' | 'light';
 type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
@@ -11,6 +11,7 @@ const variants: Record<Variant, string> = {
   danger: 'bg-danger text-white hover:bg-red-700 shadow-sm',
   success: 'bg-success text-white hover:bg-green-700 shadow-sm',
   outline: 'bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-600 dark:hover:bg-neutral-700',
+  light: 'bg-white text-primary-800 hover:bg-primary-50 active:bg-primary-100 shadow-sm',
 };
 
 const sizes: Record<Size, string> = {

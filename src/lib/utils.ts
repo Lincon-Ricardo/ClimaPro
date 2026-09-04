@@ -34,8 +34,10 @@ export const STATUS_DOT: Record<ServiceStatus, string> = {
   cancelado: 'bg-red-500',
 };
 
-export function formatBRL(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+export function formatBRL(value: number | null | undefined): string {
+  const n = Number(value);
+  const safe = Number.isFinite(n) ? n : 0;
+  return safe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 export function brlToNumber(v: string): number {
@@ -100,12 +102,14 @@ export function uid(prefix = ''): string {
   return prefix + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
 }
 
-export function onlyDigits(v: string): string {
-  return v.replace(/\D/g, '');
+export function onlyDigits(v: string | number | null | undefined): string {
+  return String(v ?? '').replace(/\D/g, '');
 }
 
-export function telToWhats(phone: string): string {
-  return '55' + onlyDigits(phone);
+export function telToWhats(phone: string | number | null | undefined): string {
+  let d = onlyDigits(phone);
+  if (d.startsWith('55')) d = d.slice(2);
+  return d ? '55' + d : '';
 }
 
 export function formatPhone(phone: string): string {

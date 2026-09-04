@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
-import { UserRound, Plus, Trash2, ShieldCheck, Wrench } from 'lucide-react';
+import { UserRound, Plus, Trash2, ShieldCheck, Wrench, Pencil } from 'lucide-react';
 import { db } from '../lib/db';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Input } from '../components/Fields';
@@ -9,43 +11,121 @@ import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 
+const emptyForm = { name: '', email: '', password: '', role: 'tech' as 'tech' | 'admin' };
+
 export default function Users() {
   const toast = useToast();
+  const { user } = useAuth();
   const users = useLiveQuery(() => db.users.toArray(), []) || [];
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [editing, setEditing] = useState<any>(null);
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  async function handleCreate(e: React.FormEvent) {
+  const isAdmin = user?.role === 'admin';
+
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  }
+
+  function openEdit(u: any) {
+    setEditing(u);
+    setForm({ name: u.name || '', email: u.email || '', password: '', role: u.role === 'admin' ? 'admin' : 'tech' });
+    setShowModal(true);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.password) {
-      toast('error', 'Preencha nome, e-mail e senha.');
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode gerenciar usuários.');
       return;
     }
-    const existing = await db.users.where('email').equals(form.email.trim().toLowerCase()).first();
-    if (existing) {
-      toast('error', 'Este e-mail já está cadastrado.');
+    if (!form.name.trim() || !form.email.trim()) {
+      toast('error', 'Preencha nome e e-mail.');
       return;
     }
+    if (!editing && !form.password) {
+      toast('error', 'Defina uma senha para o novo usuário.');
+      return;
+    }
+    const email = form.email.trim().toLowerCase();
     setSaving(true);
-    await db.users.add({
-      id: crypto.randomUUID(),
-      name: form.name.trim(),
-      firstName: form.name.trim().split(' ')[0],
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-      role: 'tech',
-    });
-    setSaving(false);
+    try {
+      if (editing) {
+        await db.users.update(editing.id, {
+          name: form.name.trim(),
+          firstName: form.name.trim().split(' ')[0],
+          role: form.role,
+        });
+        toast('success', form.password
+          ? 'Usuário atualizado! Para trocar a senha, use "Esqueci minha senha" no login.'
+          : 'Usuário atualizado!');
+      } else {
+        const existing = await db.users.where('email').equals(email).first();
+        if (existing) {
+          toast('error', 'Este e-mail já está cadastrado.');
+          return;
+        }
+        const companyId = user?.companyId || companies[0]?.id || companies[0]?.companyId;
+        if (!companyId) {
+          toast('error', 'Empresa não encontrada. Tente recarregar a página.');
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password: form.password,
+          options: { data: { name: form.name.trim(), company_id: companyId, role: form.role } },
+        });
+        if (error) {
+          toast('error', error.message || 'Não foi possível cadastrar.');
+          return;
+        }
+        if (!data.session) {
+          toast('info', 'Convite criado! O técnico precisa confirmar o e-mail antes de entrar.');
+        } else {
+          toast('success', 'Técnico cadastrado!');
+        }
+      }
+    } catch (err: any) {
+      toast('error', `Erro ao salvar: ${err?.message || 'tente novamente'}`);
+      return;
+    } finally {
+      setSaving(false);
+    }
+
     setShowModal(false);
-    setForm({ name: '', email: '', password: '' });
-    toast('success', 'Técnico cadastrado!');
+    setEditing(null);
+    setForm(emptyForm);
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Remover este usuário?')) return;
-    await db.users.delete(id);
-    toast('info', 'Usuário removido.');
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode remover usuários.');
+      return;
+    }
+    if (id === user?.id) {
+      toast('error', 'Você não pode remover a própria conta.');
+      return;
+    }
+    if (!confirm('Remover este usuário? Ele perderá o acesso à empresa.')) return;
+    try {
+      await db.users.delete(id);
+      toast('info', 'Usuário removido.');
+    } catch (err: any) {
+      toast('error', `Erro ao remover: ${err?.message || 'tente novamente'}`);
+    }
+  }
+
+  if (user && !isAdmin) {
+    return (
+      <div className="max-w-2xl">
+        <PageHeader title="Técnicos" subtitle="Acesso restrito" />
+        <Card><p className="text-sm text-neutral-500 dark:text-neutral-400">Somente o dono da empresa pode gerenciar a equipe.</p></Card>
+      </div>
+    );
   }
 
   return (
@@ -53,7 +133,7 @@ export default function Users() {
       <PageHeader
         title="Técnicos"
         subtitle={`${users.length} usuário(s) na equipe`}
-        action={<Button onClick={() => setShowModal(true)}><Plus size={18} /> Novo técnico</Button>}
+        action={<Button onClick={openCreate}><Plus size={18} /> Novo técnico</Button>}
       />
 
       {users.length === 0 ? (
@@ -61,7 +141,7 @@ export default function Users() {
           icon={<UserRound size={26} />}
           title="Nenhum técnico cadastrado"
           subtitle="Cadastre sua equipe para acompanhar o desempenho."
-          action={<Button onClick={() => setShowModal(true)}><Plus size={18} /> Novo técnico</Button>}
+          action={<Button onClick={openCreate}><Plus size={18} /> Novo técnico</Button>}
         />
       ) : (
         <div className="space-y-2">
@@ -82,6 +162,15 @@ export default function Users() {
                 </span>
                 <button
                   type="button"
+                  onClick={() => openEdit(u)}
+                  className="rounded-lg p-1.5 text-neutral-400 hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-900/40 dark:hover:text-primary-300"
+                  title="Editar"
+                  aria-label={`Editar ${u.name}`}
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleDelete(u.id)}
                   className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                   title="Remover"
@@ -96,17 +185,35 @@ export default function Users() {
       )}
 
       <p className="mt-4 text-xs text-neutral-400">
-        Técnicos podem entrar no ClimaPro com o e-mail e senha cadastrados aqui.
+        Técnicos entram no ClimaPro com o e-mail e senha cadastrados aqui. Para trocar a senha de um técnico, peça para ele usar "Esqueci minha senha" na tela de login.
       </p>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Cadastrar novo técnico">
-        <form onSubmit={handleCreate} className="space-y-3">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? 'Editar técnico' : 'Cadastrar novo técnico'}>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <Input label="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Rafael Técnico" />
-          <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="rafael@empresa.com" />
-          <Input label="Senha" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Crie uma senha" />
+          <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="rafael@empresa.com" disabled={!!editing} />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">Função</label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as 'tech' | 'admin' })}
+              className="w-full rounded-xl border border-neutral-300 bg-transparent px-3 py-2.5 text-sm text-neutral-800 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 dark:border-neutral-700 dark:text-neutral-100 dark:focus:ring-primary-900/30"
+            >
+              <option value="tech">Técnico</option>
+              <option value="admin">Dono</option>
+            </select>
+          </div>
+          <Input
+            label={editing ? 'Nova senha (use o login para trocar)' : 'Senha'}
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder={editing ? 'A troca é feita pelo "Esqueci minha senha"' : 'Crie uma senha'}
+            disabled={!!editing}
+          />
           <div className="flex gap-3">
             <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit" full disabled={saving}>{saving ? 'Salvando...' : 'Cadastrar'}</Button>
+            <Button type="submit" full disabled={saving}>{saving ? 'Salvando...' : editing ? 'Salvar' : 'Cadastrar'}</Button>
           </div>
         </form>
       </Modal>

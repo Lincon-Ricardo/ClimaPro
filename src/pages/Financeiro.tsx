@@ -31,9 +31,19 @@ export default function Financeiro() {
   }, [range, start, end]);
 
   const periodOrders = orders.filter((o) => o.date >= from && o.date <= to && o.status !== 'cancelado');
-  const revenue = periodOrders.reduce((s, o) => s + o.value, 0);
-  const paid = payments.filter((p) => p.status === 'pago' && p.paidAt && p.paidAt >= from && p.paidAt <= to).reduce((s, p) => s + p.value, 0);
-  const toReceive = periodOrders.filter((o) => o.paymentStatus !== 'pago').reduce((s, o) => s + o.value, 0);
+  const revenue = periodOrders.reduce((s, o) => s + (Number(o.value) || 0), 0);
+  // Recebido = pagamentos registrados no período + OS marcadas como pagas no período (sem registro em payments)
+  const paymentsInPeriod = payments.filter((p) => p.status === 'pago' && p.paidAt && p.paidAt >= from && p.paidAt <= to);
+  const paidIds = new Set(paymentsInPeriod.map((p) => p.serviceOrderId));
+  const paidFromPayments = paymentsInPeriod.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const paidFromOrders = periodOrders
+    .filter((o) => o.paymentStatus === 'pago' && !paidIds.has(o.id))
+    .reduce((s, o) => s + (Number(o.value) || 0), 0);
+  const paid = paidFromPayments + paidFromOrders;
+  // "A receber" é o total acumulado de serviços ainda não pagos, independente do período
+  const toReceive = orders
+    .filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado')
+    .reduce((s, o) => s + (Number(o.value) || 0), 0);
   const doneCount = periodOrders.filter((o) => o.status === 'concluido').length;
   const pendingCount = periodOrders.filter((o) => o.status !== 'concluido').length;
 

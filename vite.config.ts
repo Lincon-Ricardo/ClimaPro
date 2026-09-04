@@ -13,6 +13,7 @@ export default defineConfig({
     port: 5173,
   },
   build: {
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -20,6 +21,7 @@ export default defineConfig({
           icons: ['lucide-react'],
           schema: ['zod'],
           supabase: ['@supabase/supabase-js'],
+          pdf: ['jspdf', 'jspdf-autotable'],
         },
       },
     },

@@ -2,13 +2,13 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import {
-  TrendingUp, Users, FileText, Target, Wallet, Wrench,
-  CheckCircle2, Clock, XCircle, ChevronRight, UserRound, Activity,
+  TrendingUp, Users, Target, Wallet, Wrench,
+  ChevronRight, UserRound, Activity,
 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL, formatDate } from '../lib/utils';
+import { formatBRL } from '../lib/utils';
 
 export default function Administrativo() {
   const navigate = useNavigate();

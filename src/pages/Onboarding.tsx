@@ -129,11 +129,11 @@ export default function Onboarding() {
             </Button>
           )}
           {!last ? (
-            <Button size="lg" full className="bg-white text-primary-800 hover:bg-primary-50" onClick={() => setStep(step + 1)}>
+            <Button variant="light" size="lg" full onClick={() => setStep(step + 1)}>
               Próximo <ArrowRight size={18} />
             </Button>
           ) : (
-            <Button size="lg" full disabled={creating} onClick={handleFinal}>
+            <Button variant="light" size="lg" full disabled={creating} onClick={handleFinal}>
               {creating ? <Spinner /> : <>Criar meu perfil <ArrowRight size={18} /></>}
             </Button>
           )}

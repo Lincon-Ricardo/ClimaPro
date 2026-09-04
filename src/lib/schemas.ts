@@ -20,7 +20,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 // Customer
 export const customerSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-  phone: z.string().min(10, 'Telefone inválido'),
+  phone: z.string().min(10, 'Telefone inválido').optional().or(z.literal('')),
   whatsapp: z.string().min(10, 'WhatsApp inválido').optional().or(z.literal('')),
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
   document: z.string().min(11, 'CPF/CNPJ inválido').optional().or(z.literal('')),

@@ -9,7 +9,7 @@ import { emitDataChanged } from './tableBus';
 type TableName = 'customers' | 'service_orders' | 'budgets' | 'equipment' | 'companies' | 'notifications' | 'payments' | 'profiles' | 'appointments' | 'materials';
 
 const FIELD_MAP: Record<string, Record<string, string>> = {
-  customers: { createdAt: 'created_at' },
+  customers: { createdAt: 'created_at', updatedAt: 'updated_at' },
   equipment: {
     customerId: 'customer_id',
     installLocation: 'install_location',
@@ -45,8 +45,13 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
     paidAt: 'paid_at',
     createdAt: 'created_at',
   },
-  companies: {},
-  profiles: {},
+  companies: {
+    paymentCondition: 'payment_condition',
+    executionTerm: 'execution_term',
+    defaultValidity: 'default_validity',
+    createdAt: 'created_at',
+  },
+  profiles: { firstName: 'first_name', companyId: 'company_id' },
   appointments: {
     serviceOrderId: 'service_order_id',
     customerId: 'customer_id',
@@ -94,19 +99,68 @@ export interface RowSet {
   single(): Promise<any | undefined>;
 }
 
+const PAGE_SIZE = 1000;
+
+const TABLES_WITH_CREATED_AT = new Set([
+  'companies', 'customers', 'budgets', 'service_orders', 'payments', 'notifications', 'materials', 'profiles',
+]);
+
+async function fetchPaged(table: string, build?: (q: any) => any): Promise<any[]> {
+  const out: any[] = [];
+  for (let page = 0; ; page++) {
+    let q: any = supabase.from(table).select('*');
+    if (TABLES_WITH_CREATED_AT.has(table)) {
+      q = q.order('created_at', { ascending: false, nullsFirst: false });
+    }
+    q = q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    if (build) q = build(q);
+    const { data, error } = await q;
+    if (error) throw error;
+    const rows = (data as any[]) || [];
+    out.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
 function queryRows(table: string, filters?: Record<string, any>): RowSet {
+  const build = filters
+    ? (q: any) => {
+        for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+        return q;
+      }
+    : undefined;
   async function run() {
-    let q = supabase.from(table).select('*');
-    if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-    const { data } = await q;
-    return mapRows(table, (data as any[]) || []);
+    return mapRows(table, await fetchPaged(table, build));
   }
   return {
     toArray: run,
-    count: async () => (await run()).length,
-    get: async (key: string) => (await run()).find((r) => r.id === key),
-    first: async () => (await run())[0],
-    single: async () => (await run())[0],
+    count: async () => {
+      let q: any = supabase.from(table).select('id', { count: 'exact', head: true });
+      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+    get: async (key: string) => {
+      const { data, error } = await supabase.from(table).select('*').eq('id', key).maybeSingle();
+      if (error) throw error;
+      return data ? fromDB(table, data) : undefined;
+    },
+    first: async () => {
+      let q: any = supabase.from(table).select('*').limit(1);
+      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+      const { data, error } = await q.maybeSingle();
+      if (error) throw error;
+      return data ? fromDB(table, data) : undefined;
+    },
+    single: async () => {
+      let q: any = supabase.from(table).select('*').limit(1);
+      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+      const { data, error } = await q.maybeSingle();
+      if (error) throw error;
+      return data ? fromDB(table, data) : undefined;
+    },
   };
 }
 
@@ -152,29 +206,45 @@ function makeTable(table: string): Table {
       emitDataChanged(table);
     },
     clear: async () => {
-      const { error } = await supabase.from(table).delete().neq('id', '');
+      const { error } = await supabase.from(table).delete().not('id', 'is', null);
       if (error) throw error;
       emitDataChanged(table);
     },
     where: (field) => ({
       equals: (value) => queryRows(table, { [FIELD_MAP[table]?.[field] || field]: value }),
-      anyOf: (value) => ({
-        ...queryRows(table),
-        toArray: async () => {
-          const { data } = await supabase
-            .from(table)
-            .select('*')
-            .in(FIELD_MAP[table]?.[field] || field, value);
-          return mapRows(table, (data as any[]) || []);
-        },
-      }),
+      anyOf: (values: any[]) => {
+        const base = queryRows(table, undefined);
+        const col = FIELD_MAP[table]?.[field] || field;
+        return {
+          ...base,
+          toArray: async () => {
+            if (!values.length) return [];
+            return mapRows(
+              table,
+              await fetchPaged(table, (q: any) => q.in(col, values)),
+            );
+          },
+          count: async () => {
+            if (!values.length) return 0;
+            const { count, error } = await supabase
+              .from(table)
+              .select('id', { count: 'exact', head: true })
+              .in(col, values);
+            if (error) throw error;
+            return count ?? 0;
+          },
+        };
+      },
     }),
     filter: (fn) => {
       const all = queryRows(table);
       return {
         toArray: async () => (await all.toArray()).filter(fn),
         count: async () => (await all.toArray()).filter(fn).length,
-        get: async (key: string) => (await all.toArray()).find((r) => r.id === key && fn(r)),
+        get: async (key: string) => {
+          const row = await all.get(key).catch(() => undefined);
+          return row && fn(row) ? row : undefined;
+        },
         first: async () => (await all.toArray()).filter(fn)[0],
         single: async () => (await all.toArray()).filter(fn)[0],
       };

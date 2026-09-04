@@ -21,32 +21,57 @@ const Ctx = createContext<AuthCtx>(null as any);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [online, setOnline] = useState(false);
+  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
 
   useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    let sub: { subscription: { unsubscribe: () => void } } | null = null;
+
     (async () => {
       const configured = await isSupabaseConfigured();
       if (!configured) {
-        setLoading(false);
+        if (active) setLoading(false);
         return;
       }
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-      if (session?.user) {
-        const u = await fetchProfile(session.user.id, session.user.email);
-        if (u) setUser(u);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
+        if (session?.user && active) {
+          const u = await fetchProfile(session.user.id, session.user.email);
+          if (u && active) setUser(u);
+        }
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
 
-      const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => {
+        if (!active) return;
         if (s?.user) {
-          fetchProfile(s.user.id, s.user.email).then((u) => u && setUser(u));
+          fetchProfile(s.user.id, s.user.email).then((u) => {
+            if (u && active) setUser(u);
+          });
         } else {
           setUser(null);
         }
       });
-      return () => sub.subscription.unsubscribe();
+      sub = listener;
     })();
+
+    return () => {
+      active = false;
+      sub?.subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchProfile(id: string, fallbackEmail?: string): Promise<User | null> {
@@ -60,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', id)
           .maybeSingle();
         if (data) {
-          console.log(`[Auth] Perfil encontrado na tentativa ${attempt + 1}`);
           return {
             id: data.id,
             name: data.name || 'Dono',
@@ -68,17 +92,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: data.email || fallbackEmail || '',
             role: data.role || 'tech',
             companyName: '',
+            companyId: data.company_id || data.companyId,
           };
         }
-      } catch (err) {
-        console.warn(`[Auth] Erro ao buscar perfil (tentativa ${attempt + 1}):`, err);
+      } catch {
+        // tenta de novo com backoff; perfil pode demorar após signup
       }
       if (attempt < MAX_ATTEMPTS - 1) {
         const delay = Math.min(500 * Math.pow(1.5, attempt), 5000);
         await new Promise((r) => setTimeout(r, delay));
       }
     }
-    console.warn(`[Auth] Perfil não encontrado após ${MAX_ATTEMPTS} tentativas`);
     return null;
   }
 
@@ -98,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
     } else {
       // Fallback: se o perfil não for encontrado, ainda assim loga com os dados da sessão.
-      console.warn('[Auth] Perfil não encontrado, usando fallback com dados da sessão');
       const fn = data.user.user_metadata?.['name']?.split(' ')[0] || 'Dono';
       setUser({
         id: data.user.id,
@@ -126,11 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data = res.data;
       error = res.error;
     } catch (e: any) {
-      console.error('signUp lançou exceção:', e);
       return { ok: false, error: 'Falha na comunicação: ' + (e?.message || String(e)) };
     }
     if (error) {
-      console.error('signUp error:', error);
       return { ok: false, error: error.message || 'Não foi possível criar a conta.' };
     }
     if (!data?.user) return { ok: false, error: 'Não foi possível criar a conta.' };
@@ -151,13 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       companyName: '',
     };
     setUser(newUser);
-    console.log('[Auth] Usuário registrado com sucesso, buscando perfil...');
     // Busca perfil em background sem bloquear navegação
     fetchProfile(data.user.id, data.user.email).then((u) => {
-      if (u) {
-        console.log('[Auth] Perfil encontrado após registro, atualizando');
-        setUser(u);
-      }
+      if (u) setUser(u);
     });
     return { ok: true };
   };

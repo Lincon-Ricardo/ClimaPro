@@ -71,7 +71,7 @@ export default function Busca() {
           <h2 className="mb-2 flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100"><Users size={18} /> Clientes</h2>
           {foundCustomers.map((c) => {
             const cnt = orders.filter((o) => o.customerId === c.id).length;
-            const last = orders.filter((o) => o.customerId === c.id && o.status === 'concluido').sort((a, b) => b.date.localeCompare(a.date))[0];
+            const last = orders.filter((o) => o.customerId === c.id && o.status === 'concluido').sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
             return (
               <Card key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)} className="mb-2">
                 <div className="flex items-center gap-3">

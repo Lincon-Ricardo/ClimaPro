@@ -2,17 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { subscribeData } from '../lib/tableBus';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
-/**
- * useLiveQuery compatível com dexie-react-hooks.
- * Executa a thunk e re-executa quando qualquer tabela muda ou deps mudam.
- */
 export function useLiveQuery<T>(
   fn: () => Promise<T>,
   deps: unknown[] = [],
+  tables: string | string[] = '*',
 ): T | undefined {
   const [result, setResult] = useState<T | undefined>(undefined);
   const fnRef = useRef(fn);
   fnRef.current = fn;
+  const tablesRef = useRef(tables);
+  tablesRef.current = tables;
 
   useEffect(() => {
     let active = true;
@@ -32,10 +31,11 @@ export function useLiveQuery<T>(
     }
 
     run();
-    const unsub = subscribeData('*', run);
+    const list = Array.isArray(tablesRef.current) ? tablesRef.current : [tablesRef.current];
+    const unsubs = list.map((t) => subscribeData(t, run));
     return () => {
       active = false;
-      unsub();
+      unsubs.forEach((u) => u());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarDays, Wrench, Wallet, FileText } from 'lucide-react';
+import { CalendarDays, Wrench, Wallet, FileText, Users, Plus, ArrowRight } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/db';
@@ -25,14 +25,18 @@ export default function Dashboard() {
     .filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado')
     .reduce((s, o) => s + (Number(o.value) || 0), 0);
   const budgetsWaiting = budgets.filter((b) => b.status === 'enviado').length;
+  const totalCustomers = customers.length;
 
   const nextServices = orders
     .filter((o) => o.status === 'agendado' && o.date >= today)
     .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
-    .slice(0, 5);
+    .slice(0, 4);
+
+  const doneToday = todaysServiceOrders.filter((o) => o.status === 'concluido').length;
 
   return (
     <div className="max-w-5xl">
+      {/* Saudação */}
       <div className="rounded-3xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white shadow-lg">
         <h1 className="text-2xl font-extrabold">
           {greetings()}, {user?.firstName}! 👋
@@ -44,29 +48,35 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* StatCards clicáveis */}
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={<CalendarDays size={20} />} label="Serviços hoje" value={String(todaysServiceOrders.length)} />
-        <StatCard icon={<Wrench size={20} />} label="Pendentes" value={String(pending)} />
-        <StatCard icon={<Wallet size={20} />} label="A receber" value={formatBRL(receberTotal)} />
-        <StatCard icon={<FileText size={20} />} label="Orçamentos aguardando" value={String(budgetsWaiting)} />
+        <StatCard icon={<CalendarDays size={20} />} label="Serviços hoje →" value={String(todaysServiceOrders.length)} onClick={() => navigate('/app/agenda')} />
+        <StatCard icon={<Wrench size={20} />} label="Pendentes →" value={String(pending)} onClick={() => navigate('/app/servicos')} />
+        <StatCard icon={<Wallet size={20} />} label="A receber →" value={formatBRL(receberTotal)} onClick={() => navigate('/app/financeiro')} />
+        <StatCard icon={<FileText size={20} />} label="Orçamentos →" value={String(budgetsWaiting)} onClick={() => navigate('/app/orcamentos')} />
       </div>
 
-      <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
+      {/* Ações rápidas */}
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Button onClick={() => navigate('/app/servicos/novo')}><Plus size={16} className="mr-1" /> Novo serviço</Button>
+        <Button variant="secondary" onClick={() => navigate('/app/orcamentos/novo')}><Plus size={16} className="mr-1" /> Novo orçamento</Button>
+        <Button variant="secondary" onClick={() => navigate('/app/clientes/novo')}><Plus size={16} className="mr-1" /> Novo cliente</Button>
+        <Button variant="ghost" onClick={() => navigate('/app/agenda')}>Ver agenda <ArrowRight size={16} /></Button>
+      </div>
+
+      {/* Seu dia */}
+      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-neutral-800 dark:text-neutral-100">Seu dia</h2>
           <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            {todaysServiceOrders.filter((o) => o.status === 'concluido').length}/{todaysServiceOrders.length} concluídos
+            {doneToday}/{todaysServiceOrders.length} concluídos
           </span>
         </div>
         {todaysServiceOrders.length > 0 && (
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700/60">
             <div
-              className={`h-full rounded-full ${
-                todaysServiceOrders.every((o) => o.status === 'concluido') ? 'bg-success' : 'bg-primary-600 dark:bg-primary-500'
-              }`}
-              style={{
-                width: `${(todaysServiceOrders.filter((o) => o.status === 'concluido').length / todaysServiceOrders.length) * 100}%`,
-              }}
+              className={`h-full rounded-full ${todaysServiceOrders.every((o) => o.status === 'concluido') ? 'bg-success' : 'bg-primary-600 dark:bg-primary-500'}`}
+              style={{ width: `${todaysServiceOrders.length ? (doneToday / todaysServiceOrders.length) * 100 : 0}%` }}
             />
           </div>
         )}
@@ -80,9 +90,7 @@ export default function Dashboard() {
                 <button
                   key={o.id}
                   onClick={() => navigate(`/app/servicos/${o.id}`)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-neutral-50 dark:hover:bg-neutral-700/40 ${
-                    !done && o.status !== 'cancelado' ? 'border border-primary-200 bg-primary-50/50 dark:bg-primary-900/40' : 'border border-transparent'
-                  }`}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-neutral-50 dark:hover:bg-neutral-700/40 ${!done && o.status !== 'cancelado' ? 'border border-primary-200 bg-primary-50/50 dark:bg-primary-900/40' : 'border border-transparent'}`}
                 >
                   <span className="flex h-9 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-xs font-extrabold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                     {o.time || '—'}
@@ -103,14 +111,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4">
-        <Button size="lg" onClick={() => navigate('/app/servicos/novo')}>➕ Novo serviço</Button>
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" onClick={() => navigate('/app/orcamentos/novo')}>💰 Novo orçamento</Button>
-          <Button variant="secondary" onClick={() => navigate('/app/clientes/novo')}>👤 Novo cliente</Button>
-        </div>
-      </div>
-
+      {/* Próximos serviços */}
       <div className="mt-6 flex items-center justify-between">
         <h2 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Próximos serviços</h2>
         <Link to="/app/agenda" className="text-sm font-semibold text-primary-600 dark:text-primary-400">Ver agenda</Link>
@@ -121,7 +122,7 @@ export default function Dashboard() {
           <Card>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Você ainda não possui serviços agendados.</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate('/app/servicos/novo')}>
-              ➕ Agendar serviço
+              <Plus size={16} className="mr-1" /> Agendar serviço
             </Button>
           </Card>
         )}
@@ -143,6 +144,24 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Clientes recentes */}
+      <div className="mt-6 flex items-center justify-between">
+        <h2 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100">Clientes</h2>
+        <Link to="/app/clientes" className="text-sm font-semibold text-primary-600 dark:text-primary-400">Ver todos</Link>
+      </div>
+      <Card className="mt-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300"><Users size={18} /></span>
+          <div>
+            <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Total de clientes</div>
+            <div className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100">{totalCustomers}</div>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => navigate('/app/clientes')}>
+          Gerenciar <ArrowRight size={14} />
+        </Button>
+      </Card>
     </div>
   );
 }

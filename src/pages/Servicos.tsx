@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
-import { Wrench, Plus } from 'lucide-react';
+import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { PageHeader, EmptyState } from '../components/PageHeader';
+import { useToast } from '../components/Toast';
 import { formatBRL, formatDate } from '../lib/utils';
 
 const FILTERS = [
@@ -19,11 +20,22 @@ const FILTERS = [
 
 export default function Servicos() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [filter, setFilter] = useState<string>('todos');
   const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
+
+  async function handleDelete(orderId: string, osNumber: string) {
+    if (!confirm(`Excluir o serviço "${osNumber}"?\n\nEssa ação não pode ser desfeita.`)) return;
+    try {
+      await db.serviceOrders.delete(orderId);
+      toast('success', 'Serviço excluído!');
+    } catch {
+      toast('error', 'Não foi possível excluir. Tente novamente.');
+    }
+  }
 
   const filtered = useMemo(() => {
     const list = orders.slice().sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -79,7 +91,18 @@ export default function Servicos() {
                     {o.time ? ` · ${o.time}` : ''} · {formatBRL(o.value)}
                   </div>
                 </div>
-                <StatusBadge status={o.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={o.status} />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(o.id, o.osNumber); }}
+                    className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                    title="Excluir serviço"
+                    aria-label={`Excluir ${o.osNumber}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </Card>
           ))}

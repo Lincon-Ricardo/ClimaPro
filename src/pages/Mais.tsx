@@ -9,7 +9,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
-import { addMonths, formatDate, telToWhats, toISODate } from '../lib/utils';
+import { addMonths, telToWhats, toISODate } from '../lib/utils';
 import { format } from 'date-fns';
 
 export default function Mais() {
@@ -22,9 +22,9 @@ export default function Mais() {
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
   const dueReminders = orders
-    .filter((o) => o.status === 'concluido' && o.reminderMonths)
+    .filter((o) => o.status === 'concluido' && o.date && o.reminderMonths)
     .map((o) => {
-      const due = addMonths(o.date, o.reminderMonths!);
+      const due = addMonths(o.date!, o.reminderMonths!);
       return { order: o, due };
     })
     .filter((r) => r.due <= toISODate(new Date()))
@@ -51,14 +51,22 @@ export default function Mais() {
       {dueReminders.length > 0 && (
         <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-900/30">
           <div className="flex items-center gap-2 font-bold text-orange-800 dark:text-orange-200"><Bell size={18} /> Manutenção recomendada</div>
-          {dueReminders.slice(0, 3).map((r) => (
-            <div key={r.order.id} className="mt-2 flex items-center justify-between gap-2 text-sm">
-              <span className="text-orange-700 dark:text-orange-300">
-                Está na hora de contactar <b>{custName(r.order.customerId)}</b> ({format(new Date(r.due + 'T00:00:00'), 'dd/MM/yyyy')}).
-              </span>
-              <Button as="a" href={`https://wa.me/${customers.find((c) => c.id === r.order.customerId) ? telToWhats(customers.find((c) => c.id === r.order.customerId)!.phone) : ''}`} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={14} /> Contactar</Button>
-            </div>
-          ))}
+          {dueReminders.slice(0, 3).map((r) => {
+            const cust = customers.find((c) => c.id === r.order.customerId);
+            const ph = cust?.whatsapp || cust?.phone;
+            return (
+              <div key={r.order.id} className="mt-2 flex items-center justify-between gap-2 text-sm">
+                <span className="text-orange-700 dark:text-orange-300">
+                  Está na hora de contactar <b>{custName(r.order.customerId)}</b> ({format(new Date(r.due + 'T00:00:00'), 'dd/MM/yyyy')}).
+                </span>
+                {ph ? (
+                  <Button as="a" href={`https://wa.me/${telToWhats(ph)}`} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={14} /> Contactar</Button>
+                ) : (
+                  <span className="text-xs text-orange-400">Sem contato</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

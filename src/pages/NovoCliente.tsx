@@ -12,10 +12,36 @@ export default function NovoCliente() {
   const navigate = useNavigate();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [zipLoading, setZipLoading] = useState(false);
   const [form, setForm] = useState({
     name: '', phone: '', whatsapp: '', email: '', document: '',
     street: '', number: '', complement: '', district: '', city: '', zip: '', notes: '',
   });
+
+  async function lookupCep(cep: string) {
+    const digits = cep.replace(/\D/g, '');
+    if (digits.length !== 8) return;
+    setZipLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        toast('error', 'CEP não encontrado.');
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        street: data.logradouro || f.street,
+        district: data.bairro || f.district,
+        city: data.localidade || f.city,
+        zip: digits,
+      }));
+    } catch {
+      toast('error', 'Não foi possível buscar o CEP.');
+    } finally {
+      setZipLoading(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -53,7 +79,7 @@ export default function NovoCliente() {
         <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <Input label="CPF/CNPJ" value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} />
         <div className="grid grid-cols-3 gap-3">
-          <Input label="CEP" value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} />
+          <Input label="CEP" hint={zipLoading ? 'Buscando endereço...' : undefined} value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} onBlur={() => lookupCep(form.zip)} />
           <Input label="Cidade *" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           <Input label="Bairro *" value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
         </div>

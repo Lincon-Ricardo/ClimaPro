@@ -41,8 +41,7 @@ export default function ForgotPassword() {
         setSubmitted(true);
         toast('success', 'E-mail de recuperação enviado com sucesso!');
       }
-    } catch (err) {
-      console.error('Erro ao resetar senha:', err);
+    } catch {
       setError('Erro ao processar sua solicitação');
     } finally {
       setLoading(false);

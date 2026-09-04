@@ -16,6 +16,7 @@ export interface User {
   email: string;
   role: 'admin' | 'tech';
   companyName?: string;
+  companyId?: string;
   firstName: string;
 }
 
@@ -31,6 +32,11 @@ export interface Company {
   site: string;
   pix: string;
   logo?: string;
+  signature?: string;
+  paymentCondition?: string;
+  executionTerm?: string;
+  warranty?: string;
+  defaultValidity?: string;
 }
 
 export interface Customer {

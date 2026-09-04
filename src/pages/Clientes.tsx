@@ -1,6 +1,6 @@
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
-import { Users, MapPin, Phone, Plus } from 'lucide-react';
+import { Users, MapPin, Phone, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -21,7 +21,18 @@ export default function Clientes() {
 
   const lastService = (customerId: string) =>
     orders.filter((o) => o.customerId === customerId && o.status === 'concluido')
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+  async function handleDelete(customerId: string, customerName: string) {
+    if (!confirm(`Excluir o cliente "${customerName}"?\n\nIsso remove também equipamentos, serviços e orçamentos dele.`)) return;
+    const eqs = await db.equipment.where('customerId').equals(customerId).toArray();
+    await Promise.all(eqs.map((e) => db.equipment.delete(e.id)));
+    const sos = await db.serviceOrders.where('customerId').equals(customerId).toArray();
+    await Promise.all(sos.map((o) => db.serviceOrders.delete(o.id)));
+    const buds = await db.budgets.where('customerId').equals(customerId).toArray();
+    await Promise.all(buds.map((b) => db.budgets.delete(b.id)));
+    await db.customers.delete(customerId);
+  }
 
   return (
     <div>
@@ -68,6 +79,15 @@ export default function Clientes() {
                       </div>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
+                    className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                    title="Excluir cliente"
+                    aria-label={`Excluir ${c.name}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
                   <span>

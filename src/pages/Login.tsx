@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snowflake, Mail, Lock, ArrowRight, UserPlus } from 'lucide-react';
+import { Snowflake, Lock, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Fields';
