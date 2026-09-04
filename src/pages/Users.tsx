@@ -57,6 +57,11 @@ export default function Users() {
       return;
     }
     const email = form.email.trim().toLowerCase();
+    const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(label + ' demorou demais (timeout).')), ms)),
+      ]);
     setSaving(true);
     try {
       if (editing) {
