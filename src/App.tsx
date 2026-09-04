@@ -4,41 +4,53 @@ import { useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
 
-const Login = lazy(() => import('./pages/Login'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const Onboarding = lazy(() => import('./pages/Onboarding'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Clientes = lazy(() => import('./pages/Clientes'));
-const ClienteDetail = lazy(() => import('./pages/ClienteDetail'));
-const Equipamentos = lazy(() => import('./pages/Equipamentos'));
-const Agenda = lazy(() => import('./pages/Agenda'));
-const Orcamentos = lazy(() => import('./pages/Orcamentos'));
-const Servicos = lazy(() => import('./pages/Servicos'));
-const Financeiro = lazy(() => import('./pages/Financeiro'));
-const Relatorios = lazy(() => import('./pages/Relatorios'));
-const Perfil = lazy(() => import('./pages/Perfil'));
-const Config = lazy(() => import('./pages/Config'));
-const Mais = lazy(() => import('./pages/Mais'));
-const Busca = lazy(() => import('./pages/Busca'));
-const Empresa = lazy(() => import('./pages/Empresa'));
-const NovoCliente = lazy(() => import('./pages/NovoCliente'));
-const ClienteOrcamento = lazy(() => import('./pages/ClienteOrcamento'));
-const Notificacoes = lazy(() => import('./pages/Notificacoes'));
-const CalculadoraBtu = lazy(() => import('./pages/CalculadoraBtu'));
-const Diagnostico = lazy(() => import('./pages/Diagnostico'));
-const Administrativo = lazy(() => import('./pages/Administrativo'));
-const Users = lazy(() => import('./pages/Users'));
-const TechRota = lazy(() => import('./pages/TechRota'));
-const TechPerformance = lazy(() => import('./pages/TechPerformance'));
-const SystemHealth = lazy(() => import('./pages/SystemHealth'));
-const Planos = lazy(() => import('./pages/Planos'));
+function lazyRetry<T>(factory: () => Promise<T>, retries = 2): Promise<T> {
+  return factory().catch((err: any) => {
+    const msg = String(err?.message || '');
+    if (retries > 0 && (msg.includes('Failed to fetch dynamically imported module') || msg.includes('Loading chunk'))) {
+      return new Promise<T>((resolve, reject) => {
+        setTimeout(() => lazyRetry(factory, retries - 1).then(resolve, reject), 800);
+      });
+    }
+    throw err;
+  });
+}
 
-const OrcamentoDetail = lazy(() => import('./pages/OrcamentoDetail'));
-const NovoOrcamento = lazy(() => import('./pages/NovoOrcamento'));
-const ServicoDetail = lazy(() => import('./pages/ServicoDetail'));
-const NovaOS = lazy(() => import('./pages/NovaOS'));
-const EditarCliente = lazy(() => import('./pages/EditarCliente'));
+const Login = lazy(() => lazyRetry(() => import('./pages/Login')));
+const ForgotPassword = lazy(() => lazyRetry(() => import('./pages/ForgotPassword')));
+const ResetPassword = lazy(() => lazyRetry(() => import('./pages/ResetPassword')));
+const Onboarding = lazy(() => lazyRetry(() => import('./pages/Onboarding')));
+const Dashboard = lazy(() => lazyRetry(() => import('./pages/Dashboard')));
+const Clientes = lazy(() => lazyRetry(() => import('./pages/Clientes')));
+const ClienteDetail = lazy(() => lazyRetry(() => import('./pages/ClienteDetail')));
+const Equipamentos = lazy(() => lazyRetry(() => import('./pages/Equipamentos')));
+const Agenda = lazy(() => lazyRetry(() => import('./pages/Agenda')));
+const Orcamentos = lazy(() => lazyRetry(() => import('./pages/Orcamentos')));
+const Servicos = lazy(() => lazyRetry(() => import('./pages/Servicos')));
+const Financeiro = lazy(() => lazyRetry(() => import('./pages/Financeiro')));
+const Relatorios = lazy(() => lazyRetry(() => import('./pages/Relatorios')));
+const Perfil = lazy(() => lazyRetry(() => import('./pages/Perfil')));
+const Config = lazy(() => lazyRetry(() => import('./pages/Config')));
+const Mais = lazy(() => lazyRetry(() => import('./pages/Mais')));
+const Busca = lazy(() => lazyRetry(() => import('./pages/Busca')));
+const Empresa = lazy(() => lazyRetry(() => import('./pages/Empresa')));
+const NovoCliente = lazy(() => lazyRetry(() => import('./pages/NovoCliente')));
+const ClienteOrcamento = lazy(() => lazyRetry(() => import('./pages/ClienteOrcamento')));
+const Notificacoes = lazy(() => lazyRetry(() => import('./pages/Notificacoes')));
+const CalculadoraBtu = lazy(() => lazyRetry(() => import('./pages/CalculadoraBtu')));
+const Diagnostico = lazy(() => lazyRetry(() => import('./pages/Diagnostico')));
+const Administrativo = lazy(() => lazyRetry(() => import('./pages/Administrativo')));
+const Users = lazy(() => lazyRetry(() => import('./pages/Users')));
+const TechRota = lazy(() => lazyRetry(() => import('./pages/TechRota')));
+const TechPerformance = lazy(() => lazyRetry(() => import('./pages/TechPerformance')));
+const SystemHealth = lazy(() => lazyRetry(() => import('./pages/SystemHealth')));
+const Planos = lazy(() => lazyRetry(() => import('./pages/Planos')));
+
+const OrcamentoDetail = lazy(() => lazyRetry(() => import('./pages/OrcamentoDetail')));
+const NovoOrcamento = lazy(() => lazyRetry(() => import('./pages/NovoOrcamento')));
+const ServicoDetail = lazy(() => lazyRetry(() => import('./pages/ServicoDetail')));
+const NovaOS = lazy(() => lazyRetry(() => import('./pages/NovaOS')));
+const EditarCliente = lazy(() => lazyRetry(() => import('./pages/EditarCliente')));
 
 function SuspenseWrap({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>;
