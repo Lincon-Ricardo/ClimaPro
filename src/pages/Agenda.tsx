@@ -101,22 +101,31 @@ export default function Agenda() {
 
   function renderDetail(o: any) {
     const showDate = view !== 'dia';
+    const customer = customers.find((c) => c.id === o.customerId);
+    const fullAddress = o.address || [customer?.street, customer?.number, customer?.district, customer?.city].filter(Boolean).join(', ');
     return (
-      <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+      <Card key={o.id} onClick={() => navigate(`/app/servicos/${o.id}`)} className="p-3 sm:p-4">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div className="flex h-12 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
               <span className="text-sm font-extrabold leading-none">{o.time || '--:--'}</span>
-              {showDate && o.date ? <span className="text-[10px] font-semibold leading-none opacity-80">{o.date.slice(8, 10)}/{o.date.slice(5, 7)}</span> : null}
+              {showDate && o.date ? <span className="mt-0.5 text-[10px] font-semibold leading-none opacity-80">{o.date.slice(8, 10)}/{o.date.slice(5, 7)}</span> : null}
             </div>
-            <div className="min-w-0">
-              <div className="truncate font-bold text-neutral-800 dark:text-neutral-100">{custName(o.customerId)}</div>
-              <div className="truncate text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
-              <div className="truncate text-xs text-neutral-400">📍 {o.address}</div>
-              <div className="mt-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400">{formatBRL(o.value)}</div>
+            <div className="min-w-0 flex-1">
+              <div className="break-words text-sm font-bold leading-snug text-neutral-800 dark:text-neutral-100 sm:text-base">{custName(o.customerId)}</div>
+              <div className="mt-0.5 break-words text-xs leading-snug text-neutral-500 dark:text-neutral-400 sm:text-sm">❄️ {o.service}</div>
+              {fullAddress ? (
+                <div className="mt-1 break-words text-xs leading-snug text-neutral-500 dark:text-neutral-400">📍 {fullAddress}</div>
+              ) : null}
+              {o.technician ? (
+                <div className="mt-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300">🧑‍🔧 {o.technician}</div>
+              ) : null}
+              <div className="mt-1 text-xs font-bold text-primary-700 dark:text-primary-300">{formatBRL(o.value)}</div>
             </div>
           </div>
-          <StatusBadge status={o.status} />
+          <div className="flex shrink-0 items-center gap-1.5 pl-[66px] sm:pl-0">
+            <StatusBadge status={o.status} />
+          </div>
         </div>
       </Card>
     );
@@ -124,44 +133,47 @@ export default function Agenda() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader
-        title="Agenda"
-        action={<Button onClick={() => navigate('/app/servicos/novo')}><Plus size={18} /> Novo serviço</Button>}
-      />
+      <div className="mb-4">
+        <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Agenda</h1>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">
+          {scheduled.length} agendado(s) · {done.length} encerrado(s) neste período
+        </p>
+        <Button onClick={() => navigate('/app/servicos/novo')} full className="mt-2.5 sm:mt-0 sm:w-auto"><Plus size={18} /> Novo serviço</Button>
+      </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 space-y-3">
         <div className="flex rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-800">
           {(['dia', 'semana', 'mes'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize ${view === v ? 'bg-primary-700 text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60'}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize touch-manipulation ${view === v ? 'bg-primary-700 text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60'}`}
             >
               {v === 'dia' ? 'Dia' : v === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Semana anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'mes' ? 'Mês anterior' : 'Semana anterior (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
-          <span className="min-w-0 whitespace-nowrap text-center text-sm font-bold text-neutral-700 dark:text-neutral-200">
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Semana anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'mes' ? 'Mês anterior' : 'Semana anterior (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
+          <span className="min-w-0 flex-1 break-words text-center text-xs font-bold text-neutral-700 dark:text-neutral-200 sm:text-sm">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
-          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próxima semana' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'mes' ? 'Próximo mês' : 'Próxima semana (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
+          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próxima semana' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'mes' ? 'Próximo mês' : 'Próxima semana (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
           {orderDate(anchor) !== todayISO() && (
-            <button onClick={goToday} className="rounded-lg border border-neutral-200 bg-white px-2.5 py-2 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-primary-300 dark:hover:bg-primary-900/40">Hoje</button>
+            <button onClick={goToday} className="shrink-0 rounded-lg border border-neutral-200 bg-white px-2.5 py-2.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-primary-300 dark:hover:bg-primary-900/40">Hoje</button>
           )}
         </div>
       </div>
 
       {view === 'mes' && (
-        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">Ocupação do mês</span>
-            <span className="text-xs text-neutral-400">{scheduled.filter((o) => o.date && o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} serviço(s) no mês</span>
+        <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-3 shadow-card dark:border-neutral-700 dark:bg-neutral-800 sm:p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-200 sm:text-sm">Ocupação do mês</span>
+            <span className="whitespace-nowrap text-[11px] text-neutral-400 sm:text-xs">{scheduled.filter((o) => o.date && o.date.startsWith(anchor.getFullYear() + '-' + String(anchor.getMonth() + 1).padStart(2, '0'))).length} no mês</span>
           </div>
-          <div className="grid grid-cols-7 gap-1.5 text-center">
+          <div className="grid grid-cols-7 gap-1 text-center sm:gap-1.5">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="py-1 text-[10px] font-semibold uppercase text-neutral-400">{w}</div>
+              <div key={w} className="py-1 text-[9px] font-semibold uppercase text-neutral-400 sm:text-[10px]">{w}</div>
             ))}
             {buildMonthCells(anchor).map((cell, i) =>
               cell === null ? (
@@ -186,17 +198,17 @@ export default function Agenda() {
       )}
 
       {view !== 'mes' && (
-        <div className="mb-4 grid grid-cols-7 gap-2">
+        <div className="mb-4 grid grid-cols-7 gap-1 sm:gap-2">
           {weekDays.map((d, i) => {
             const activeDay = orderDate(d) === anchorISO;
             return (
               <button
                 key={i}
                 onClick={() => setAnchor(d)}
-                className={`min-h-[44px] rounded-xl border p-2 text-center touch-manipulation ${activeDay ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/40' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
+                className={`min-h-[52px] rounded-xl border p-1 text-center touch-manipulation sm:min-h-[44px] sm:p-2 ${activeDay ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/40' : 'border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}
               >
-                <div className="text-[10px] font-semibold uppercase text-neutral-400">{WEEKDAYS[d.getDay()]}</div>
-                <div className={`text-base font-bold ${activeDay ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-200'}`}>{d.getDate()}</div>
+                <div className="text-[9px] font-semibold uppercase text-neutral-400 sm:text-[10px]">{WEEKDAYS[d.getDay()]}</div>
+                <div className={`text-sm font-bold sm:text-base ${activeDay ? 'text-primary-700 dark:text-primary-300' : 'text-neutral-700 dark:text-neutral-200'}`}>{d.getDate()}</div>
                 <div className={`mt-0.5 h-1.5 w-1.5 rounded-full mx-auto ${scheduled.some((o) => o.date === orderDate(d)) ? 'bg-success' : 'bg-transparent'}`} />
               </button>
             );
@@ -218,11 +230,13 @@ export default function Agenda() {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         {active.map(renderDetail)}
         {done.length > 0 && (
           <>
-            <div className="pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Encerrados neste período</div>
+            <div className="rounded-xl bg-green-50 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-green-700 dark:bg-green-950/40 dark:text-green-300 sm:text-left">
+              ✓ Encerrados neste período ({done.length})
+            </div>
             {done.map(renderDetail)}
           </>
         )}
