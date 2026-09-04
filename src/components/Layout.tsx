@@ -19,6 +19,7 @@ import {
   Moon,
   Navigation,
   Trophy,
+  DollarSign,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
@@ -70,13 +71,18 @@ export function Layout() {
   ) ?? 0;
 
   const isTech = user?.role === 'tech';
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
 
-  // Navegação do Técnico (Cockpit de Campo)
+  // Navegação do Técnico (Cockpit de Campo) — rótulo muda conforme regra da empresa
+  const perfItem = commissionOn
+    ? { to: '/app/desempenho', icon: DollarSign, label: 'Comissão' }
+    : { to: '/app/desempenho', icon: Trophy, label: 'Desempenho' };
   const techBottomItems = [
     { to: '/app/rota', icon: Navigation, label: 'Minha Rota' },
     { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
     { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
-    { to: '/app/desempenho', icon: Trophy, label: 'Comissão' },
+    perfItem,
     { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
   ];
 
@@ -93,7 +99,7 @@ export function Layout() {
 
   const techMoreItems = [
     { to: '/app/rota', icon: Navigation, label: 'Cockpit de Rota' },
-    { to: '/app/desempenho', icon: Trophy, label: 'Meu Desempenho' },
+    { to: '/app/desempenho', icon: commissionOn ? DollarSign : Trophy, label: commissionOn ? 'Minhas Comissões' : 'Meu Desempenho' },
     { to: '/app/servicos', icon: Wrench, label: 'Minhas OS' },
     { to: '/app/equipamentos', icon: Snowflake, label: 'Equipamentos' },
     { to: '/app/config', icon: Settings, label: 'Minha Conta' },
@@ -124,7 +130,7 @@ export function Layout() {
                 <NavItem to="/app/rota" icon={Navigation} label="Minha Rota" light />
                 <NavItem to="/app/servicos" icon={Wrench} label="Minhas OS" light />
                 <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
-                <NavItem to="/app/desempenho" icon={Trophy} label="Meu Desempenho" light />
+                <NavItem to="/app/desempenho" icon={commissionOn ? DollarSign : Trophy} label={commissionOn ? 'Minhas Comissões' : 'Meu Desempenho'} light />
                 <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
                   Ferramentas
                 </div>

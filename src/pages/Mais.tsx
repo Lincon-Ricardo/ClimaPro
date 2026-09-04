@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Wrench, TrendingUp, Snowflake, FileText, Briefcase, Settings,
   Users, Bell, MessageCircle, Building2, Calculator, Stethoscope, LayoutDashboard,
+  DollarSign, Trophy,
 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
@@ -22,6 +23,8 @@ export default function Mais() {
   const isTech = user?.role === 'tech';
   const techName = (user?.name || '').trim().toLowerCase();
   const techFirstName = (user?.firstName || '').trim().toLowerCase();
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
 
   // Técnico: só vê as próprias OS
   const visibleOrders = isTech
@@ -48,7 +51,9 @@ export default function Mais() {
     ? [
         { to: '/app/rota', icon: <Wrench size={20} />, label: 'Minha Rota do Dia', sub: 'Atendimentos de hoje' },
         { to: '/app/servicos', icon: <Wrench size={20} />, label: 'Minhas Ordens de Serviço', sub: `${visibleOrders.length} atribuídas a você` },
-        { to: '/app/desempenho', icon: <TrendingUp size={20} />, label: 'Meu Desempenho & Comissões', sub: 'Extrato e metas' },
+        commissionOn
+          ? { to: '/app/desempenho', icon: <DollarSign size={20} />, label: 'Minhas Comissões', sub: 'Extrato e ganhos' }
+          : { to: '/app/desempenho', icon: <Trophy size={20} />, label: 'Meu Desempenho', sub: 'Produtividade e metas' },
         { to: '/app/equipamentos', icon: <Snowflake size={20} />, label: 'Equipamentos', sub: 'Histórico de aparelhos' },
         { to: '/app/notificacoes', icon: <Bell size={20} />, label: 'Notificações', sub: `${unread} não lida(s)` },
       ]
@@ -164,12 +169,12 @@ export default function Mais() {
             </div>
           </Card>
           <Card onClick={() => navigate('/app/desempenho')} className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300">
-              <TrendingUp size={20} />
+            <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${commissionOn ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+              {commissionOn ? <DollarSign size={20} /> : <Trophy size={20} />}
             </div>
             <div>
-              <div className="font-bold text-neutral-800 dark:text-neutral-100">Minhas Comissões</div>
-              <div className="text-xs text-neutral-500 dark:text-neutral-400">Extrato e progresso</div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">{commissionOn ? 'Minhas Comissões' : 'Meu Desempenho'}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">{commissionOn ? 'Extrato e ganhos' : 'Produtividade e metas'}</div>
             </div>
           </Card>
         </div>
