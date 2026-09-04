@@ -70,8 +70,8 @@ export default function NovaOS() {
     e.preventDefault();
     if (busy) return;
     if (!active) {
-      toast('error', 'Assinatura vencida. Renove em Planos para continuar.');
-      navigate('/app/planos');
+      toast('error', 'Seu teste terminou. Escolha um plano para continuar criando.');
+      navigate('/app/expirado');
       return;
     }
     if (osBlocked) {

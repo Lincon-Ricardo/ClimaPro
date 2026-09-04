@@ -20,7 +20,7 @@ export const PLANS: Plan[] = [
     key: 'start',
     name: 'Gelo Fino',
     tagline: 'Para quem está começando a gelar',
-    price: 49,
+    price: 47,
     osPerMonth: 30,
     technicians: 1,
     cta: 'Começar pequeno',
@@ -36,7 +36,7 @@ export const PLANS: Plan[] = [
     key: 'pro',
     name: 'Clima Ideal',
     tagline: 'Para equipes que vivem no campo',
-    price: 99,
+    price: 97,
     osPerMonth: 150,
     technicians: 5,
     highlight: true,
@@ -55,7 +55,7 @@ export const PLANS: Plan[] = [
     key: 'master',
     name: 'Tempestade Polar',
     tagline: 'Para dominar a cidade inteira',
-    price: 199,
+    price: 197,
     osPerMonth: Number.POSITIVE_INFINITY,
     technicians: Number.POSITIVE_INFINITY,
     cta: 'Dominar tudo',
@@ -84,7 +84,8 @@ export interface Subscription {
 }
 
 export function trialDaysLeft(sub: Subscription | null): number {
-  if (!sub || sub.status !== 'trialing' || !sub.trialEndsAt) return 0;
+  if (!sub || sub.status !== 'trialing') return 0;
+  if (!sub.trialEndsAt) return TRIAL_DAYS;
   const diff = new Date(sub.trialEndsAt).getTime() - Date.now();
   return Math.max(0, Math.ceil(diff / 86400000));
 }
@@ -92,8 +93,16 @@ export function trialDaysLeft(sub: Subscription | null): number {
 export function isSubscriptionActive(sub: Subscription | null): boolean {
   if (!sub) return true;
   if (sub.status === 'active') return true;
+  if (sub.status === 'trialing' && !sub.trialEndsAt) return true;
   if (sub.status === 'trialing') return trialDaysLeft(sub) > 0;
   return false;
+}
+
+export function isExpired(sub: Subscription | null): boolean {
+  if (!sub) return false;
+  if (sub.status === 'active') return false;
+  if (sub.status === 'trialing') return !!sub.trialEndsAt && trialDaysLeft(sub) <= 0;
+  return ['past_due', 'canceled', 'expired'].includes(sub.status);
 }
 
 export function effectivePlan(sub: Subscription | null): Plan {

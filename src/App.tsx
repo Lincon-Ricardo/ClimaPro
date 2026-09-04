@@ -45,6 +45,7 @@ const TechRota = lazy(() => lazyRetry(() => import('./pages/TechRota')));
 const TechPerformance = lazy(() => lazyRetry(() => import('./pages/TechPerformance')));
 const SystemHealth = lazy(() => lazyRetry(() => import('./pages/SystemHealth')));
 const Planos = lazy(() => lazyRetry(() => import('./pages/Planos')));
+const Expirado = lazy(() => lazyRetry(() => import('./pages/Expirado')));
 
 const OrcamentoDetail = lazy(() => lazyRetry(() => import('./pages/OrcamentoDetail')));
 const NovoOrcamento = lazy(() => lazyRetry(() => import('./pages/NovoOrcamento')));
@@ -122,6 +123,7 @@ export default function App() {
         <Route path="diagnostico" element={<SuspenseWrap><Diagnostico /></SuspenseWrap>} />
         <Route path="saude" element={<SuspenseWrap><AdminOnly><SystemHealth /></AdminOnly></SuspenseWrap>} />
         <Route path="planos" element={<SuspenseWrap><AdminOnly><Planos /></AdminOnly></SuspenseWrap>} />
+        <Route path="expirado" element={<SuspenseWrap><Expirado /></SuspenseWrap>} />
         <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
         <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />

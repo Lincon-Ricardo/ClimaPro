@@ -500,15 +500,35 @@ create policy "assinatura empresa" on subscriptions
 create index if not exists idx_subscriptions_company on subscriptions (company_id);
 
 -- Trigger: toda empresa nova ganha trial de 14 dias no Pro automaticamente
+-- O relógio do trial só começa na 1ª OS criada (função start_trial_clock)
 create or replace function start_trial()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into subscriptions (company_id, plan, status, trial_ends_at)
-  values (new.id, 'pro', 'trialing', now() + interval '14 days')
+  values (new.id, 'pro', 'trialing', null)
   on conflict (company_id) do nothing;
   return new;
 end;
 $$;
+
+-- Relógio do trial: dispara na 1ª OS e vale 14 dias (modelo product-led)
+create or replace function start_trial_clock()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  update subscriptions
+  set trial_ends_at = now() + interval '14 days',
+      updated_at = now()
+  where company_id = new.company_id
+    and status = 'trialing'
+    and trial_ends_at is null;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_first_os_trial on service_orders;
+create trigger on_first_os_trial
+  after insert on service_orders
+  for each row execute procedure start_trial_clock();
 
 drop trigger if exists on_company_trial on companies;
 create trigger on_company_trial
@@ -516,6 +536,7 @@ create trigger on_company_trial
   for each row execute procedure start_trial();
 
 -- Backfill: empresas existentes sem assinatura ganham trial agora
+-- (quem já tem OS: relógio começa hoje; quem nunca usou: começa na 1ª OS)
 insert into subscriptions (company_id, plan, status, trial_ends_at)
-select id, 'pro', 'trialing', now() + interval '14 days' from companies
+select id, 'pro', 'trialing', case when exists (select 1 from service_orders so where so.company_id = companies.id) then now() + interval '14 days' else null end from companies
 on conflict (company_id) do nothing;
