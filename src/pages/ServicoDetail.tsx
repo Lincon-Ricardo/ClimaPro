@@ -107,6 +107,7 @@ export default function ServicoDetail() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const equipment = useLiveQuery(() => db.equipment.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const team = useLiveQuery(() => db.users.toArray(), []) || [];
 
   const [signOpen, setSignOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -368,13 +369,41 @@ export default function ServicoDetail() {
       />
 
       <Card className="mb-3">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
             <Wrench size={18} className="text-primary-600" /> Status
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLE[o.status as keyof typeof STATUS_STYLE] || 'bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300'}`}>
             {STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status}
           </span>
+        </div>
+        <div className="mb-3 flex flex-col gap-1.5 rounded-xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-900/50 dark:bg-sky-950/20 sm:flex-row sm:items-center sm:justify-between">
+          <label className="text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-200">
+            🧑‍🔧 Técnico responsável
+          </label>
+          <select
+            value={o.technician || ''}
+            onChange={async (e) => {
+              const v = e.target.value;
+              try {
+                await setField({ technician: v });
+                toast('success', v ? `OS atribuída a ${v}!` : 'Técnico removido da OS.');
+              } catch {
+                toast('error', 'Não foi possível atualizar o técnico.');
+              }
+            }}
+            className="w-full rounded-lg border border-sky-300 bg-white px-2.5 py-2 text-sm font-semibold text-neutral-800 outline-none focus:border-sky-500 dark:border-sky-800 dark:bg-neutral-900 dark:text-neutral-100 sm:w-64"
+          >
+            <option value="">⚠️ Sem técnico (atribuir)</option>
+            {team.map((u: any) => (
+              <option key={u.id} value={u.name}>
+                {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
+              </option>
+            ))}
+            {o.technician && !team.some((u: any) => u.name === o.technician) && (
+              <option value={o.technician}>{o.technician} (antigo)</option>
+            )}
+          </select>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STEP_OPTIONS.filter((s) => s.value !== 'cancelado').map((s) => (

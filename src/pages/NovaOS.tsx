@@ -28,6 +28,7 @@ export default function NovaOS() {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+  const team = useLiveQuery(() => db.users.toArray(), []) || [];
 
   const preselect = (location.state as any)?.customerId || '';
 
@@ -133,7 +134,14 @@ export default function NovaOS() {
             setValueText(clean);
             setForm({ ...form, value: parseMoney(clean) });
           }} placeholder="0,00" />
-          <Input label="Técnico" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} placeholder="Nome do técnico" />
+          <Select label="Técnico responsável" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })}>
+            <option value="">⚠️ Sem técnico (atribuir depois)</option>
+            {team.map((u: any) => (
+              <option key={u.id} value={u.name}>
+                {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
+              </option>
+            ))}
+          </Select>
         </div>
         <AddressPicker
           customer={customer}
