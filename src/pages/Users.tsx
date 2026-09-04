@@ -88,16 +88,20 @@ export default function Users() {
         let data: any;
         let error: any;
         try {
-          const res = await isolated.auth.signUp({
-            email,
-            password: form.password,
-            options: { data: { name: form.name.trim(), company_id: companyId, role: form.role } },
-          });
+          const res = await withTimeout(
+            isolated.auth.signUp({
+              email,
+              password: form.password,
+              options: { data: { name: form.name.trim(), company_id: companyId, role: form.role } },
+            }),
+            10000,
+            'Comunicação com Supabase'
+          );
           data = res.data;
           error = res.error;
         } catch (e: any) {
           console.error('[Users] signUp falhou:', e);
-          toast('error', 'Falha de conexão ao cadastrar: ' + (e?.message || String(e)));
+          toast('error', 'Falha ao cadastrar: ' + (e?.message || String(e)));
           return;
         }
         if (error) {
@@ -113,40 +117,15 @@ export default function Users() {
         const newId = data?.user?.id as string | undefined;
         if (!newId) {
           console.error('[Users] signUp sem user:', data);
-          toast('error', 'Supabase não retornou o usuário. Veja o console (F12) e tente de novo.');
+          toast('error', 'Supabase não retornou o usuário. Tente novamente.');
           return;
-        }
-        let profileOk = false;
-        for (let i = 0; i < 6; i++) {
-          try {
-            const p = await db.users.get(newId);
-            if (p) { profileOk = true; break; }
-          } catch { /* trigger pode demorar */ }
-          await new Promise((r) => setTimeout(r, 600));
-        }
-        if (!profileOk) {
-          try {
-            await db.users.add({
-              id: newId,
-              name: form.name.trim(),
-              first_name: form.name.trim().split(' ')[0],
-              email,
-              role: form.role,
-              company_id: companyId,
-            });
-            profileOk = true;
-          } catch (e: any) {
-            console.error('[Users] insert profile falhou:', e);
-            toast('error', 'Conta criada no login, mas perfil bloqueado (RLS): ' + (e?.message || String(e)) + '. Rode o schema.sql novo no Supabase e tente outro e-mail.');
-            return;
-          }
         }
         emitDataChanged('profiles');
         emitDataChanged('users');
         if (!data.session) {
-          toast('success', 'Técnico cadastrado! Ele confirma o e-mail e já aparece na lista.');
+          toast('info', 'Técnico criado! Ele precisa confirmar o e-mail cadastrado antes de fazer login.');
         } else {
-          toast('success', 'Técnico cadastrado!');
+          toast('success', 'Técnico cadastrado com sucesso!');
         }
       }
     } catch (err: any) {
