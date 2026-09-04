@@ -73,6 +73,7 @@ export default function Mais() {
         { to: '/app/perfil', icon: <Briefcase size={20} />, label: 'Perfil da empresa', sub: 'Dados da sua empresa' },
         { to: '/app/empresa', icon: <Building2 size={20} />, label: 'Editar empresa', sub: 'Logo e contatos' },
         { to: '/app/config', icon: <Settings size={20} />, label: 'Configurações', sub: 'Conta e dados' },
+        { to: '/app/saude', icon: <Stethoscope size={20} />, label: 'Saúde do sistema', sub: 'Logs e diagnóstico' },
       ];
 
   return (

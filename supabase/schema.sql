@@ -424,3 +424,52 @@ $$;
 
 grant execute on function get_public_budget(uuid) to anon, authenticated;
 grant execute on function decide_public_budget(uuid, text) to anon, authenticated;
+
+-- =============================================================
+-- ÍNDICES DE PERFORMANCE (escala: filtros por empresa/data/status)
+-- =============================================================
+create index if not exists idx_customers_company on customers (company_id);
+create index if not exists idx_customers_name on customers (company_id, name);
+create index if not exists idx_equipment_company on equipment (company_id);
+create index if not exists idx_equipment_customer on equipment (customer_id);
+create index if not exists idx_budgets_company on budgets (company_id);
+create index if not exists idx_budgets_status on budgets (company_id, status);
+create index if not exists idx_budgets_customer on budgets (customer_id);
+create index if not exists idx_orders_company on service_orders (company_id);
+create index if not exists idx_orders_status on service_orders (company_id, status);
+create index if not exists idx_orders_date on service_orders (company_id, date desc);
+create index if not exists idx_orders_tech on service_orders (company_id, technician);
+create index if not exists idx_orders_customer on service_orders (customer_id);
+create index if not exists idx_payments_company on payments (company_id);
+create index if not exists idx_payments_order on payments (service_order_id);
+create index if not exists idx_appointments_company on appointments (company_id);
+create index if not exists idx_appointments_date on appointments (company_id, date);
+create index if not exists idx_notifications_company on notifications (company_id);
+create index if not exists idx_materials_company on materials (company_id);
+create index if not exists idx_profiles_company on profiles (company_id);
+
+-- =============================================================
+-- STORAGE: bucket service-photos (fotos da OS persistentes)
+-- Rode também no Dashboard > Storage > New bucket: service-photos (public)
+-- =============================================================
+insert into storage.buckets (id, name, public)
+values ('service-photos', 'service-photos', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "fotos publicas" on storage.objects;
+create policy "fotos publicas" on storage.objects
+  for select using (bucket_id = 'service-photos');
+
+drop policy if exists "fotos upload empresa" on storage.objects;
+create policy "fotos upload empresa" on storage.objects
+  for insert with check (
+    bucket_id = 'service-photos'
+    and auth.role() = 'authenticated'
+  );
+
+drop policy if exists "fotos delete empresa" on storage.objects;
+create policy "fotos delete empresa" on storage.objects
+  for delete using (
+    bucket_id = 'service-photos'
+    and auth.role() = 'authenticated'
+  );

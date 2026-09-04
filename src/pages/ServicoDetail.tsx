@@ -4,11 +4,13 @@ import SignatureCanvas from 'react-signature-canvas';
 import autoTable from 'jspdf-autotable';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
-  CheckCircle2, Clock, Trash2,
+  CheckCircle2, Clock, Trash2, Loader2,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/db';
+import { uploadServicePhoto, deleteServicePhoto } from '../lib/storage';
+import { log } from '../lib/logger';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
@@ -48,22 +50,26 @@ function PhotoUpload({
   photos,
   onAdd,
   onRemove,
+  uploadCtx,
   className = '',
 }: {
   label: string;
   photos: string[];
   onAdd: (urls: string[]) => void;
   onRemove: (url: string) => void;
+  uploadCtx: { companyId: string; orderId: string; step: string };
   className?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const toast = useToast();
   return (
     <div className={className}>
       <div className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">{label}</div>
       <div className="flex flex-wrap gap-2">
         {photos.map((p) => (
           <div key={p} className="relative">
-            <img src={p} alt={label} className="h-20 w-20 rounded-lg object-cover" />
+            <img src={p} alt={label} className="h-20 w-20 rounded-lg object-cover" loading="lazy" />
             <button
               type="button"
               onClick={() => onRemove(p)}
@@ -75,23 +81,37 @@ function PhotoUpload({
         ))}
         <button
           type="button"
+          disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500 dark:border-neutral-600"
+          className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500 disabled:opacity-50 dark:border-neutral-600"
         >
-          <Camera size={20} />
+          {uploading ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
         </button>
       </div>
+      {uploading && <p className="mt-1 text-[11px] text-neutral-400">Enviando foto(s)...</p>}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         multiple
         hidden
-        onChange={(e) => {
+        onChange={async (e) => {
           const files = Array.from(e.target.files || []);
-          const urls = files.map((f) => URL.createObjectURL(f));
-          onAdd(urls);
           e.target.value = '';
+          if (files.length === 0) return;
+          setUploading(true);
+          try {
+            const urls: string[] = [];
+            for (const f of files) {
+              const url = await uploadServicePhoto(uploadCtx.companyId, uploadCtx.orderId, uploadCtx.step, f);
+              urls.push(url);
+            }
+            onAdd(urls);
+          } catch (err: any) {
+            toast('error', err?.message || 'Não foi possível enviar a foto.');
+          } finally {
+            setUploading(false);
+          }
         }}
       />
     </div>
@@ -490,8 +510,12 @@ export default function ServicoDetail() {
               key={s.key}
               label={s.label}
               photos={o[s.key] || []}
+              uploadCtx={{ companyId: o.companyId || user?.companyId || '', orderId: o.id, step: s.key }}
               onAdd={(urls) => setField({ [s.key]: [...(o[s.key] || []), ...urls] })}
-              onRemove={(url) => setField({ [s.key]: ((o[s.key] as string[]) || []).filter((x: string) => x !== url) })}
+              onRemove={(url) => {
+                setField({ [s.key]: ((o[s.key] as string[]) || []).filter((x: string) => x !== url) });
+                deleteServicePhoto(url);
+              }}
             />
           ))}
         </div>

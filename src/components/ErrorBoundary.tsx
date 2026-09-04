@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { log } from '../lib/logger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -21,7 +22,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary] Erro capturado:', error, errorInfo);
+    log.error('ErrorBoundary', error.message, { stack: error.stack?.slice(0, 1000), componentStack: errorInfo.componentStack?.slice(0, 1000) });
   }
 
   render() {

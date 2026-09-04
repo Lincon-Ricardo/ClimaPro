@@ -31,6 +31,7 @@ const Administrativo = lazy(() => import('./pages/Administrativo'));
 const Users = lazy(() => import('./pages/Users'));
 const TechRota = lazy(() => import('./pages/TechRota'));
 const TechPerformance = lazy(() => import('./pages/TechPerformance'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 
 const OrcamentoDetail = lazy(() => import('./pages/OrcamentoDetail'));
 const NovoOrcamento = lazy(() => import('./pages/NovoOrcamento'));
@@ -106,6 +107,7 @@ export default function App() {
         <Route path="notificacoes" element={<SuspenseWrap><Notificacoes /></SuspenseWrap>} />
         <Route path="calculadora-btu" element={<SuspenseWrap><CalculadoraBtu /></SuspenseWrap>} />
         <Route path="diagnostico" element={<SuspenseWrap><Diagnostico /></SuspenseWrap>} />
+        <Route path="saude" element={<SuspenseWrap><AdminOnly><SystemHealth /></AdminOnly></SuspenseWrap>} />
         <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
         <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
