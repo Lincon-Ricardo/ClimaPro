@@ -540,3 +540,6 @@ create trigger on_company_trial
 insert into subscriptions (company_id, plan, status, trial_ends_at)
 select id, 'pro', 'trialing', case when exists (select 1 from service_orders so where so.company_id = companies.id) then now() + interval '14 days' else null end from companies
 on conflict (company_id) do nothing;
+
+-- Força o PostgREST a recarregar o cache do schema (evita "table not in schema cache")
+notify pgrst, 'reload schema';
