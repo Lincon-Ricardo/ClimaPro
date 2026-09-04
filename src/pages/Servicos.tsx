@@ -102,7 +102,18 @@ export default function Servicos() {
                     <span className="shrink-0 text-xs font-medium text-neutral-400 dark:text-neutral-500">{o.osNumber}</span>
                   </div>
                   <div className="truncate text-sm text-neutral-500 dark:text-neutral-400">❄️ {o.service}</div>
-                  <div className="text-xs text-neutral-400 dark:text-neutral-500">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    {o.technician ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
+                        🧑‍🔧 {o.technician}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                        ⚠️ Sem técnico
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
                     {o.date ? formatDate(o.date) : 'Sem data'}
                     {o.time ? ` · ${o.time}` : ''} · {formatBRL(o.value)}
                   </div>
