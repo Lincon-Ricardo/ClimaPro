@@ -49,6 +49,8 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
     paymentCondition: 'payment_condition',
     executionTerm: 'execution_term',
     defaultValidity: 'default_validity',
+    commissionEnabled: 'commission_enabled',
+    commissionRate: 'commission_rate',
     createdAt: 'created_at',
   },
   profiles: { firstName: 'first_name', companyId: 'company_id' },

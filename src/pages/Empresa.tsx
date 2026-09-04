@@ -15,6 +15,7 @@ const emptyForm = {
   name: '', cnpj: '', phone: '', whatsapp: '', email: '',
   address: '', instagram: '', site: '', pix: '', logo: '', signature: '',
   paymentCondition: '', executionTerm: '', warranty: '', defaultValidity: '',
+  commissionEnabled: true, commissionRate: 15,
 };
 
 export default function Empresa() {
@@ -75,6 +76,8 @@ export default function Empresa() {
         executionTerm: company.executionTerm || '',
         warranty: company.warranty || '',
         defaultValidity: company.defaultValidity || '',
+        commissionEnabled: company.commissionEnabled !== false,
+        commissionRate: company.commissionRate !== undefined && company.commissionRate !== null ? Number(company.commissionRate) : 15,
       });
     }
   }, [company]);
@@ -218,6 +221,61 @@ export default function Empresa() {
               placeholder="Ex.: 7 dias"
             />
           </div>
+        </div>
+
+        {/* ── Comissão da equipe ── */}
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="mb-1 text-sm font-semibold text-neutral-700 dark:text-neutral-200">Comissão da equipe técnica</p>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Defina se os técnicos recebem comissão e qual % sobre cada serviço concluído. Eles veem o extrato em "Meu Desempenho".
+          </p>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 dark:bg-neutral-800">
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
+              Técnicos recebem comissão?
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!form.commissionEnabled}
+              onClick={() => setForm((f) => ({ ...f, commissionEnabled: !f.commissionEnabled }))}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition ${form.commissionEnabled ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${form.commissionEnabled ? 'left-[22px]' : 'left-0.5'}`}
+              />
+            </button>
+          </label>
+          {form.commissionEnabled && (
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+                Porcentagem padrão da comissão
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={form.commissionRate}
+                  onChange={(e) => setForm((f) => ({ ...f, commissionRate: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))}
+                  className="w-24 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-amber-500 dark:border-neutral-600 dark:bg-neutral-800"
+                />
+                <span className="text-sm font-bold text-neutral-600 dark:text-neutral-300">%</span>
+                <div className="flex flex-1 flex-wrap gap-1.5">
+                  {[10, 15, 20, 30].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, commissionRate: v }))}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${form.commissionRate === v ? 'bg-amber-500 text-white' : 'bg-white text-neutral-500 hover:bg-amber-100 dark:bg-neutral-800 dark:hover:bg-amber-900/40'}`}
+                    >
+                      {v}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Assinatura ── */}

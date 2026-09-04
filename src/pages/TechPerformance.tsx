@@ -20,8 +20,11 @@ export default function TechPerformance() {
   const techName = (user?.name || '').trim().toLowerCase();
   const techFirstName = (user?.firstName || '').trim().toLowerCase();
 
-  // Comissao padrao sugerida: 15% (ou baseada em metadados)
-  const [commissionRate, setCommissionRate] = useState<number>(15);
+  // O dono define se há comissão e qual a taxa nas configurações da empresa
+  const commissionEnabled = company?.commissionEnabled !== false;
+  const commissionRate = company?.commissionRate !== undefined && company?.commissionRate !== null
+    ? Number(company.commissionRate)
+    : 15;
 
   const myOrders = useMemo(() => {
     return orders.filter((o) => {
@@ -116,67 +119,72 @@ export default function TechPerformance() {
         </div>
       </div>
 
-      {/* Cards Financeiros do Técnico (Apenas a Comissão dele) */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              Sua Comissão este Mês
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
-              <DollarSign size={18} />
-            </div>
+      {/* Cards Financeiros do Técnico (Definidos pela Empresa) */}
+      {commissionEnabled ? (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Card className="border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                  Sua Comissão este Mês ({commissionRate}%)
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+                  <DollarSign size={18} />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-emerald-800 dark:text-emerald-200">
+                {formatBRL(stats.monthCommission)}
+              </div>
+              <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                Baseado em {stats.monthDone} atendimento(s) concluídos no mês
+              </div>
+            </Card>
+
+            <Card className="border-primary-200 bg-primary-50/50 dark:border-primary-900/50 dark:bg-primary-950/20">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold uppercase tracking-wider text-primary-700 dark:text-primary-300">
+                  Comissão de Hoje
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/60 dark:text-primary-300">
+                  <Flame size={18} />
+                </div>
+              </div>
+              <div className="mt-2 text-2xl font-black text-primary-800 dark:text-primary-200">
+                {formatBRL(stats.todayCommission)}
+              </div>
+              <div className="mt-1 text-xs text-primary-600 dark:text-primary-400">
+                {stats.todayDone} serviço(s) finalizados hoje
+              </div>
+            </Card>
           </div>
-          <div className="mt-2 text-2xl font-black text-emerald-800 dark:text-emerald-200">
-            {formatBRL(stats.monthCommission)}
-          </div>
-          <div className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
-            Baseado em {stats.monthDone} atendimento(s) concluídos no mês
+
+          <Card>
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <div className="font-bold text-neutral-800 dark:text-neutral-100">Regra de Comissão da Empresa</div>
+                <div className="text-xs text-neutral-500">Definida pelo responsável em Configurações da Empresa</div>
+              </div>
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                {commissionRate}% por OS
+              </span>
+            </div>
+          </Card>
+        </>
+      ) : (
+        <Card className="border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/40">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Modelo de Remuneração Fixa</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                Sua empresa não trabalha com modelo de comissão por OS. Seus ganhos seguem o contrato com a empresa.
+              </div>
+            </div>
           </div>
         </Card>
-
-        <Card className="border-primary-200 bg-primary-50/50 dark:border-primary-900/50 dark:bg-primary-950/20">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-wider text-primary-700 dark:text-primary-300">
-              Comissão de Hoje
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/60 dark:text-primary-300">
-              <Flame size={18} />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl font-black text-primary-800 dark:text-primary-200">
-            {formatBRL(stats.todayCommission)}
-          </div>
-          <div className="mt-1 text-xs text-primary-600 dark:text-primary-400">
-            {stats.todayDone} serviço(s) finalizados hoje
-          </div>
-        </Card>
-      </div>
-
-      {/* Ajuste de Comissão Pessoal do Técnico */}
-      <Card>
-        <div className="flex items-center justify-between text-sm">
-          <div>
-            <div className="font-bold text-neutral-800 dark:text-neutral-100">Taxa de Comissão Estimada</div>
-            <div className="text-xs text-neutral-500">Ajuste conforme o combinado com a empresa</div>
-          </div>
-          <div className="flex items-center gap-1.5 font-bold">
-            <select
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(Number(e.target.value))}
-              className="rounded-lg border border-neutral-300 bg-transparent px-2.5 py-1 text-sm font-semibold dark:border-neutral-700"
-            >
-              <option value="10">10%</option>
-              <option value="15">15%</option>
-              <option value="20">20%</option>
-              <option value="25">25%</option>
-              <option value="30">30%</option>
-              <option value="40">40%</option>
-              <option value="50">50%</option>
-            </select>
-          </div>
-        </div>
-      </Card>
+      )}
 
       {/* Dicas de Excelência Operacional */}
       <Card>

@@ -37,8 +37,14 @@ create table if not exists companies (
   execution_term text default '',
   warranty text default '',
   default_validity text default '',
+  commission_enabled boolean default true,
+  commission_rate numeric default 15,
   created_at timestamptz default now()
 );
+
+-- Migração para comissões da equipe (dono controla no perfil da empresa)
+alter table companies add column if not exists commission_enabled boolean default true;
+alter table companies add column if not exists commission_rate numeric default 15;
 
 -- ---------- CLIENTES ----------
 create table if not exists customers (
