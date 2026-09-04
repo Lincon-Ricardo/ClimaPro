@@ -7,6 +7,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { PageHeader } from '../components/PageHeader';
+import { useToast } from '../components/Toast';
 import { formatBRL, toISODate, todayISO, formatDate } from '../lib/utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
@@ -14,9 +15,12 @@ const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function Agenda() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { user } = useAuth();
   const allOrders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+  const team = useLiveQuery(() => db.users.toArray(), []) || [];
+  const isAdmin = user?.role === 'admin';
   const [view, setView] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [anchor, setAnchor] = useState(new Date());
 
@@ -117,7 +121,38 @@ export default function Agenda() {
               {fullAddress ? (
                 <div className="mt-1 break-words text-xs leading-snug text-neutral-500 dark:text-neutral-400">📍 {fullAddress}</div>
               ) : null}
-              {o.technician ? (
+              {isAdmin ? (
+                <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={o.technician || ''}
+                    onChange={async (e) => {
+                      const v = e.target.value;
+                      try {
+                        await db.serviceOrders.update(o.id, { technician: v });
+                        toast('success', v ? `OS atribuída a ${v}!` : 'Técnico removido da OS.');
+                      } catch {
+                        toast('error', 'Não foi possível atualizar o técnico.');
+                      }
+                    }}
+                    aria-label="Atribuir técnico"
+                    className={`w-full max-w-[220px] rounded-lg border px-2 py-1.5 text-[11px] font-bold outline-none sm:text-xs ${
+                      o.technician
+                        ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200'
+                        : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+                    }`}
+                  >
+                    <option value="">⚠️ Sem técnico — atribuir</option>
+                    {team.map((u: any) => (
+                      <option key={u.id} value={u.name}>
+                        {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
+                      </option>
+                    ))}
+                    {o.technician && !team.some((u: any) => u.name === o.technician) && (
+                      <option value={o.technician}>{o.technician} (antigo)</option>
+                    )}
+                  </select>
+                </div>
+              ) : o.technician ? (
                 <div className="mt-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300">🧑‍🔧 {o.technician}</div>
               ) : null}
               <div className="mt-1 text-xs font-bold text-primary-700 dark:text-primary-300">{formatBRL(o.value)}</div>
