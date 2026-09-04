@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { UserRound, Plus, Trash2, ShieldCheck, Wrench, Pencil } from 'lucide-react';
 import { db } from '../lib/db';
-import { supabase } from '../lib/supabaseClient';
+import { createIsolatedClient } from '../lib/supabaseClient';
+import { emitDataChanged } from '../lib/tableBus';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -74,7 +75,8 @@ export default function Users() {
           toast('error', 'Empresa não encontrada. Tente recarregar a página.');
           return;
         }
-        const { data, error } = await supabase.auth.signUp({
+        const isolated = createIsolatedClient();
+        const { data, error } = await isolated.auth.signUp({
           email,
           password: form.password,
           options: { data: { name: form.name.trim(), company_id: companyId, role: form.role } },
@@ -83,8 +85,27 @@ export default function Users() {
           toast('error', error.message || 'Não foi possível cadastrar.');
           return;
         }
+        const newId = data.user?.id;
+        if (!newId) {
+          toast('error', 'Não foi possível cadastrar. Tente novamente.');
+          return;
+        }
+        try {
+          await db.users.add({
+            id: newId,
+            name: form.name.trim(),
+            first_name: form.name.trim().split(' ')[0],
+            email,
+            role: form.role,
+            company_id: companyId,
+          });
+        } catch {
+          // Trigger do Supabase geralmente já criou o perfil; ignora duplicado.
+        }
+        emitDataChanged('profiles');
+        emitDataChanged('users');
         if (!data.session) {
-          toast('info', 'Convite criado! O técnico precisa confirmar o e-mail antes de entrar.');
+          toast('success', 'Técnico cadastrado! Ele confirma o e-mail e já aparece na lista.');
         } else {
           toast('success', 'Técnico cadastrado!');
         }

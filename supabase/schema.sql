@@ -261,6 +261,12 @@ create policy "profiles delete" on profiles
     and id <> auth.uid()
     and exists (select 1 from profiles me where me.id = auth.uid() and me.role = 'admin')
   );
+drop policy if exists "profiles insert admin" on profiles;
+create policy "profiles insert admin" on profiles
+  for insert with check (
+    company_id = auth_company_id()
+    and exists (select 1 from profiles me where me.id = auth.uid() and me.role = 'admin')
+  );
 
 -- Preenchimento automático de company_id nos inserts (RLS exige)
 create or replace function set_company_id()

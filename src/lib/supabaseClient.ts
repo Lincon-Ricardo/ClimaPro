@@ -11,6 +11,15 @@ export async function isSupabaseConfigured() {
   return isSupabaseConfiguredSync();
 }
 
+export const SUPABASE_URL = rawUrl;
+export const SUPABASE_ANON_KEY = rawKey;
+
+export function createIsolatedClient() {
+  return createClient(rawUrl, rawKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
 function getClient(): SupabaseClient {
   if (isSupabaseConfiguredSync()) return createClient(rawUrl, rawKey);
   return createClient('https://placeholder.supabase.co', 'placeholder-anon-key');
