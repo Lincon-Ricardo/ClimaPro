@@ -46,6 +46,9 @@ create table if not exists companies (
 alter table companies add column if not exists commission_enabled boolean default true;
 alter table companies add column if not exists commission_rate numeric default 15;
 
+-- Migração para múltiplos endereços por cliente (casa, comércio, etc.)
+alter table customers add column if not exists saved_addresses jsonb default '[]'::jsonb;
+
 -- ---------- CLIENTES ----------
 create table if not exists customers (
   id uuid primary key default gen_random_uuid(),

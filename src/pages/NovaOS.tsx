@@ -4,6 +4,8 @@ import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
 import { Button } from '../components/Button';
 import { Input, Select, Textarea } from '../components/Fields';
+import { AddressPicker } from '../components/AddressPicker';
+import { mergeSavedAddress } from '../lib/addresses';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { SERVICE_TYPES, toggleChecklistItem, parseMoney } from '../lib/utils';
@@ -40,6 +42,8 @@ export default function NovaOS() {
     technician: '',
     address: '',
   });
+  const [addressIsNew, setAddressIsNew] = useState(false);
+  const [addressLabel, setAddressLabel] = useState('');
   const [valueText, setValueText] = useState('');
   const [checklist, setChecklist] = useState<ChecklistItem[]>(
     DEFAULT_CHECKLIST.map((label) => ({ id: crypto.randomUUID(), label, done: false }))
@@ -65,6 +69,14 @@ export default function NovaOS() {
     }
     setBusy(true);
     try {
+      const finalAddress = form.address || (customer ? `${customer.street || ''} ${customer.number || ''}`.trim() : '');
+      // Se digitou um endereço novo, salva no cadastro do cliente para reutilizar
+      if (addressIsNew && finalAddress && customer && !`${customer.street || ''} ${customer.number || ''}`.includes(finalAddress.slice(0, 10))) {
+        try {
+          const savedAddresses = mergeSavedAddress(customer, addressLabel, finalAddress);
+          await db.customers.update(customer.id, { savedAddresses });
+        } catch { /* não bloqueia a OS se falhar */ }
+      }
       await db.serviceOrders.add({
         id: crypto.randomUUID(),
         osNumber: `OS-${String(Date.now()).slice(-5)}`,
@@ -75,7 +87,7 @@ export default function NovaOS() {
         value: form.value,
         date: form.date,
         time: form.time,
-        address: form.address || (customer ? `${customer.street || ''} ${customer.number || ''}`.trim() : ''),
+        address: finalAddress,
         technician: form.technician,
         status: 'agendado',
         checklist,
@@ -123,7 +135,15 @@ export default function NovaOS() {
           }} placeholder="0,00" />
           <Input label="Técnico" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} placeholder="Nome do técnico" />
         </div>
-        <Input label="Endereço do atendimento" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Endereço onde será o serviço" />
+        <AddressPicker
+          customer={customer}
+          value={form.address}
+          onChange={(addr, isNew, label) => {
+            setForm((f) => ({ ...f, address: addr }));
+            setAddressIsNew(isNew);
+            setAddressLabel(label);
+          }}
+        />
 
         <div>
           <div className="mb-2 flex items-center justify-between">

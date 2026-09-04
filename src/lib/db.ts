@@ -9,7 +9,7 @@ import { emitDataChanged } from './tableBus';
 type TableName = 'customers' | 'service_orders' | 'budgets' | 'equipment' | 'companies' | 'notifications' | 'payments' | 'profiles' | 'appointments' | 'materials';
 
 const FIELD_MAP: Record<string, Record<string, string>> = {
-  customers: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  customers: { createdAt: 'created_at', updatedAt: 'updated_at', savedAddresses: 'saved_addresses' },
   equipment: {
     customerId: 'customer_id',
     installLocation: 'install_location',
