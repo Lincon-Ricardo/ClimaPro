@@ -6,7 +6,7 @@ import { emitDataChanged } from './tableBus';
  * operando sobre o Supabase. Campos JS (camelCase) <-> colunas (snake_case).
  */
 
-type TableName = 'customers' | 'service_orders' | 'budgets' | 'equipment' | 'companies' | 'notifications' | 'payments' | 'profiles' | 'appointments' | 'materials';
+type TableName = 'customers' | 'service_orders' | 'budgets' | 'equipment' | 'companies' | 'notifications' | 'payments' | 'profiles' | 'appointments' | 'materials' | 'subscriptions';
 
 const FIELD_MAP: Record<string, Record<string, string>> = {
   customers: { createdAt: 'created_at', updatedAt: 'updated_at', savedAddresses: 'saved_addresses' },
@@ -62,6 +62,15 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
   materials: {
     unitValue: 'unit_value',
     createdAt: 'created_at',
+  },
+  subscriptions: {
+    companyId: 'company_id',
+    trialEndsAt: 'trial_ends_at',
+    currentPeriodEnd: 'current_period_end',
+    asaasCustomerId: 'asaas_customer_id',
+    asaasSubscriptionId: 'asaas_subscription_id',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   },
 };
 
@@ -266,6 +275,7 @@ export const db = {
   users: makeTable('profiles'),
   appointments: makeTable('appointments'),
   materials: makeTable('materials'),
+  subscriptions: makeTable('subscriptions'),
 };
 
 export async function seedIfEmpty() {

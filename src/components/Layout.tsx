@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
+import { BillingBanner } from './BillingBanner';
 import { useTheme } from '../context/ThemeContext';
 import { NavItem } from './NavItem';
 import { useLiveQuery } from '../hooks/useLiveQuery';
@@ -171,6 +172,7 @@ export function Layout() {
           </div>
         </aside>
         <main className="ml-64 flex-1 px-6 py-6">
+          {!isTech && <BillingBanner />}
           <Outlet />
         </main>
       </div>
@@ -208,6 +210,7 @@ export function Layout() {
           </div>
         </header>
         <main className="px-4 pb-24 pt-4">
+          {!isTech && <BillingBanner />}
           <Outlet />
         </main>
         <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-700 dark:bg-neutral-900">

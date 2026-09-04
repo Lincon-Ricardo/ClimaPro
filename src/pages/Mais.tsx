@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Wrench, TrendingUp, Snowflake, FileText, Briefcase, Settings,
   Users, Bell, MessageCircle, Building2, Calculator, Stethoscope, LayoutDashboard,
-  DollarSign, Trophy,
+  DollarSign, Trophy, Crown,
 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
@@ -72,6 +72,7 @@ export default function Mais() {
     : [
         { to: '/app/perfil', icon: <Briefcase size={20} />, label: 'Perfil da empresa', sub: 'Dados da sua empresa' },
         { to: '/app/empresa', icon: <Building2 size={20} />, label: 'Editar empresa', sub: 'Logo e contatos' },
+        { to: '/app/planos', icon: <Crown size={20} />, label: 'Plano e assinatura', sub: 'Trial, upgrade e pagamento' },
         { to: '/app/config', icon: <Settings size={20} />, label: 'Configurações', sub: 'Conta e dados' },
         { to: '/app/saude', icon: <Stethoscope size={20} />, label: 'Saúde do sistema', sub: 'Logs e diagnóstico' },
       ];

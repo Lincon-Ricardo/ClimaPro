@@ -8,6 +8,7 @@ import { AddressPicker } from '../components/AddressPicker';
 import { mergeSavedAddress } from '../lib/addresses';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 import { PageHeader } from '../components/PageHeader';
 import { SERVICE_TYPES, toggleChecklistItem, parseMoney } from '../lib/utils';
 import type { ChecklistItem } from '../types';
@@ -28,6 +29,7 @@ export default function NovaOS() {
   const location = useLocation();
   const toast = useToast();
   const { user } = useAuth();
+  const { active, osBlocked, osThisMonth, osAllowed, plan } = useSubscription();
   const isAdmin = user?.role === 'admin';
   const [busy, setBusy] = useState(false);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
@@ -67,6 +69,16 @@ export default function NovaOS() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
+    if (!active) {
+      toast('error', 'Assinatura vencida. Renove em Planos para continuar.');
+      navigate('/app/planos');
+      return;
+    }
+    if (osBlocked) {
+      toast('error', `Limite do plano ${plan.name} atingido (${osThisMonth}/${osAllowed} OS). Faça upgrade.`);
+      navigate('/app/planos');
+      return;
+    }
     if (!form.customerId) {
       toast('error', 'Selecione um cliente.');
       return;

@@ -11,12 +11,14 @@ import { Input } from '../components/Fields';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
+import { useSubscription } from '../hooks/useSubscription';
 
 const emptyForm = { name: '', email: '', password: '', role: 'tech' as 'tech' | 'admin' };
 
 export default function Users() {
   const toast = useToast();
   const { user } = useAuth();
+  const { techBlocked, techCount, techAllowed, plan } = useSubscription();
   const users = useLiveQuery(() => db.users.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +29,10 @@ export default function Users() {
   const isAdmin = user?.role === 'admin';
 
   function openCreate() {
+    if (techBlocked) {
+      toast('error', `Limite do plano ${plan.name}: ${techCount}/${techAllowed} técnicos. Faça upgrade em Planos.`);
+      return;
+    }
     setEditing(null);
     setForm(emptyForm);
     setShowModal(true);

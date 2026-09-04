@@ -473,3 +473,49 @@ create policy "fotos delete empresa" on storage.objects
     bucket_id = 'service-photos'
     and auth.role() = 'authenticated'
   );
+
+-- =============================================================
+-- ASSINATURAS (monetização SaaS via Asaas)
+-- Planos: start R$49 / pro R$99 / master R$199 + trial 14 dias
+-- =============================================================
+create table if not exists subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies on delete cascade unique,
+  plan text not null default 'trial' check (plan in ('trial','start','pro','master')),
+  status text not null default 'trialing' check (status in ('trialing','active','past_due','canceled','expired')),
+  trial_ends_at timestamptz default (now() + interval '14 days'),
+  current_period_end timestamptz,
+  asaas_customer_id text default '',
+  asaas_subscription_id text default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table subscriptions enable row level security;
+
+drop policy if exists "assinatura empresa" on subscriptions;
+create policy "assinatura empresa" on subscriptions
+  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+
+create index if not exists idx_subscriptions_company on subscriptions (company_id);
+
+-- Trigger: toda empresa nova ganha trial de 14 dias no Pro automaticamente
+create or replace function start_trial()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into subscriptions (company_id, plan, status, trial_ends_at)
+  values (new.id, 'pro', 'trialing', now() + interval '14 days')
+  on conflict (company_id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_company_trial on companies;
+create trigger on_company_trial
+  after insert on companies
+  for each row execute procedure start_trial();
+
+-- Backfill: empresas existentes sem assinatura ganham trial agora
+insert into subscriptions (company_id, plan, status, trial_ends_at)
+select id, 'pro', 'trialing', now() + interval '14 days' from companies
+on conflict (company_id) do nothing;
