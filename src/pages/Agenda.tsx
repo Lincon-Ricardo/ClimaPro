@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
@@ -13,10 +14,25 @@ const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function Agenda() {
   const navigate = useNavigate();
-  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
+  const { user } = useAuth();
+  const allOrders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const [view, setView] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [anchor, setAnchor] = useState(new Date());
+
+  const isTech = user?.role === 'tech';
+  const techName = (user?.name || '').trim().toLowerCase();
+  const techFirstName = (user?.firstName || '').trim().toLowerCase();
+
+  // Técnico: agenda isolada nas próprias atribuições
+  const orders = useMemo(() => {
+    if (!isTech) return allOrders;
+    return allOrders.filter((o) => {
+      const t = (o.technician || '').trim().toLowerCase();
+      if (!t) return false;
+      return t === techName || t === techFirstName || t.includes(techFirstName);
+    });
+  }, [allOrders, isTech, techName, techFirstName]);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 

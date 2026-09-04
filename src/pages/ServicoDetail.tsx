@@ -24,6 +24,7 @@ import {
   FOOTER_SPACE, fitOneLine, measureLines, newBrandedPage, stampFooters,
 } from '../lib/pdf/theme';
 import { setPdfFont } from '../lib/pdf/fonts';
+import { VoiceReport, SuperheatCalc } from '../components/FieldTools';
 import type { ChecklistItem } from '../types';
 
 const STEP_OPTIONS: { value: string; label: string }[] = [
@@ -462,11 +463,15 @@ export default function ServicoDetail() {
 
       <Card className="mt-3">
         <div className="mb-2 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
-          <StickyNote size={18} className="text-primary-600" /> Observações técnicas
+          <StickyNote size={18} className="text-primary-600" /> Observações técnicas / Laudo
+        </div>
+        <div className="mb-3 space-y-2">
+          <VoiceReport onApply={(txt) => setObs((prev) => (prev ? prev.replace(/\s+$/, '') + '\n' + txt : txt))} />
+          <SuperheatCalc onApply={(txt) => setObs((prev) => (prev ? prev.replace(/\s+$/, '') + '\n' + txt : txt))} />
         </div>
         <Input
           value={obs}
-          placeholder="Anote o que foi feito..."
+          placeholder="Anote o que foi feito... ou use o laudo por voz acima"
           onChange={(e) => setObs(e.target.value)}
         />
       </Card>

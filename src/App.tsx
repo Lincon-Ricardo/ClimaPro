@@ -29,6 +29,8 @@ const CalculadoraBtu = lazy(() => import('./pages/CalculadoraBtu'));
 const Diagnostico = lazy(() => import('./pages/Diagnostico'));
 const Administrativo = lazy(() => import('./pages/Administrativo'));
 const Users = lazy(() => import('./pages/Users'));
+const TechRota = lazy(() => import('./pages/TechRota'));
+const TechPerformance = lazy(() => import('./pages/TechPerformance'));
 
 const OrcamentoDetail = lazy(() => import('./pages/OrcamentoDetail'));
 const NovoOrcamento = lazy(() => import('./pages/NovoOrcamento'));
@@ -44,6 +46,22 @@ function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function DashboardOrRota() {
+  const { user } = useAuth();
+  if (user?.role === 'tech') {
+    return <Navigate to="/app/rota" replace />;
+  }
+  return <Dashboard />;
+}
+
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role === 'tech') {
+    return <Navigate to="/app/rota" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -64,31 +82,33 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<SuspenseWrap><Dashboard /></SuspenseWrap>} />
+        <Route index element={<SuspenseWrap><DashboardOrRota /></SuspenseWrap>} />
+        <Route path="rota" element={<SuspenseWrap><TechRota /></SuspenseWrap>} />
+        <Route path="desempenho" element={<SuspenseWrap><TechPerformance /></SuspenseWrap>} />
         <Route path="clientes" element={<SuspenseWrap><Clientes /></SuspenseWrap>} />
         <Route path="clientes/novo" element={<SuspenseWrap><NovoCliente /></SuspenseWrap>} />
         <Route path="clientes/:id" element={<SuspenseWrap><ClienteDetail /></SuspenseWrap>} />
         <Route path="clientes/:id/editar" element={<SuspenseWrap><EditarCliente /></SuspenseWrap>} />
         <Route path="equipamentos" element={<SuspenseWrap><Equipamentos /></SuspenseWrap>} />
         <Route path="agenda" element={<SuspenseWrap><Agenda /></SuspenseWrap>} />
-        <Route path="orcamentos" element={<SuspenseWrap><Orcamentos /></SuspenseWrap>} />
-        <Route path="orcamentos/novo" element={<SuspenseWrap><NovoOrcamento /></SuspenseWrap>} />
-        <Route path="orcamentos/:id" element={<SuspenseWrap><OrcamentoDetail /></SuspenseWrap>} />
+        <Route path="orcamentos" element={<SuspenseWrap><AdminOnly><Orcamentos /></AdminOnly></SuspenseWrap>} />
+        <Route path="orcamentos/novo" element={<SuspenseWrap><AdminOnly><NovoOrcamento /></AdminOnly></SuspenseWrap>} />
+        <Route path="orcamentos/:id" element={<SuspenseWrap><AdminOnly><OrcamentoDetail /></AdminOnly></SuspenseWrap>} />
         <Route path="servicos" element={<SuspenseWrap><Servicos /></SuspenseWrap>} />
         <Route path="servicos/:id" element={<SuspenseWrap><ServicoDetail /></SuspenseWrap>} />
         <Route path="servicos/novo" element={<SuspenseWrap><NovaOS /></SuspenseWrap>} />
-        <Route path="financeiro" element={<SuspenseWrap><Financeiro /></SuspenseWrap>} />
-        <Route path="relatorios" element={<SuspenseWrap><Relatorios /></SuspenseWrap>} />
-        <Route path="perfil" element={<SuspenseWrap><Perfil /></SuspenseWrap>} />
+        <Route path="financeiro" element={<SuspenseWrap><AdminOnly><Financeiro /></AdminOnly></SuspenseWrap>} />
+        <Route path="relatorios" element={<SuspenseWrap><AdminOnly><Relatorios /></AdminOnly></SuspenseWrap>} />
+        <Route path="perfil" element={<SuspenseWrap><AdminOnly><Perfil /></AdminOnly></SuspenseWrap>} />
         <Route path="config" element={<SuspenseWrap><Config /></SuspenseWrap>} />
         <Route path="mais" element={<SuspenseWrap><Mais /></SuspenseWrap>} />
         <Route path="busca" element={<SuspenseWrap><Busca /></SuspenseWrap>} />
         <Route path="notificacoes" element={<SuspenseWrap><Notificacoes /></SuspenseWrap>} />
         <Route path="calculadora-btu" element={<SuspenseWrap><CalculadoraBtu /></SuspenseWrap>} />
         <Route path="diagnostico" element={<SuspenseWrap><Diagnostico /></SuspenseWrap>} />
-        <Route path="administrativo" element={<SuspenseWrap><Administrativo /></SuspenseWrap>} />
-        <Route path="users" element={<SuspenseWrap><Users /></SuspenseWrap>} />
-        <Route path="empresa" element={<SuspenseWrap><Empresa /></SuspenseWrap>} />
+        <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
+        <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
+        <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
       </Route>
       <Route path="/orcamento/:id" element={<SuspenseWrap><ClienteOrcamento /></SuspenseWrap>} />
       <Route path="*" element={<Navigate to={user ? '/app' : '/login'} replace />} />

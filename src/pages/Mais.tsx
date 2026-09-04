@@ -19,9 +19,22 @@ export default function Mais() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const unread = useLiveQuery(() => db.notifications.filter((n) => n.read === false).count(), []) ?? 0;
 
+  const isTech = user?.role === 'tech';
+  const techName = (user?.name || '').trim().toLowerCase();
+  const techFirstName = (user?.firstName || '').trim().toLowerCase();
+
+  // Técnico: só vê as próprias OS
+  const visibleOrders = isTech
+    ? orders.filter((o) => {
+        const t = (o.technician || '').trim().toLowerCase();
+        if (!t) return false;
+        return t === techName || t === techFirstName || t.includes(techFirstName);
+      })
+    : orders;
+
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
-  const dueReminders = orders
+  const dueReminders = visibleOrders
     .filter((o) => o.status === 'concluido' && o.date && o.reminderMonths)
     .map((o) => {
       const due = addMonths(o.date!, o.reminderMonths!);
@@ -30,19 +43,32 @@ export default function Mais() {
     .filter((r) => r.due <= toISODate(new Date()))
     .sort((a, b) => a.due.localeCompare(b.due));
 
-  const sections = [
-    { to: '/app/servicos', icon: <Wrench size={20} />, label: 'Serviços', sub: `${orders.length} ordens de serviço` },
-    { to: '/app/financeiro', icon: <TrendingUp size={20} />, label: 'Financeiro', sub: 'Receitas e valores' },
-    { to: '/app/equipamentos', icon: <Snowflake size={20} />, label: 'Equipamentos', sub: 'Cadastro de aparelhos' },
-    { to: '/app/relatorios', icon: <FileText size={20} />, label: 'Relatórios', sub: 'Indicadores do negócio' },
-    { to: '/app/notificacoes', icon: <Bell size={20} />, label: 'Notificações', sub: `${unread} não lida(s)` },
-  ];
+  // Modulos para Dono vs Tecnico
+  const sections = isTech
+    ? [
+        { to: '/app/rota', icon: <Wrench size={20} />, label: 'Minha Rota do Dia', sub: 'Atendimentos de hoje' },
+        { to: '/app/servicos', icon: <Wrench size={20} />, label: 'Minhas Ordens de Serviço', sub: `${visibleOrders.length} atribuídas a você` },
+        { to: '/app/desempenho', icon: <TrendingUp size={20} />, label: 'Meu Desempenho & Comissões', sub: 'Extrato e metas' },
+        { to: '/app/equipamentos', icon: <Snowflake size={20} />, label: 'Equipamentos', sub: 'Histórico de aparelhos' },
+        { to: '/app/notificacoes', icon: <Bell size={20} />, label: 'Notificações', sub: `${unread} não lida(s)` },
+      ]
+    : [
+        { to: '/app/servicos', icon: <Wrench size={20} />, label: 'Serviços', sub: `${orders.length} ordens de serviço` },
+        { to: '/app/financeiro', icon: <TrendingUp size={20} />, label: 'Financeiro', sub: 'Receitas e valores' },
+        { to: '/app/equipamentos', icon: <Snowflake size={20} />, label: 'Equipamentos', sub: 'Cadastro de aparelhos' },
+        { to: '/app/relatorios', icon: <FileText size={20} />, label: 'Relatórios', sub: 'Indicadores do negócio' },
+        { to: '/app/notificacoes', icon: <Bell size={20} />, label: 'Notificações', sub: `${unread} não lida(s)` },
+      ];
 
-  const account = [
-    { to: '/app/perfil', icon: <Briefcase size={20} />, label: 'Perfil da empresa', sub: 'Dados da sua empresa' },
-    { to: '/app/empresa', icon: <Building2 size={20} />, label: 'Editar empresa', sub: 'Logo e contatos' },
-    { to: '/app/config', icon: <Settings size={20} />, label: 'Configurações', sub: 'Conta e dados' },
-  ];
+  const account = isTech
+    ? [
+        { to: '/app/config', icon: <Settings size={20} />, label: 'Configurações da conta', sub: 'Tema e senha' },
+      ]
+    : [
+        { to: '/app/perfil', icon: <Briefcase size={20} />, label: 'Perfil da empresa', sub: 'Dados da sua empresa' },
+        { to: '/app/empresa', icon: <Building2 size={20} />, label: 'Editar empresa', sub: 'Logo e contatos' },
+        { to: '/app/config', icon: <Settings size={20} />, label: 'Configurações', sub: 'Conta e dados' },
+      ];
 
   return (
     <div className="max-w-4xl">
@@ -105,26 +131,49 @@ export default function Mais() {
       </div>
 
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Gestão</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card onClick={() => navigate('/app/administrativo')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <LayoutDashboard size={20} />
-          </div>
-          <div>
-            <div className="font-bold text-neutral-800 dark:text-neutral-100">Painel administrativo</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">Visão do dono e desempenho da equipe</div>
-          </div>
-        </Card>
-        <Card onClick={() => navigate('/app/users')} className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300">
-            <Users size={20} />
-          </div>
-          <div>
-            <div className="font-bold text-neutral-800 dark:text-neutral-100">Técnicos</div>
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">Gerenciar equipe e acessos</div>
-          </div>
-        </Card>
-      </div>
+      {!isTech ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Card onClick={() => navigate('/app/administrativo')} className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <LayoutDashboard size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Painel administrativo</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">Visão do dono e desempenho da equipe</div>
+            </div>
+          </Card>
+          <Card onClick={() => navigate('/app/users')} className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300">
+              <Users size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Técnicos</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">Gerenciar equipe e acessos</div>
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Card onClick={() => navigate('/app/rota')} className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300">
+              <LayoutDashboard size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Minha Rota de Hoje</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">Ver atendimentos e navegação</div>
+            </div>
+          </Card>
+          <Card onClick={() => navigate('/app/desempenho')} className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300">
+              <TrendingUp size={20} />
+            </div>
+            <div>
+              <div className="font-bold text-neutral-800 dark:text-neutral-100">Minhas Comissões</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400">Extrato e progresso</div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Conta e empresa</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

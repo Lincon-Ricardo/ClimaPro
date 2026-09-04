@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
@@ -21,9 +22,24 @@ const FILTERS = [
 export default function Servicos() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<string>('todos');
-  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
+  const allOrders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+
+  const isTech = user?.role === 'tech';
+  const techName = (user?.name || '').trim().toLowerCase();
+  const techFirstName = (user?.firstName || '').trim().toLowerCase();
+
+  // Técnico: apenas OS atribuídas a ele
+  const orders = useMemo(() => {
+    if (!isTech) return allOrders;
+    return allOrders.filter((o) => {
+      const t = (o.technician || '').trim().toLowerCase();
+      if (!t) return false;
+      return t === techName || t === techFirstName || t.includes(techFirstName);
+    });
+  }, [allOrders, isTech, techName, techFirstName]);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 

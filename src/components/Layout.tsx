@@ -17,6 +17,8 @@ import {
   Bell,
   Sun,
   Moon,
+  Navigation,
+  Trophy,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
@@ -58,7 +60,7 @@ function Logo({ light }: { light?: boolean }) {
 }
 
 export function Layout() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const { resolved, setTheme } = useTheme();
@@ -66,6 +68,38 @@ export function Layout() {
     () => db.notifications.filter((n) => n.read === false).count(),
     []
   ) ?? 0;
+
+  const isTech = user?.role === 'tech';
+
+  // Navegação do Técnico (Cockpit de Campo)
+  const techBottomItems = [
+    { to: '/app/rota', icon: Navigation, label: 'Minha Rota' },
+    { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
+    { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
+    { to: '/app/desempenho', icon: Trophy, label: 'Comissão' },
+    { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
+  ];
+
+  // Navegação do Dono (Torre de Controle)
+  const adminBottomItems = [
+    { to: '/app', icon: Home, label: 'Início' },
+    { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
+    { to: '/app/clientes', icon: Users, label: 'Clientes' },
+    { to: '/app/orcamentos', icon: Wallet, label: 'Orçamentos' },
+    { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
+  ];
+
+  const currentBottomItems = isTech ? techBottomItems : adminBottomItems;
+
+  const techMoreItems = [
+    { to: '/app/rota', icon: Navigation, label: 'Cockpit de Rota' },
+    { to: '/app/desempenho', icon: Trophy, label: 'Meu Desempenho' },
+    { to: '/app/servicos', icon: Wrench, label: 'Minhas OS' },
+    { to: '/app/equipamentos', icon: Snowflake, label: 'Equipamentos' },
+    { to: '/app/config', icon: Settings, label: 'Minha Conta' },
+  ];
+
+  const currentMoreItems = isTech ? techMoreItems : moreItems;
 
   useEffect(() => {
     generateNotifications();
@@ -85,16 +119,33 @@ export function Layout() {
             <Logo light />
           </div>
           <nav className="flex-1 space-y-1 overflow-y-auto px-3">
-            <NavItem to="/app" icon={Home} label="Início" light />
-            <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
-            <NavItem to="/app/clientes" icon={Users} label="Clientes" light />
-            <NavItem to="/app/orcamentos" icon={Wallet} label="Orçamentos" light />
-            <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
-              Gestão
-            </div>
-            {moreItems.map((it) => (
-              <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
-            ))}
+            {isTech ? (
+              <>
+                <NavItem to="/app/rota" icon={Navigation} label="Minha Rota" light />
+                <NavItem to="/app/servicos" icon={Wrench} label="Minhas OS" light />
+                <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
+                <NavItem to="/app/desempenho" icon={Trophy} label="Meu Desempenho" light />
+                <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
+                  Ferramentas
+                </div>
+                {currentMoreItems.map((it) => (
+                  <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
+                ))}
+              </>
+            ) : (
+              <>
+                <NavItem to="/app" icon={Home} label="Início" light />
+                <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
+                <NavItem to="/app/clientes" icon={Users} label="Clientes" light />
+                <NavItem to="/app/orcamentos" icon={Wallet} label="Orçamentos" light />
+                <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
+                  Gestão
+                </div>
+                {moreItems.map((it) => (
+                  <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
+                ))}
+              </>
+            )}
             <div className="relative">
               <NavItem to="/app/notificacoes" icon={Bell} label="Notificações" light />
               {unreadCount > 0 && (
@@ -154,7 +205,7 @@ export function Layout() {
           <Outlet />
         </main>
         <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-700 dark:bg-neutral-900">
-          {bottomItems.map((it) => (
+          {currentBottomItems.map((it) => (
             <NavItem
               key={it.to}
               to={it.to}
