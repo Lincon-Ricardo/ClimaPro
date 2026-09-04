@@ -74,7 +74,17 @@ export default function Users() {
           ? 'Usuário atualizado! Para trocar a senha, use "Esqueci minha senha" no login.'
           : 'Usuário atualizado!');
       } else {
-        const existing = await db.users.where('email').equals(email).first();
+        console.log('[Users] criando tecnico:', email);
+        let existing = null;
+        try {
+          existing = await withTimeout(
+            db.users.where('email').equals(email).first(),
+            8000,
+            'Verificação de e-mail'
+          );
+        } catch (e: any) {
+          console.warn('[Users] verificação de duplicado falhou, seguindo:', e?.message);
+        }
         if (existing) {
           toast('error', 'Este e-mail já está cadastrado.');
           return;
@@ -84,6 +94,7 @@ export default function Users() {
           toast('error', 'Empresa não encontrada. Tente recarregar a página.');
           return;
         }
+        console.log('[Users] companyId:', companyId);
         const isolated = createIsolatedClient();
         let data: any;
         let error: any;
