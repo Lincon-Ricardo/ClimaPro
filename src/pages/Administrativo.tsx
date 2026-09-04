@@ -1,171 +1,453 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import {
-  TrendingUp, Users, Target, Wallet, Wrench,
-  ChevronRight, UserRound, Activity,
+  TrendingUp, Users, Target, Wallet, Wrench, ChevronRight, UserRound,
+  Siren, Flame, Clock, Quote, BadgeDollarSign, Crosshair, Rocket,
+  CalendarCheck, MessageCircle, ArrowUpRight, Gauge, Zap, ShieldCheck,
 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
+import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
-import { formatBRL } from '../lib/utils';
+import { useToast } from '../components/Toast';
+import { formatBRL, formatDate, todayISO, telToWhats } from '../lib/utils';
+
+function ScoreRing({ score }: { score: number }) {
+  const r = 30;
+  const circ = 2 * Math.PI * r;
+  const color = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
+  return (
+    <div className="relative h-20 w-20">
+      <svg viewBox="0 0 80 80" className="h-20 w-20 -rotate-90">
+        <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="9" />
+        <circle
+          cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="9"
+          strokeLinecap="round" strokeDasharray={circ}
+          strokeDashoffset={circ - (circ * Math.min(100, Math.max(0, score))) / 100}
+          className="transition-all duration-700"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+        <span className="text-xl font-black leading-none">{score}</span>
+        <span className="text-[9px] uppercase tracking-wider opacity-70">saúde</span>
+      </div>
+    </div>
+  );
+}
 
 export default function Administrativo() {
   const navigate = useNavigate();
+  const toast = useToast();
   const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const users = useLiveQuery(() => db.users.toArray(), []) || [];
+  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
 
-  const stats = useMemo(() => {
-    const concluded = orders.filter((o) => o.status === 'concluido');
-    const revenueTotal = concluded.reduce((s, o) => s + o.value, 0);
-    const cancelled = orders.filter((o) => o.status === 'cancelado').length;
-    const pending = orders.filter((o) => !['concluido', 'cancelado'].includes(o.status)).length;
+  const company = companies[0];
+  const today = todayISO();
+  const monthKey = today.slice(0, 7);
+
+  const [meta, setMeta] = useState<number>(() => {
+    const v = Number(localStorage.getItem('climapro_meta_mensal') || 30000);
+    return isNaN(v) || v <= 0 ? 30000 : v;
+  });
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [metaText, setMetaText] = useState(String(meta));
+
+  function saveMeta() {
+    const v = Number(String(metaText).replace(/[^\d.,]/g, '').replace(',', '.'));
+    if (!v || v <= 0) {
+      toast('error', 'Informe um valor de meta válido.');
+      return;
+    }
+    setMeta(v);
+    localStorage.setItem('climapro_meta_mensal', String(v));
+    setEditingMeta(false);
+    toast('success', 'Meta do mês atualizada!');
+  }
+
+  const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
+
+  const data = useMemo(() => {
+    const valid = orders.filter((o) => o.status !== 'cancelado');
+    const done = valid.filter((o) => o.status === 'concluido');
+    const monthDone = done.filter((o) => (o.date || '').startsWith(monthKey));
+    const revenueMonth = monthDone.reduce((s, o) => s + (Number(o.value) || 0), 0);
+    const revenueTotal = done.reduce((s, o) => s + (Number(o.value) || 0), 0);
+    const toReceive = orders
+      .filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado')
+      .reduce((s, o) => s + (Number(o.value) || 0), 0);
+    const receivedMonth = valid
+      .filter((o) => o.paymentStatus === 'pago' && (o.date || '').startsWith(monthKey))
+      .reduce((s, o) => s + (Number(o.value) || 0), 0);
+
+    const open = valid.filter((o) => o.status !== 'concluido');
+    const overdue = open.filter((o) => o.date && o.date < today);
+    const todayList = valid.filter((o) => o.date === today);
+    const noTech = open.filter((o) => !(o.technician || '').trim());
+    const noDate = open.filter((o) => !o.date);
+
+    const staleBudgets = budgets.filter((b) => !['aprovado', 'recusado'].includes(b.status));
+    const pipelineValue = staleBudgets.reduce((s, b) => s + (Number(b.total) || 0), 0);
     const approved = budgets.filter((b) => b.status === 'aprovado').length;
-    const totalBudget = budgets.length;
-    const approvalRate = totalBudget ? Math.round((approved / totalBudget) * 100) : 0;
-    const ticket = concluded.length ? revenueTotal / concluded.length : 0;
-    const toReceive = orders.filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado').reduce((s, o) => s + o.value, 0);
-    return { revenueTotal, cancelled, pending, approved, approvalRate, ticket, toReceive };
+    const approvalRate = budgets.length ? Math.round((approved / budgets.length) * 100) : 0;
+    const ticket = done.length ? revenueTotal / done.length : 0;
+    const cancelRate = orders.length ? (orders.filter((o) => o.status === 'cancelado').length / orders.length) * 100 : 0;
+
+    // Score de saúde da operação (0-100)
+    let score = 100;
+    score -= Math.min(30, overdue.length * 6);
+    score -= Math.min(20, staleBudgets.length * 2);
+    score -= Math.min(15, noTech.length * 5);
+    score -= Math.min(15, cancelRate);
+    if (toReceive > revenueTotal * 0.5 && revenueTotal > 0) score -= 10;
+    score = Math.max(5, Math.round(score));
+
+    return {
+      valid, done, monthDone, revenueMonth, revenueTotal, toReceive, receivedMonth,
+      open, overdue, todayList, noTech, noDate, staleBudgets, pipelineValue,
+      approved, approvalRate, ticket, cancelRate, score,
+    };
+  }, [orders, budgets, monthKey, today]);
+
+  const funnel = useMemo(() => {
+    const stages = [
+      { key: 'solicitacao', label: 'Solicitado' },
+      { key: 'orcamento', label: 'Orçado' },
+      { key: 'agendado', label: 'Agendado' },
+      { key: 'em_andamento', label: 'Executando' },
+      { key: 'concluido', label: 'Concluído' },
+      { key: 'pago', label: 'Pago' },
+    ];
+    const counts: Record<string, number> = {
+      solicitacao: orders.filter((o) => o.status === 'solicitacao').length,
+      orcamento: orders.filter((o) => ['orcamento_enviado', 'aguardando_aprovacao'].includes(o.status)).length + budgets.filter((b) => !['aprovado', 'recusado'].includes(b.status)).length,
+      agendado: orders.filter((o) => o.status === 'agendado').length,
+      em_andamento: orders.filter((o) => o.status === 'em_andamento').length,
+      concluido: orders.filter((o) => o.status === 'concluido').length,
+      pago: orders.filter((o) => o.paymentStatus === 'pago' && o.status !== 'cancelado').length,
+    };
+    const max = Math.max(1, ...stages.map((s) => counts[s.key] || 0));
+    return { stages, counts, max };
   }, [orders, budgets]);
 
-  const byTechnician = useMemo(() => {
-    const map = new Map<string, { count: number; done: number; revenue: number }>();
-    orders.forEach((o) => {
-      const t = o.technician || 'Sem técnico';
-      const cur = map.get(t) || { count: 0, done: 0, revenue: 0 };
-      cur.count += 1;
+  const team = useMemo(() => {
+    const map = new Map<string, { name: string; open: number; done: number; revenue: number; today: number }>();
+    orders.filter((o) => o.status !== 'cancelado').forEach((o) => {
+      const name = (o.technician || 'Sem técnico').trim() || 'Sem técnico';
+      const e = map.get(name) || { name, open: 0, done: 0, revenue: 0, today: 0 };
       if (o.status === 'concluido') {
-        cur.done += 1;
-        cur.revenue += o.value;
+        e.done += 1;
+        e.revenue += Number(o.value) || 0;
+      } else {
+        e.open += 1;
       }
-      map.set(t, cur);
+      if (o.date === today && o.status !== 'concluido') e.today += 1;
+      map.set(name, e);
     });
-    return Array.from(map.entries()).sort((a, b) => b[1].revenue - a[1].revenue);
-  }, [orders]);
+    return Array.from(map.values())
+      .map((t) => ({
+        ...t,
+        total: t.done + t.open,
+        efficiency: t.done + t.open > 0 ? Math.round((t.done / (t.done + t.open)) * 100) : 0,
+        ticket: t.done > 0 ? t.revenue / t.done : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [orders, today]);
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, number>();
-    orders
-      .filter((o) => o.status === 'concluido' && o.date)
-      .forEach((o) => {
-        const m = o.date.slice(0, 7);
-        map.set(m, (map.get(m) || 0) + o.value);
+  const alerts = useMemo(() => {
+    const list: Array<{ level: 'crit' | 'warn' | 'info'; title: string; desc: string; action: string; to: string }> = [];
+    if (data.overdue.length > 0) {
+      list.push({
+        level: 'crit',
+        title: `${data.overdue.length} OS atrasada(s)`,
+        desc: `Há serviços com data anterior a hoje parados. Cada dia parado queima a reputação.`,
+        action: 'Ver agenda',
+        to: '/app/agenda',
       });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
-  }, [orders]);
+    }
+    if (data.noTech.length > 0) {
+      list.push({
+        level: 'crit',
+        title: `${data.noTech.length} OS sem técnico`,
+        desc: 'Serviços abertos sem responsável definido. Atribua agora para não perder o dia.',
+        action: 'Distribuir',
+        to: '/app/servicos',
+      });
+    }
+    if (data.staleBudgets.length > 0) {
+      list.push({
+        level: 'warn',
+        title: `${formatBRL(data.pipelineValue)} parado em orçamentos`,
+        desc: `${data.staleBudgets.length} proposta(s) aguardando resposta. Follow-up hoje vira receita.`,
+        action: 'Atacar funil',
+        to: '/app/orcamentos',
+      });
+    }
+    if (data.toReceive > 0) {
+      list.push({
+        level: 'warn',
+        title: `${formatBRL(data.toReceive)} a receber`,
+        desc: 'Dinheiro já trabalhado esperando cobrança. Dispare o WhatsApp de cobrança.',
+        action: 'Cobrar agora',
+        to: '/app/relatorios',
+      });
+    }
+    if (data.noDate.length > 0) {
+      list.push({
+        level: 'info',
+        title: `${data.noDate.length} OS sem data`,
+        desc: 'Serviços no limbo do calendário. Agende para ocupar a semana.',
+        action: 'Agendar',
+        to: '/app/agenda',
+      });
+    }
+    return list;
+  }, [data]);
 
-  const maxMonth = monthly.length ? Math.max(...monthly.map(([, v]) => v)) : 1;
-  const monthLabel = (m: string) => {
-    const [y, mo] = m.split('-');
-    return `${new Date(+y, +mo - 1, 1).toLocaleDateString('pt-BR', { month: 'short' })}`;
-  };
+  const metaPct = meta > 0 ? Math.min(100, Math.round((data.revenueMonth / meta) * 100)) : 0;
 
-  const statusDist = [
-    { label: 'Concluídos', value: stats.revenueTotal ? orders.filter((o) => o.status === 'concluido').length : 0, color: 'bg-success' },
-    { label: 'Pendentes', value: stats.pending, color: 'bg-orange-400' },
-    { label: 'Cancelados', value: stats.cancelled, color: 'bg-danger' },
-  ];
-  const statusTotal = statusDist.reduce((s, d) => s + d.value, 0) || 1;
+  function cobraGeral() {
+    const debtors = orders.filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado' && Number(o.value) > 0);
+    if (debtors.length === 0) {
+      toast('success', 'Nada a cobrar. Caixa limpo!');
+      return;
+    }
+    navigate('/app/relatorios');
+    toast('info', `${debtors.length} conta(s) em aberto — use a Cobrança prioritária.`);
+  }
 
   return (
-    <div className="max-w-5xl">
-      <PageHeader title="Painel administrativo" subtitle="Visão do dono da empresa" />
+    <div className="max-w-5xl space-y-4">
+      {/* ── Centro de Comando ── */}
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 via-primary-950 to-primary-800 p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary-200">
+              <Gauge size={12} /> Centro de comando
+            </span>
+            <h1 className="mt-2 truncate text-2xl font-black tracking-tight">
+              {company?.name || 'Minha empresa'}
+            </h1>
+            <p className="text-xs text-primary-200">
+              {formatDate(today)} · {data.todayList.length} atendimento(s) hoje · {data.open.length} OS em aberto
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => navigate('/app/servicos/novo')}>
+                <Rocket size={15} /> Nova OS
+              </Button>
+              <Button size="sm" variant="secondary" onClick={cobraGeral}>
+                <MessageCircle size={15} /> Cobrança
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate('/app/relatorios')}>
+                <ArrowUpRight size={15} /> BI completo
+              </Button>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <ScoreRing score={data.score} />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-200">
+              {data.score >= 80 ? 'Operação saudável' : data.score >= 60 ? 'Atenção necessária' : 'Modo guerra'}
+            </span>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={<TrendingUp size={20} />} label="Faturamento total" value={formatBRL(stats.revenueTotal)} />
-        <StatCard icon={<Target size={20} />} color="text-success" bg="bg-green-50 dark:bg-green-900/30" label="Aprovação de orçamentos" value={`${stats.approvalRate}%`} />
-        <StatCard icon={<Wallet size={20} />} color="text-warning" bg="bg-orange-50 dark:bg-orange-900/30" label="A receber" value={formatBRL(stats.toReceive)} />
-        <StatCard icon={<Activity size={20} />} label="Ticket médio" value={formatBRL(stats.ticket)} />
+        {/* Meta do mês */}
+        <div className="mt-4 rounded-2xl bg-white/10 p-3 backdrop-blur-sm">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 font-bold text-white">
+              <Crosshair size={14} className="text-amber-300" /> Meta de {new Date().toLocaleDateString('pt-BR', { month: 'long' })}
+            </span>
+            {!editingMeta ? (
+              <button type="button" onClick={() => { setMetaText(String(meta)); setEditingMeta(true); }} className="font-semibold text-primary-200 hover:text-white hover:underline">
+                Ajustar meta ({formatBRL(meta)})
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <input
+                  value={metaText}
+                  onChange={(e) => setMetaText(e.target.value)}
+                  inputMode="numeric"
+                  className="w-24 rounded-lg bg-white/15 px-2 py-1 text-xs font-bold text-white outline-none"
+                />
+                <button type="button" onClick={saveMeta} className="rounded-lg bg-emerald-500 px-2 py-1 text-xs font-bold">OK</button>
+              </span>
+            )}
+          </div>
+          <div className="mt-2 flex items-end justify-between">
+            <span className="text-2xl font-black">{formatBRL(data.revenueMonth)}</span>
+            <span className="text-xs font-bold text-primary-200">{metaPct}% da meta</span>
+          </div>
+          <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/15">
+            <div
+              className={`h-full rounded-full transition-all ${metaPct >= 100 ? 'bg-emerald-400' : metaPct >= 60 ? 'bg-amber-300' : 'bg-sky-300'}`}
+              style={{ width: `${metaPct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-primary-200">
+            {data.revenueMonth >= meta
+              ? '🔥 Meta batida! Hora de acelerar o próximo nível.'
+              : `Faltam ${formatBRL(Math.max(0, meta - data.revenueMonth))} — o funil tem ${formatBRL(data.pipelineValue)} para converter.`}
+          </p>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
-            <TrendingUp size={18} className="text-primary-600 dark:text-primary-400" /> Receita mensal
+      {/* ── Alertas inteligentes ── */}
+      {alerts.length > 0 && (
+        <div>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-extrabold text-neutral-800 dark:text-neutral-100">
+            <Siren size={18} className="text-danger" /> Exige ação agora
           </h2>
-          {monthly.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-400 dark:text-neutral-500">Sem dados ainda.</p>
-          ) : (
-            <div className="mt-4 flex h-40 items-end gap-3">
-              {monthly.map(([m, v]) => (
-                <div key={m} className="flex flex-1 flex-col items-center gap-1">
-                  <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">{formatBRL(v).replace(/R\$\s?/, '')}</span>
-                  <div
-                    className="w-full rounded-t-lg bg-gradient-to-t from-primary-700 to-primary-400"
-                    style={{ height: `${Math.max(8, (v / maxMonth) * 120)}px` }}
-                  />
-                  <span className="text-[10px] font-medium capitalize text-neutral-400">{monthLabel(m)}</span>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {alerts.map((a, i) => (
+              <div
+                key={i}
+                className={`rounded-2xl border-l-4 p-3.5 shadow-card ${
+                  a.level === 'crit'
+                    ? 'border-danger bg-red-50 dark:border-red-400 dark:bg-red-950/30'
+                    : a.level === 'warn'
+                    ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/30'
+                    : 'border-sky-400 bg-sky-50 dark:bg-sky-950/30'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-black text-neutral-900 dark:text-white">{a.title}</div>
+                    <p className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-300">{a.desc}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
-            <Wrench size={18} className="text-primary-600 dark:text-primary-400" /> Distribuição de serviços
-          </h2>
-          <div className="mt-4 space-y-3">
-            {statusDist.map((s) => (
-              <div key={s.label}>
-                <div className="flex justify-between text-sm">
-                  <span className="text-neutral-600 dark:text-neutral-300">{s.label}</span>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-100">{s.value}</span>
-                </div>
-                <div className="mt-1 h-2 w-full rounded-full bg-neutral-100 dark:bg-neutral-700">
-                  <div className={`h-2 rounded-full ${s.color}`} style={{ width: `${(s.value / statusTotal) * 100}%` }} />
-                </div>
+                <Button size="sm" variant={a.level === 'crit' ? 'danger' : 'secondary'} className="mt-2.5" onClick={() => navigate(a.to)}>
+                  {a.action} <ChevronRight size={14} />
+                </Button>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
+      )}
+
+      {/* ── Pulso financeiro ── */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={<BadgeDollarSign size={20} />} label="Receita no mês" value={formatBRL(data.revenueMonth)} color="text-emerald-600" />
+        <StatCard icon={<Wallet size={20} />} label="Recebido no mês" value={formatBRL(data.receivedMonth)} color="text-primary-600" />
+        <StatCard icon={<Clock size={20} />} label="A receber total" value={formatBRL(data.toReceive)} color="text-orange-600" />
+        <StatCard icon={<Quote size={20} />} label="Funil a converter" value={formatBRL(data.pipelineValue)} color="text-violet-600" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard icon={<Target size={20} />} label="Aprovação orç." value={`${data.approvalRate}%`} color="text-success" bg="bg-green-50 dark:bg-green-900/30" />
+        <StatCard icon={<CalendarCheck size={20} />} label="Atendimentos hoje" value={String(data.todayList.length)} color="text-sky-600" />
+        <StatCard icon={<Flame size={20} />} label="OS atrasadas" value={String(data.overdue.length)} color="text-danger" />
+        <StatCard icon={<TrendingUp size={20} />} label="Ticket médio" value={formatBRL(data.ticket)} />
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-extrabold text-neutral-800 dark:text-neutral-100">
-          <UserRound size={20} className="text-primary-600 dark:text-primary-400" /> Desempenho por técnico
+      {/* ── Funil operacional ── */}
+      <Card>
+        <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
+          <Zap size={18} className="text-amber-500" /> Funil da operação
         </h2>
-        <span className="text-xs text-neutral-400 dark:text-neutral-500">{users.length} usuário(s) cadastrado(s)</span>
-      </div>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {byTechnician.length === 0 && (
-          <Card><p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum serviço vinculado a técnico ainda.</p></Card>
-        )}
-        {byTechnician.map(([name, t]) => (
-          <Card key={name} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
-                {name.charAt(0).toUpperCase()}
+        <p className="text-xs text-neutral-400">Onde cada OS está travada agora</p>
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {funnel.stages.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => navigate('/app/servicos')}
+              className="rounded-xl bg-neutral-50 p-2.5 text-center transition hover:bg-primary-50 dark:bg-neutral-900/60 dark:hover:bg-primary-950/40"
+            >
+              <div className="text-xl font-black text-neutral-800 dark:text-white">{funnel.counts[s.key] || 0}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">{s.label}</div>
+              <div className="mx-auto mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-primary-600 to-sky-400"
+                  style={{ width: `${((funnel.counts[s.key] || 0) / funnel.max) * 100}%` }}
+                />
               </div>
-              <div>
-                <div className="font-bold text-neutral-800 dark:text-neutral-100">{name}</div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400">{t.done} concluído(s) de {t.count}</div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* ── Time em campo ── */}
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-extrabold text-neutral-800 dark:text-neutral-100">
+            <UserRound size={18} className="text-primary-600" /> Time em campo
+          </h2>
+          <button type="button" onClick={() => navigate('/app/users')} className="flex items-center gap-1 text-xs font-bold text-primary-600 hover:underline">
+            <Users size={13} /> Gerenciar equipe <ChevronRight size={13} />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {team.length === 0 && (
+            <Card><p className="text-sm text-neutral-500">Nenhum serviço vinculado a técnico ainda.</p></Card>
+          )}
+          {team.map((t) => (
+            <Card key={t.name}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 font-black text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+                    {t.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-bold text-neutral-800 dark:text-neutral-100">{t.name}</div>
+                    <div className="text-xs text-neutral-500">
+                      {t.today > 0 ? (
+                        <span className="font-bold text-sky-600">📍 {t.today} hoje</span>
+                      ) : (
+                        <span>Eficiência {t.efficiency}%</span>
+                      )}
+                      {' · '}ticket {formatBRL(t.ticket)}
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-base font-black text-primary-700 dark:text-primary-300">{formatBRL(t.revenue)}</div>
+                  <div className="text-[10px] text-neutral-400">{t.done}/{t.total} concluídas</div>
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-bold text-primary-700 dark:text-primary-300">{formatBRL(t.revenue)}</div>
-              <div className="text-[10px] text-neutral-400 dark:text-neutral-500">faturou</div>
-            </div>
-          </Card>
-        ))}
+              <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-700">
+                <div
+                  className={`h-full rounded-full ${t.efficiency >= 70 ? 'bg-emerald-500' : t.efficiency >= 40 ? 'bg-amber-400' : 'bg-red-400'}`}
+                  style={{ width: `${t.efficiency}%` }}
+                />
+              </div>
+              {t.open > 0 && (
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-neutral-500">
+                  <ShieldCheck size={12} className="text-emerald-500" /> {t.open} OS em aberto sob responsabilidade
+                </p>
+              )}
+            </Card>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-6">
-        <Card onClick={() => navigate('/app/users')} className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300">
-              <Users size={20} />
-            </div>
-            <div>
-              <div className="font-bold text-neutral-800 dark:text-neutral-100">Gerenciar técnicos</div>
-              <div className="text-xs text-neutral-500 dark:text-neutral-400">Cadastre e gerencie os usuários da sua equipe</div>
-            </div>
+      {/* ── Atividade de hoje ── */}
+      {data.todayList.length > 0 && (
+        <Card>
+          <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
+            <Wrench size={18} className="text-primary-600" /> Acontecendo hoje
+          </h2>
+          <div className="mt-3 space-y-2">
+            {data.todayList.slice(0, 5).map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => navigate(`/app/servicos/${o.id}`)}
+                className="flex w-full items-center justify-between gap-2 rounded-xl border border-neutral-100 px-3 py-2.5 text-left transition hover:border-primary-300 hover:bg-primary-50/50 dark:border-neutral-800 dark:hover:bg-primary-950/20"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-neutral-800 dark:text-neutral-100">
+                    {o.time ? `${o.time} · ` : ''}{custName(o.customerId)}
+                  </span>
+                  <span className="block truncate text-xs text-neutral-400">{o.service} · {o.technician || 'sem técnico'}</span>
+                </span>
+                <ChevronRight size={16} className="shrink-0 text-neutral-400" />
+              </button>
+            ))}
           </div>
-          <ChevronRight size={18} className="text-neutral-400" />
         </Card>
-      </div>
+      )}
     </div>
   );
 }
