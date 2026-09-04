@@ -7,6 +7,7 @@ import { Input, Select, Textarea } from '../components/Fields';
 import { AddressPicker } from '../components/AddressPicker';
 import { mergeSavedAddress } from '../lib/addresses';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import { PageHeader } from '../components/PageHeader';
 import { SERVICE_TYPES, toggleChecklistItem, parseMoney } from '../lib/utils';
 import type { ChecklistItem } from '../types';
@@ -26,6 +27,8 @@ export default function NovaOS() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [busy, setBusy] = useState(false);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const team = useLiveQuery(() => db.users.toArray(), []) || [];
@@ -134,7 +137,7 @@ export default function NovaOS() {
             setValueText(clean);
             setForm({ ...form, value: parseMoney(clean) });
           }} placeholder="0,00" />
-          <Select label="Técnico responsável" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })}>
+          <Select label="Técnico responsável" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} disabled={!isAdmin}>
             <option value="">⚠️ Sem técnico (atribuir depois)</option>
             {team.map((u: any) => (
               <option key={u.id} value={u.name}>
@@ -142,6 +145,9 @@ export default function NovaOS() {
               </option>
             ))}
           </Select>
+          {!isAdmin && (
+            <p className="-mt-1 text-[11px] text-neutral-400">Apenas o dono pode atribuir o técnico responsável.</p>
+          )}
         </div>
         <AddressPicker
           customer={customer}
