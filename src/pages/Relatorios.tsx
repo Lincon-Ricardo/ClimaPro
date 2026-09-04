@@ -301,20 +301,19 @@ export default function Relatorios() {
 
   return (
     <div className="max-w-5xl space-y-4">
-      <PageHeader
-        title="Relatórios gerenciais"
-        subtitle={`Inteligência do negócio · ${label}`}
-        action={
-          <Button size="sm" onClick={exportPDF} disabled={generating}>
-            <FileDown size={16} /> {generating ? 'Gerando...' : 'Exportar PDF'}
-          </Button>
-        }
-      />
+      {/* Cabeçalho mobile-first: empilha título + botão full */}
+      <div className="mb-4">
+        <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Relatórios gerenciais</h1>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">Inteligência do negócio · {label}</p>
+        <Button size="sm" onClick={exportPDF} disabled={generating} full className="mt-2.5 sm:mt-0 sm:w-auto">
+          <FileDown size={16} /> {generating ? 'Gerando...' : 'Exportar PDF'}
+        </Button>
+      </div>
 
-      {/* Filtros */}
-      <Card>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+      {/* Filtros com scroll horizontal no celular */}
+      <Card className="p-3 sm:p-4">
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+          <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
             <Filter size={14} /> Período:
           </span>
           {RANGES.map((r) => (
@@ -322,7 +321,7 @@ export default function Relatorios() {
               key={r.key}
               type="button"
               onClick={() => setRange(r.key)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${range === r.key ? 'bg-primary-700 text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50 dark:bg-neutral-700/60 dark:text-neutral-300'}`}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${range === r.key ? 'bg-primary-700 text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50 dark:bg-neutral-700/60 dark:text-neutral-300'}`}
             >
               {r.label}
             </button>
@@ -372,22 +371,24 @@ export default function Relatorios() {
           </h2>
           <span className="text-xs text-neutral-400">Valores concluídos</span>
         </div>
-        <div className="mt-3 flex h-36 items-end gap-1.5">
-          {revenueSeries.map((p, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400">
-                {p.value >= 1000 ? `${(p.value / 1000).toFixed(1)}k` : p.value > 0 ? String(Math.round(p.value)) : ''}
-              </span>
-              <div className="flex h-24 w-full items-end">
-                <div
-                  className={`w-full rounded-t-md ${i === revenueSeries.length - 1 ? 'bg-emerald-500' : 'bg-primary-300 dark:bg-primary-700'}`}
-                  style={{ height: `${Math.max(3, (p.value / maxSeries) * 100)}%` }}
-                  title={`${p.label}: ${formatBRL(p.value)}`}
-                />
+        <div className="mt-3 overflow-x-auto pb-1">
+          <div className="flex h-36 min-w-[480px] items-end gap-1.5 sm:min-w-0">
+            {revenueSeries.map((p, i) => (
+              <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                <span className="whitespace-nowrap text-[9px] font-bold text-neutral-500 dark:text-neutral-400">
+                  {p.value >= 1000 ? `${(p.value / 1000).toFixed(1)}k` : p.value > 0 ? String(Math.round(p.value)) : ''}
+                </span>
+                <div className="flex h-24 w-full items-end">
+                  <div
+                    className={`w-full rounded-t-md ${i === revenueSeries.length - 1 ? 'bg-emerald-500' : 'bg-primary-300 dark:bg-primary-700'}`}
+                    style={{ height: `${Math.max(3, (p.value / maxSeries) * 100)}%` }}
+                    title={`${p.label}: ${formatBRL(p.value)}`}
+                  />
+                </div>
+                <span className="whitespace-nowrap text-[9px] font-medium text-neutral-400">{p.label}</span>
               </div>
-              <span className="text-[9px] font-medium text-neutral-400">{p.label}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -402,15 +403,17 @@ export default function Relatorios() {
             {techRanking.length === 0 && <p className="text-sm text-neutral-400">Sem dados no período.</p>}
             {techRanking.slice(0, 6).map((t, i) => (
               <div key={t.name}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 font-semibold text-neutral-700 dark:text-neutral-200">
-                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black text-white ${i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-neutral-400' : i === 2 ? 'bg-orange-700' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
+                <div className="mb-1 flex items-start justify-between gap-2 text-sm">
+                  <span className="flex min-w-0 flex-1 items-center gap-2 font-semibold text-neutral-700 dark:text-neutral-200">
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black text-white ${i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-neutral-400' : i === 2 ? 'bg-orange-700' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
                       {i + 1}
                     </span>
-                    {t.name}
-                    <span className="text-xs font-normal text-neutral-400">{t.done} OS · {t.open} aberta(s)</span>
+                    <span className="min-w-0">
+                      <span className="block truncate">{t.name}</span>
+                      <span className="block text-[11px] font-normal text-neutral-400">{t.done} OS · {t.open} aberta(s)</span>
+                    </span>
                   </span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300">{formatBRL(t.revenue)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-sm font-bold text-emerald-700 dark:text-emerald-300">{formatBRL(t.revenue)}</span>
                 </div>
                 <Bar value={t.revenue} max={Math.max(1, ...techRanking.map((x) => x.revenue))} color="bg-gradient-to-r from-amber-400 to-emerald-500" />
               </div>
@@ -428,11 +431,11 @@ export default function Relatorios() {
             {serviceMix.length === 0 && <p className="text-sm text-neutral-400">Sem serviços concluídos no período.</p>}
             {serviceMix.map((s) => (
               <div key={s.name}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-medium text-neutral-700 dark:text-neutral-200">
-                    {s.name} <span className="text-xs text-neutral-400">({s.count}x)</span>
+                <div className="mb-1 flex items-start justify-between gap-2 text-sm">
+                  <span className="min-w-0 flex-1 break-words font-medium text-neutral-700 dark:text-neutral-200">
+                    {s.name} <span className="whitespace-nowrap text-xs text-neutral-400">({s.count}x)</span>
                   </span>
-                  <span className="font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(s.revenue)}</span>
+                  <span className="shrink-0 whitespace-nowrap font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(s.revenue)}</span>
                 </div>
                 <Bar value={s.revenue} max={maxServiceRevenue} color="bg-gradient-to-r from-primary-500 to-sky-400" />
               </div>
@@ -451,19 +454,19 @@ export default function Relatorios() {
           <div className="mt-3 space-y-2">
             {debtors.length === 0 && <p className="text-sm text-neutral-400">Nenhuma conta em aberto. 🎉</p>}
             {debtors.map((d) => (
-              <div key={d.id} className="flex items-center justify-between gap-2 rounded-xl border border-neutral-100 px-3 py-2.5 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-neutral-800 dark:text-neutral-100">{d.name}</div>
+              <div key={d.id} className="flex flex-col gap-2 rounded-xl border border-neutral-100 px-3 py-2.5 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="break-words text-sm font-bold text-neutral-800 dark:text-neutral-100">{d.name}</div>
                   <div className="text-xs text-neutral-400">{d.count} OS em aberto</div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-black text-danger">{formatBRL(d.total)}</span>
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  <span className="whitespace-nowrap text-sm font-black text-danger">{formatBRL(d.total)}</span>
                   {d.phone && (
                     <a
                       href={`https://wa.me/${telToWhats(d.phone)}?text=${encodeURIComponent(`Olá, ${d.name}! Aqui é da ${company?.name || 'ClimaPro'}. Passando para lembrar do saldo em aberto de ${formatBRL(d.total)}. Podemos acertar hoje? ❄️`)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-lg bg-emerald-500 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-600"
+                      className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-600"
                     >
                       Cobrar
                     </a>
@@ -483,14 +486,15 @@ export default function Relatorios() {
           <div className="mt-3 space-y-2">
             {staleBudgets.length === 0 && <p className="text-sm text-neutral-400">Nenhum orçamento pendente.</p>}
             {staleBudgets.map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl border border-neutral-100 px-3 py-2.5 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-neutral-800 dark:text-neutral-100">
-                    {custName(b.customerId)} <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">{b.status}</span>
+              <div key={b.id} className="flex items-start justify-between gap-2 rounded-xl border border-neutral-100 px-3 py-2.5 dark:border-neutral-800">
+                <div className="min-w-0 flex-1">
+                  <div className="break-words text-sm font-bold text-neutral-800 dark:text-neutral-100">
+                    {custName(b.customerId)}{' '}
+                    <span className="inline-block whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">{b.status}</span>
                   </div>
-                  <div className="truncate text-xs text-neutral-400">{b.serviceType || b.description || 'Orçamento'}</div>
+                  <div className="break-words text-xs text-neutral-400">{b.serviceType || b.description || 'Orçamento'}</div>
                 </div>
-                <span className="shrink-0 text-sm font-black text-primary-700 dark:text-primary-300">{formatBRL(Number(b.total) || 0)}</span>
+                <span className="shrink-0 whitespace-nowrap text-sm font-black text-primary-700 dark:text-primary-300">{formatBRL(Number(b.total) || 0)}</span>
               </div>
             ))}
           </div>
