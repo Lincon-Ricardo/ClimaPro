@@ -122,16 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (u) {
       setUser(u);
     } else {
-      // Fallback: se o perfil não for encontrado, ainda assim loga com os dados da sessão.
-      const fn = data.user.user_metadata?.['name']?.split(' ')[0] || 'Dono';
-      setUser({
-        id: data.user.id,
-        name: data.user.user_metadata?.['name'] || 'Dono',
-        firstName: fn,
-        email: data.user.email || '',
-        role: 'tech',
-        companyName: '',
-      });
+      await supabase.auth.signOut();
+      return { ok: false, error: 'Perfil do usuário não encontrado. Execute o trigger do Supabase e tente novamente.' };
     }
     return { ok: true };
   };

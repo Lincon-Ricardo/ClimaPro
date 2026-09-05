@@ -183,16 +183,20 @@ export default function ServicoDetail() {
 
   async function markPaid() {
     await setField({ paymentStatus: 'pago', paymentMethod });
-    await db.payments.add({
-      id: crypto.randomUUID(),
-      serviceOrderId: o.id,
+    const payment = await db.payments.where('serviceOrderId').equals(o.id).first();
+    const changes = {
       customerId: o.customerId,
       value: Number(o.value) || 0,
       method: paymentMethod || 'outro',
       status: 'pago',
       paidAt: todayISO(),
-      createdAt: new Date().toISOString(),
-    });
+      createdAt: payment?.createdAt || new Date().toISOString(),
+    };
+    if (payment) {
+      await db.payments.update(payment.id, changes);
+    } else {
+      await db.payments.add({ id: crypto.randomUUID(), serviceOrderId: o.id, ...changes });
+    }
     setPayOpen(false);
     toast('success', 'Pagamento registrado como pago.');
   }

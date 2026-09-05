@@ -16,7 +16,6 @@ create table if not exists profiles (
   company_id uuid not null,
   created_at timestamptz default now()
 );
--- Migração para bancos já criados
 alter table profiles add column if not exists email text default '';
 
 -- ---------- EMPRESAS ----------
@@ -42,12 +41,19 @@ create table if not exists companies (
   created_at timestamptz default now()
 );
 
+-- Convites de usuários: o token é criado por um administrador autenticado.
+create table if not exists company_invites (
+  token text primary key,
+  company_id uuid not null references companies on delete cascade,
+  role text not null default 'tech' check (role in ('admin','tech')),
+  expires_at timestamptz not null default (now() + interval '24 hours'),
+  used_at timestamptz,
+  created_at timestamptz default now()
+);
+
 -- Migração para comissões da equipe (dono controla no perfil da empresa)
 alter table companies add column if not exists commission_enabled boolean default true;
 alter table companies add column if not exists commission_rate numeric default 15;
-
--- Migração para múltiplos endereços por cliente (casa, comércio, etc.)
-alter table customers add column if not exists saved_addresses jsonb default '[]'::jsonb;
 
 -- ---------- CLIENTES ----------
 create table if not exists customers (
@@ -68,6 +74,9 @@ create table if not exists customers (
   created_at text default '',
   updated_at timestamptz default now()
 );
+
+-- Migração para múltiplos endereços por cliente (casa, comércio, etc.)
+alter table customers add column if not exists saved_addresses jsonb default '[]'::jsonb;
 
 -- ---------- EQUIPAMENTOS ----------
 create table if not exists equipment (
@@ -199,12 +208,42 @@ alter table notifications enable row level security;
 alter table appointments enable row level security;
 alter table profiles enable row level security;
 alter table materials enable row level security;
+alter table company_invites enable row level security;
 
 -- Função auxiliar: company_id do usuário logado
 create or replace function auth_company_id() returns uuid
 language sql stable security definer set search_path = public as $$
   select company_id from profiles where id = auth.uid()
 $$;
+
+create or replace function is_company_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from profiles
+    where id = auth.uid()
+      and role = 'admin'
+  )
+$$;
+
+create or replace function protect_profile_changes()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  new.company_id := old.company_id;
+  if old.id = auth.uid() and not is_company_admin() then
+    new.role := old.role;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_protect_profile_changes on profiles;
+create trigger trg_protect_profile_changes
+  before update on profiles
+  for each row execute procedure protect_profile_changes();
+
+drop policy if exists "convites admin" on company_invites;
+create policy "convites admin" on company_invites
+  for insert with check (company_id = auth_company_id() and is_company_admin());
 
 -- Empresas: quem cria tem acesso
 drop policy if exists "empresa owner" on companies;
@@ -228,22 +267,48 @@ drop policy if exists "dados empresa" on payments;
 drop policy if exists "dados empresa" on notifications;
 drop policy if exists "dados empresa" on appointments;
 drop policy if exists "dados empresa" on materials;
-create policy "dados empresa" on customers
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on equipment
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on budgets
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on service_orders
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on payments
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on notifications
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on appointments
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
-create policy "dados empresa" on materials
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+drop policy if exists "empresa select" on customers;
+drop policy if exists "empresa insert" on customers;
+drop policy if exists "empresa update" on customers;
+drop policy if exists "empresa delete" on customers;
+drop policy if exists "empresa select" on equipment;
+drop policy if exists "empresa insert" on equipment;
+drop policy if exists "empresa update" on equipment;
+drop policy if exists "empresa delete" on equipment;
+drop policy if exists "empresa select" on service_orders;
+drop policy if exists "empresa insert" on service_orders;
+drop policy if exists "empresa update" on service_orders;
+drop policy if exists "empresa delete" on service_orders;
+drop policy if exists "empresa select" on appointments;
+drop policy if exists "empresa insert" on appointments;
+drop policy if exists "empresa update" on appointments;
+drop policy if exists "empresa delete" on appointments;
+drop policy if exists "admin budgets" on budgets;
+drop policy if exists "admin payments" on payments;
+drop policy if exists "admin materials" on materials;
+drop policy if exists "empresa notifications" on notifications;
+create policy "empresa select" on customers for select using (company_id = auth_company_id());
+create policy "empresa insert" on customers for insert with check (company_id = auth_company_id());
+create policy "empresa update" on customers for update using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+create policy "empresa delete" on customers for delete using (company_id = auth_company_id() and is_company_admin());
+create policy "empresa select" on equipment for select using (company_id = auth_company_id());
+create policy "empresa insert" on equipment for insert with check (company_id = auth_company_id());
+create policy "empresa update" on equipment for update using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+create policy "empresa delete" on equipment for delete using (company_id = auth_company_id() and is_company_admin());
+create policy "empresa select" on service_orders for select using (company_id = auth_company_id());
+create policy "empresa insert" on service_orders for insert with check (company_id = auth_company_id());
+create policy "empresa update" on service_orders for update using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+create policy "empresa delete" on service_orders for delete using (company_id = auth_company_id() and is_company_admin());
+create policy "empresa select" on appointments for select using (company_id = auth_company_id());
+create policy "empresa insert" on appointments for insert with check (company_id = auth_company_id());
+create policy "empresa update" on appointments for update using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+create policy "empresa delete" on appointments for delete using (company_id = auth_company_id() and is_company_admin());
+
+-- Dados administrativos e financeiros: somente administradores.
+create policy "admin budgets" on budgets for all using (company_id = auth_company_id() and is_company_admin()) with check (company_id = auth_company_id() and is_company_admin());
+create policy "admin payments" on payments for all using (company_id = auth_company_id() and is_company_admin()) with check (company_id = auth_company_id() and is_company_admin());
+create policy "admin materials" on materials for all using (company_id = auth_company_id() and is_company_admin()) with check (company_id = auth_company_id() and is_company_admin());
+create policy "empresa notifications" on notifications for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
 
 -- Profiles: cada usuário vê apenas o próprio e os da mesma empresa
 drop policy if exists "profiles empresa" on profiles;
@@ -303,10 +368,7 @@ create trigger trg_set_company_appointments before insert on appointments for ea
 drop trigger if exists trg_set_company_materials on materials;
 create trigger trg_set_company_materials before insert on materials for each row execute procedure set_company_id();
 
--- Trigger: ao criar usuário, cria a própria empresa e o perfil admin.
--- Se o signup vier com metadata { company_id, role } (convite feito pelo dono
--- na tela de Usuários), o novo usuário entra na empresa existente em vez de
--- criar outra.
+-- Trigger: ao criar usuário, cria a própria empresa ou consome um convite válido.
 create or replace function create_company_and_profile()
 returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -314,19 +376,22 @@ declare
   comp_id uuid;
   disp_name text;
   invited_role text;
+  invite_token text;
 begin
   disp_name := nullif(trim(coalesce(new.raw_user_meta_data->>'name', '')), '');
   disp_name := coalesce(disp_name, split_part(new.email, '@', 1), 'Dono');
 
-  if (new.raw_user_meta_data ? 'company_id')
-     and (new.raw_user_meta_data->>'company_id') ~ '^[0-9a-fA-F-]{36}$' then
-    comp_id := (new.raw_user_meta_data->>'company_id')::uuid;
-    perform 1 from companies where id = comp_id;
-    if found then
-      invited_role := coalesce(nullif(new.raw_user_meta_data->>'role', ''), 'tech');
-      if invited_role not in ('admin', 'tech') then
-        invited_role := 'tech';
-      end if;
+  if new.raw_user_meta_data ? 'invite_token' then
+    invite_token := nullif(new.raw_user_meta_data->>'invite_token', '');
+    select company_id, role into comp_id, invited_role
+      from company_invites
+      where token = invite_token
+        and used_at is null
+        and expires_at > now()
+      for update;
+    if not found then
+      raise exception 'Convite inválido ou expirado';
+    end if;
       insert into profiles (id, name, first_name, email, role, company_id)
         values (new.id, disp_name, split_part(disp_name, ' ', 1), new.email, invited_role, comp_id)
         on conflict (id) do update set
@@ -335,8 +400,8 @@ begin
           first_name = excluded.first_name,
           role = excluded.role,
           company_id = excluded.company_id;
+      update company_invites set used_at = now() where token = invite_token;
       return new;
-    end if;
   end if;
 
   insert into companies (name, email) values ('Minha Empresa', new.email)
@@ -382,16 +447,33 @@ declare
   co companies%rowtype;
 begin
   select * into b from budgets where id = p_id;
-  if not found then
+  if not found or b.status not in ('enviado', 'aprovado', 'recusado') then
     return jsonb_build_object('found', false);
   end if;
   select * into c from customers where id = b.customer_id;
   select * into co from companies where id = b.company_id;
   return jsonb_build_object(
     'found', true,
-    'budget', to_jsonb(b),
-    'customer', case when c.id is null then null else to_jsonb(c) end,
-    'company', case when co.id is null then null else to_jsonb(co) end
+    'budget', jsonb_build_object(
+      'id', b.id, 'number', b.number, 'customer_id', b.customer_id,
+      'equipment_id', b.equipment_id, 'service_type', b.service_type,
+      'description', b.description, 'items', b.items, 'labor', b.labor,
+      'displacement', b.displacement, 'discount', b.discount, 'total', b.total,
+      'status', b.status, 'validity', b.validity, 'notes', b.notes,
+      'created_at', b.created_at, 'approved_at', b.approved_at
+    ),
+    'customer', case when c.id is null then null else jsonb_build_object(
+      'id', c.id, 'name', c.name, 'phone', c.phone, 'whatsapp', c.whatsapp,
+      'street', c.street, 'number', c.number, 'city', c.city, 'created_at', c.created_at
+    ) end,
+    'company', case when co.id is null then null else jsonb_build_object(
+      'id', co.id, 'name', co.name, 'cnpj', co.cnpj, 'phone', co.phone,
+      'whatsapp', co.whatsapp, 'email', co.email, 'address', co.address,
+      'instagram', co.instagram, 'site', co.site, 'pix', co.pix,
+      'logo', co.logo, 'signature', co.signature,
+      'payment_condition', co.payment_condition, 'execution_term', co.execution_term,
+      'warranty', co.warranty, 'default_validity', co.default_validity
+    ) end
   );
 end;
 $$;
@@ -410,8 +492,8 @@ begin
   if not found then
     return jsonb_build_object('ok', false, 'error', 'Orçamento não encontrado.');
   end if;
-  if b.status in ('aprovado', 'recusado') then
-    return jsonb_build_object('ok', true, 'status', b.status, 'already', true);
+  if b.status <> 'enviado' then
+    return jsonb_build_object('ok', false, 'error', 'Este orçamento não está aguardando decisão.');
   end if;
   new_status := p_decision;
   update budgets
@@ -465,6 +547,7 @@ create policy "fotos upload empresa" on storage.objects
   for insert with check (
     bucket_id = 'service-photos'
     and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = auth_company_id()::text
   );
 
 drop policy if exists "fotos delete empresa" on storage.objects;
@@ -472,6 +555,7 @@ create policy "fotos delete empresa" on storage.objects
   for delete using (
     bucket_id = 'service-photos'
     and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = auth_company_id()::text
   );
 
 -- =============================================================

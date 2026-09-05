@@ -25,8 +25,8 @@ export function useLiveQuery<T>(
       try {
         const v = await fnRef.current();
         if (active) setResult(v);
-      } catch {
-        // keep previous result on failure to avoid flicker
+      } catch (error) {
+        console.error('[useLiveQuery] consulta falhou', error);
       }
     }
 

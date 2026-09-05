@@ -21,6 +21,10 @@ export default function Config() {
   const { theme, setTheme } = useTheme();
 
   async function wipe() {
+    if (user?.role !== 'admin') {
+      toast('error', 'Somente administradores podem apagar os dados.');
+      return;
+    }
     if (!confirm('Apagar todos os dados? Essa ação não pode ser desfeita.')) return;
     await Promise.all([
       db.customers.clear(),
@@ -71,12 +75,12 @@ export default function Config() {
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{user?.name} · {user?.email}</p>
           <Button variant="outline" className="mt-3" onClick={() => { logout(); navigate('/login'); }}><LogOut size={16} /> Sair da conta</Button>
         </Card>
-        <Card>
+        {user?.role === 'admin' && <Card>
           <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Dados</h2>
           <div className="mt-3">
             <Button variant="danger" onClick={wipe}><Trash2 size={16} /> Apagar todos os dados</Button>
           </div>
-        </Card>
+        </Card>}
       </div>
     </div>
   );

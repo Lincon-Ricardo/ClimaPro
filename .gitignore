@@ -6,3 +6,6 @@ dist
 public
 supabase/.temp
 *.tsbuildinfo
+
+.vercel
+.env*

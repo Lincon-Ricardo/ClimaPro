@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { UserRound, Plus, Trash2, ShieldCheck, Wrench, Pencil } from 'lucide-react';
 import { db } from '../lib/db';
-import { createIsolatedClient } from '../lib/supabaseClient';
+import { createIsolatedClient, supabase } from '../lib/supabaseClient';
 import { emitDataChanged } from '../lib/tableBus';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
@@ -101,6 +101,16 @@ export default function Users() {
           return;
         }
         console.log('[Users] companyId:', companyId);
+        const inviteToken = crypto.randomUUID();
+        const { error: inviteError } = await supabase.from('company_invites').insert({
+          token: inviteToken,
+          company_id: companyId,
+          role: form.role,
+        });
+        if (inviteError) {
+          toast('error', 'Não foi possível criar o convite: ' + inviteError.message);
+          return;
+        }
         const isolated = createIsolatedClient();
         let data: any;
         let error: any;
@@ -109,7 +119,7 @@ export default function Users() {
             isolated.auth.signUp({
               email,
               password: form.password,
-              options: { data: { name: form.name.trim(), company_id: companyId, role: form.role } },
+              options: { data: { name: form.name.trim(), invite_token: inviteToken } },
             }),
             10000,
             'Comunicação com Supabase'
