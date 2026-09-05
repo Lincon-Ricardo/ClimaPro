@@ -16,6 +16,8 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
   const [supported, setSupported] = useState(true);
   const [draft, setDraft] = useState('');
   const recRef = useRef<any>(null);
+  const shouldListenRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -27,22 +29,40 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
     rec.lang = 'pt-BR';
     rec.continuous = true;
     rec.interimResults = true;
+    rec.maxAlternatives = 1;
 
     rec.onresult = (ev: any) => {
-      let finalTxt = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      let transcript = '';
+      for (let i = 0; i < ev.results.length; i++) {
         const r = ev.results[i];
-        if (r.isFinal) finalTxt += r[0].transcript + ' ';
+        transcript += r[0].transcript;
       }
-      if (finalTxt) setDraft((d) => (d ? d + ' ' : '') + finalTxt.trim());
+      setDraft(transcript.trim());
     };
-    rec.onerror = () => {
+    rec.onstart = () => setListening(true);
+    rec.onerror = (ev: any) => {
+      if (ev?.error === 'no-speech' || ev?.error === 'aborted') return;
+      shouldListenRef.current = false;
       setListening(false);
-      toast('error', 'Microfone indisponível. Verifique a permissão do navegador.');
+      const message = ev?.error === 'not-allowed'
+        ? 'Permita o uso do microfone no navegador para falar o laudo.'
+        : 'Microfone indisponível. Verifique a permissão e tente novamente.';
+      toast('error', message);
     };
-    rec.onend = () => setListening(false);
+    rec.onend = () => {
+      if (!shouldListenRef.current) {
+        setListening(false);
+        return;
+      }
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = setTimeout(() => {
+        try { rec.start(); } catch { /* o navegador já pode estar iniciando */ }
+      }, 250);
+    };
     recRef.current = rec;
     return () => {
+      shouldListenRef.current = false;
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       try { rec.stop(); } catch { /* noop */ }
     };
   }, [toast]);
@@ -53,20 +73,25 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
       return;
     }
     if (listening) {
+      shouldListenRef.current = false;
       try { recRef.current?.stop(); } catch { /* noop */ }
       setListening(false);
     } else {
       setDraft('');
+      shouldListenRef.current = true;
       try {
         recRef.current?.start();
         setListening(true);
       } catch {
+        shouldListenRef.current = false;
         toast('error', 'Não foi possível iniciar o microfone.');
       }
     }
   }
 
   function apply() {
+    shouldListenRef.current = false;
+    try { recRef.current?.stop(); } catch { /* noop */ }
     const normalized = normalizeTechReport(draft);
     if (!normalized) {
       toast('error', 'Fale primeiro ou digite o laudo.');
