@@ -540,12 +540,14 @@ export default function ServicoDetail() {
         <Textarea
           value={obs}
           placeholder="O laudo aplicado aparecerá aqui e será salvo nesta OS..."
-          rows={7}
+          rows={5}
+          maxLength={900}
           onChange={(e) => setObs(e.target.value)}
         />
-        <p className="mt-1 text-right text-[11px] text-neutral-400 dark:text-neutral-500" aria-live="polite">
-          {obsSaving ? 'Salvando laudo...' : obs ? 'Laudo salvo nesta OS' : 'Nenhum laudo registrado'}
-        </p>
+        <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-neutral-400 dark:text-neutral-500" aria-live="polite">
+          <span>{obsSaving ? 'Salvando laudo...' : obs ? 'Laudo salvo nesta OS' : 'Nenhum laudo registrado'}</span>
+          <span>{obs.length}/900</span>
+        </div>
       </Card>
 
       <Card className="mt-3">

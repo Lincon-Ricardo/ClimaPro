@@ -159,6 +159,20 @@ function formatSpokenPunctuation(value: string): string {
     .trim();
 }
 
+function normalizeTechnicalUnits(value: string): string {
+  return value
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(graus?|°)\s*c(?:elsius)?\b/gi, '$1 °C')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(psi|libras?)\b/gi, '$1 PSI')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(btu)\b/gi, '$1 BTU')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(amp[eè]res?|a)\b/gi, '$1 A')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*(volts?|v)\b/gi, '$1 V')
+    .replace(/\s+([°])/g, ' $1');
+}
+
+function removeRepeatedWords(value: string): string {
+  return value.replace(/\b([\p{L}\d]+)(\s+\1\b)+/giu, '$1');
+}
+
 export function normalizeTechReport(raw: string): string {
   let text = formatSpokenPunctuation(raw || '');
   if (!text) return text;
@@ -167,7 +181,8 @@ export function normalizeTechReport(raw: string): string {
     text = text.replace(rx, fix);
   }
 
-  text = formatSpokenPunctuation(text)
+  text = normalizeTechnicalUnits(removeRepeatedWords(formatSpokenPunctuation(text)))
+    .replace(/\s*\n\s*/g, ' ')
     .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/(^|[.!?]\s+)([a-záàâãéêíóôõúç])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
 
@@ -175,7 +190,9 @@ export function normalizeTechReport(raw: string): string {
 
   // Mantem o laudo legivel no PDF sem permitir um texto excessivamente longo.
   if (text.length > MAX_REPORT_LENGTH) {
-    text = `${text.slice(0, MAX_REPORT_LENGTH - 3).replace(/[\s,;:]+$/, '')}...`;
+    const cut = text.slice(0, MAX_REPORT_LENGTH - 3);
+    const safeCut = cut.slice(0, Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(', '), cut.lastIndexOf(' ')));
+    text = `${(safeCut || cut).replace(/[\s,;:]+$/, '')}...`;
   }
 
   return text;
