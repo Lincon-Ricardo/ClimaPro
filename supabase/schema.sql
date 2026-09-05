@@ -575,13 +575,40 @@ create table if not exists subscriptions (
   updated_at timestamptz default now()
 );
 
+alter table subscriptions add column if not exists billing_cycle text default 'monthly';
+alter table subscriptions add column if not exists cancel_at_period_end boolean default false;
+alter table subscriptions add column if not exists last_webhook_at timestamptz;
+
+create table if not exists billing_events (
+  event_id text primary key,
+  event_type text not null,
+  asaas_subscription_id text,
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'received' check (status in ('received', 'processed', 'failed')),
+  processed_at timestamptz,
+  created_at timestamptz default now()
+);
+
 alter table subscriptions enable row level security;
+alter table billing_events enable row level security;
 
 drop policy if exists "assinatura empresa" on subscriptions;
-create policy "assinatura empresa" on subscriptions
-  for all using (company_id = auth_company_id()) with check (company_id = auth_company_id());
+drop policy if exists "assinatura leitura" on subscriptions;
+create policy "assinatura leitura" on subscriptions
+  for select using (company_id = auth_company_id());
+
+drop policy if exists "assinatura admin" on subscriptions;
+create policy "assinatura admin" on subscriptions
+  for update using (company_id = auth_company_id() and is_company_admin())
+  with check (company_id = auth_company_id() and is_company_admin());
+
+drop policy if exists "billing events bloqueado" on billing_events;
+create policy "billing events bloqueado" on billing_events
+  for select using (false);
 
 create index if not exists idx_subscriptions_company on subscriptions (company_id);
+create unique index if not exists idx_subscriptions_asaas_id on subscriptions (asaas_subscription_id) where asaas_subscription_id <> '';
+create index if not exists idx_billing_events_subscription on billing_events (asaas_subscription_id);
 
 -- Trigger: toda empresa nova ganha trial de 14 dias no Pro automaticamente
 -- O relógio do trial só começa na 1ª OS criada (função start_trial_clock)

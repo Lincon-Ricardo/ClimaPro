@@ -9,6 +9,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { formatBRL } from '../lib/utils';
+import { startCheckout } from '../lib/billing';
 
 const PLAN_STYLE: Record<string, { icon: any; gradient: string; glow: string; accent: string }> = {
   start: {
@@ -85,11 +86,14 @@ export default function Planos() {
   async function handleSubscribe(planKey: string) {
     setBusy(planKey);
     try {
-      const waNumber = '5511999999999';
-      const mode = annual ? 'ANUAL (-20%)' : 'MENSAL';
-      const msg = `Olá! Quero assinar o ClimaPro no plano ${planKey.toUpperCase()} ${mode}. Pode me enviar o link de pagamento Asaas? ❄️`;
-      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
-      toast('info', 'Abrimos o WhatsApp comercial. Complete sua assinatura por lá!');
+      const result = await startCheckout(planKey, annual ? 'yearly' : 'monthly');
+      if (result.checkoutUrl) {
+        window.location.assign(result.checkoutUrl);
+      } else {
+        toast('info', 'Assinatura criada. A primeira cobrança está sendo preparada pelo Asaas.');
+      }
+    } catch (error: any) {
+      toast('error', error?.message || 'Não foi possível iniciar o pagamento.');
     } finally {
       setBusy(null);
     }
