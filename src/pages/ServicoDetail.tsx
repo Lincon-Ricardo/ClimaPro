@@ -16,7 +16,7 @@ import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
-import { Input, Select } from '../components/Fields';
+import { Select, Textarea } from '../components/Fields';
 import {
   STATUS_LABEL, STATUS_STYLE, STATUS_DOT, formatBRL, formatDate, telToWhats,
   toggleChecklistItem, todayISO,
@@ -137,6 +137,7 @@ export default function ServicoDetail() {
   const [reminderMonths, setReminderMonths] = useState(3);
   const sigRef = useRef<SignatureCanvas>(null);
   const [obs, setObs] = useState('');
+  const [obsSaving, setObsSaving] = useState(false);
 
   useEffect(() => {
     setObs(order?.observacoesTecnicas || '');
@@ -144,8 +145,11 @@ export default function ServicoDetail() {
 
   useEffect(() => {
     if (!order || obs === order.observacoesTecnicas) return;
+    setObsSaving(true);
     const t = setTimeout(() => {
-      db.serviceOrders.update(order.id, { observacoesTecnicas: obs }).catch(() => {});
+      db.serviceOrders.update(order.id, { observacoesTecnicas: obs })
+        .then(() => setObsSaving(false))
+        .catch(() => setObsSaving(false));
     }, 600);
     return () => clearTimeout(t);
   }, [obs, order]);
@@ -533,11 +537,15 @@ export default function ServicoDetail() {
           <VoiceReport onApply={(txt) => setObs((prev) => (prev ? prev.replace(/\s+$/, '') + '\n' + txt : txt))} />
           <SuperheatCalc onApply={(txt) => setObs((prev) => (prev ? prev.replace(/\s+$/, '') + '\n' + txt : txt))} />
         </div>
-        <Input
+        <Textarea
           value={obs}
-          placeholder="Anote o que foi feito... ou use o laudo por voz acima"
+          placeholder="O laudo aplicado aparecerá aqui e será salvo nesta OS..."
+          rows={7}
           onChange={(e) => setObs(e.target.value)}
         />
+        <p className="mt-1 text-right text-[11px] text-neutral-400 dark:text-neutral-500" aria-live="polite">
+          {obsSaving ? 'Salvando laudo...' : obs ? 'Laudo salvo nesta OS' : 'Nenhum laudo registrado'}
+        </p>
       </Card>
 
       <Card className="mt-3">
