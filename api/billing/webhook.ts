@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 function statusFromEvent(event: string): string | null {
   if (['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'SUBSCRIPTION_ACTIVATED'].includes(event)) return 'active';
   if (['PAYMENT_OVERDUE', 'PAYMENT_DUNNING_RECEIVED'].includes(event)) return 'past_due';
-  if (['SUBSCRIPTION_DELETED', 'SUBSCRIPTION_INACTIVE'].includes(event)) return 'canceled';
+  if (['SUBSCRIPTION_INACTIVATED', 'SUBSCRIPTION_DELETED'].includes(event)) return 'canceled';
   return null;
 }
 
