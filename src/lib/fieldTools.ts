@@ -143,19 +143,40 @@ const TERM_FIXES: Array<[RegExp, string]> = [
   [/\bplaca\b/gi, 'placa eletrônica principal'],
 ];
 
+const MAX_REPORT_LENGTH = 900;
+
+function formatSpokenPunctuation(value: string): string {
+  return value
+    .replace(/\b(virgula|vírgula)\b/gi, ',')
+    .replace(/\b(ponto final|ponto finalizando|ponto)\b/gi, '.')
+    .replace(/\b(dois pontos)\b/gi, ':')
+    .replace(/\b(nova linha|quebra de linha)\b/gi, '. ')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/([,.;:!?])(?=\S)/g, '$1 ')
+    .replace(/,{2,}/g, ',')
+    .replace(/\.{2,}/g, '.')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export function normalizeTechReport(raw: string): string {
-  let text = (raw || '').trim();
+  let text = formatSpokenPunctuation(raw || '');
   if (!text) return text;
 
   for (const [rx, fix] of TERM_FIXES) {
     text = text.replace(rx, fix);
   }
 
-  // Capitaliza primeira letra de cada frase
-  text = text.replace(/(^\s*\w|[.!?]\s*\w)/g, (c) => c.toUpperCase());
+  text = formatSpokenPunctuation(text)
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/(^|[.!?]\s+)([a-záàâãéêíóôõúç])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
 
-  // Garante ponto final
   if (!/[.!?]$/.test(text)) text += '.';
+
+  // Mantem o laudo legivel no PDF sem permitir um texto excessivamente longo.
+  if (text.length > MAX_REPORT_LENGTH) {
+    text = `${text.slice(0, MAX_REPORT_LENGTH - 3).replace(/[\s,;:]+$/, '')}...`;
+  }
 
   return text;
 }
