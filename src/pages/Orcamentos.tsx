@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Wallet, Plus } from 'lucide-react';
+import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -9,6 +9,8 @@ import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { usePagedList, useDebouncedValue } from '../hooks/usePagedList';
 import { Loading } from '../components/Loading';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../components/Toast';
 
 const STATUS_STYLE: Record<string, string> = {
   rascunho: 'bg-neutral-100 dark:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300',
@@ -26,8 +28,25 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function Orcamentos() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; number: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await db.budgets.delete(deleteTarget.id);
+      toast('success', 'Orçamento excluído!');
+      setDeleteTarget(null);
+    } catch {
+      toast('error', 'Não foi possível excluir. Tente novamente.');
+    } finally {
+      setDeleting(false);
+    }
+  }
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
   const { rows: budgets, loading, loadingMore, hasMore, loadMore } = usePagedList(
@@ -70,11 +89,22 @@ export default function Orcamentos() {
                   <div className="mt-0.5 truncate text-sm text-neutral-500 dark:text-neutral-400">{b.serviceType}</div>
                   <div className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">Criado em {formatDate(b.createdAt)}</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(b.total)}</div>
-                  <span className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[b.status] || ''}`}>
-                    {STATUS_LABEL[b.status] || b.status}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(b.total)}</div>
+                    <span className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[b.status] || ''}`}>
+                      {STATUS_LABEL[b.status] || b.status}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: b.id, number: b.number }); }}
+                    className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                    title="Excluir orçamento"
+                    aria-label={`Excluir orçamento ${b.number}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             </Card>
@@ -86,6 +116,14 @@ export default function Orcamentos() {
           <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Carregando...' : 'Carregar mais'}</Button>
         </div>
       )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Excluir orçamento ${deleteTarget?.number || ''}?`}
+        message="Essa ação não pode ser desfeita."
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

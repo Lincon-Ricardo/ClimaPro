@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
-import { MessageCircle, FileDown, Check, X, CalendarPlus, Pencil, Save } from 'lucide-react';
+import { MessageCircle, FileDown, Check, X, CalendarPlus, Pencil, Save, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -10,6 +10,8 @@ import { Input, Select, Textarea } from '../components/Fields';
 import { BudgetItemsEditor } from '../components/BudgetItemsEditor';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { audit } from '../lib/audit';
 import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
 import { Loading } from '../components/Loading';
 import { generateBudgetPdf } from '../lib/pdf/budgetPdf';
@@ -39,6 +41,23 @@ export default function OrcamentoDetail() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Budget | null>(null);
   const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await db.budgets.delete(b.id);
+      try { audit({ actor: 'admin', action: 'delete_budget', entity: 'budgets', entityId: b.id, detail: b.number }); } catch { /* noop */ }
+      toast('success', 'Orçamento excluído!');
+      navigate('/app/orcamentos');
+    } catch {
+      toast('error', 'Não foi possível excluir. Tente novamente.');
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
 
   if (!budget) return <Loading />;
   const b = budget;
@@ -197,6 +216,15 @@ export default function OrcamentoDetail() {
             {!editing && (
               <Button variant="outline" size="sm" onClick={startEdit}><Pencil size={15} /> Editar</Button>
             )}
+            <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir orçamento" title="Excluir orçamento"><Trash2 size={15} /></Button>
+            <ConfirmDialog
+              open={confirmDelete}
+              title={`Excluir orçamento ${b.number}?`}
+              message="Essa ação não pode ser desfeita."
+              busy={deleting}
+              onConfirm={handleDelete}
+              onClose={() => setConfirmDelete(false)}
+            />
           </div>
         }
       />
