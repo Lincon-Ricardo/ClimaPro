@@ -37,23 +37,27 @@ export default function Dashboard() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl">
       {/* Saudação */}
-      <div className="rounded-2xl bg-gradient-to-r from-primary-800 to-primary-600 p-4 text-white shadow-lg sm:rounded-3xl sm:p-6">
-        <h1 className="break-words text-xl font-extrabold sm:text-2xl">
+      <div className="rounded-2xl bg-gradient-to-r from-primary-800 to-primary-600 p-3.5 text-white shadow-lg sm:rounded-3xl sm:p-6">
+        <h1 className="break-words text-lg font-extrabold leading-tight sm:text-2xl">
           {greetings()}, {user?.firstName}! 👋
         </h1>
-        <p className="mt-1 text-primary-100">
+        <p className="mt-1 break-words text-xs text-primary-100 sm:text-base">
           {todaysServiceOrders.length > 0
             ? `Você possui ${todaysServiceOrders.length} serviço${todaysServiceOrders.length > 1 ? 's' : ''} hoje.`
             : 'Nenhum serviço agendado para hoje.'}
         </p>
+        <div className="mt-3 flex gap-2 sm:hidden">
+          <Button size="sm" variant="light" full onClick={() => navigate('/app/servicos/novo')}><Plus size={15} /> Novo serviço</Button>
+          <Button size="sm" variant="secondary" full onClick={() => navigate('/app/orcamentos/novo')} className="!bg-white/15 !text-white !border-white/20"><Plus size={15} /> Orçamento</Button>
+        </div>
       </div>
 
       {/* StatCards clicáveis */}
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-cols-4">
-        <StatCard icon={<CalendarDays size={20} />} label="Serviços hoje →" value={String(todaysServiceOrders.length)} onClick={() => navigate('/app/agenda')} />
-        <StatCard icon={<Wrench size={20} />} label="Pendentes →" value={String(pending)} onClick={() => navigate('/app/servicos?filter=pendentes')} />
-        <StatCard icon={<Wallet size={20} />} label="A receber →" value={formatBRL(receberTotal)} onClick={() => navigate('/app/financeiro')} />
-        <StatCard icon={<FileText size={20} />} label="Aguardando →" value={String(budgetsWaiting)} onClick={() => navigate('/app/orcamentos')} />
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 lg:grid-cols-4">
+        <StatCard icon={<CalendarDays size={18} />} label="Serviços hoje →" value={String(todaysServiceOrders.length)} onClick={() => navigate('/app/agenda')} />
+        <StatCard icon={<Wrench size={18} />} label="Pendentes →" value={String(pending)} onClick={() => navigate('/app/servicos?filter=pendentes')} />
+        <StatCard icon={<Wallet size={18} />} label="A receber →" value={formatBRL(receberTotal)} onClick={() => navigate('/app/financeiro')} />
+        <StatCard icon={<FileText size={18} />} label="Aguardando →" value={String(budgetsWaiting)} onClick={() => navigate('/app/orcamentos')} />
       </div>
 
       {/* Ações rápidas */}
