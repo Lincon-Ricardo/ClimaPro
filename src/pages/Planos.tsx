@@ -228,8 +228,8 @@ export default function Planos() {
       {/* ── COMPARATIVO ── */}
       <Card className="overflow-hidden p-0">
         <h2 className="px-4 pt-4 text-base font-black text-neutral-900 dark:text-white sm:px-5">Compare tudo, sem letra miúda</h2>
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full min-w-[520px] text-xs">
+        <div className="table-scroll mt-2">
+          <table className="w-full min-w-[560px] text-xs sm:min-w-0">
             <thead>
               <tr className="border-b border-neutral-100 dark:border-neutral-800">
                 <th className="px-4 py-2.5 text-left font-semibold text-neutral-400 sm:px-5">Recurso</th>

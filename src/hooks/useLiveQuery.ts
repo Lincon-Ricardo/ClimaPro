@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { subscribeData } from '../lib/tableBus';
+import { startRealtime } from '../lib/realtime';
 import { isSupabaseConfigured } from '../lib/supabaseClient';
 
 export function useLiveQuery<T>(
@@ -14,6 +15,7 @@ export function useLiveQuery<T>(
   tablesRef.current = tables;
 
   useEffect(() => {
+    startRealtime();
     let active = true;
 
     async function run() {

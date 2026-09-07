@@ -7,30 +7,32 @@ import { PageHeader, EmptyState } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { formatDate } from '../lib/utils';
 import { useState } from 'react';
+import { usePagedList, useDebouncedValue } from '../hooks/usePagedList';
+import { Loading } from '../components/Loading';
 
 export default function Equipamentos() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const equipment = useLiveQuery(() => db.equipment.toArray(), []) || [];
+  const debounced = useDebouncedValue(search.trim(), 350);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
-
-  const filtered = equipment.filter((e) =>
-    (e.brand + e.model + e.serial + (custName(e.customerId) || '')).toLowerCase().includes(search.toLowerCase())
+  const { rows: equipment, loading, loadingMore, hasMore, loadMore } = usePagedList(
+    (p) => db.equipment.list({ ...p, pageSize: 24, ...(debounced ? { orIlike: { columns: ['brand', 'model', 'serial'], term: debounced } } : {}) }),
+    { ...(debounced ? { orIlike: { columns: ['brand', 'model', 'serial'], term: debounced } } : {}) },
+    24,
   );
 
   return (
     <div>
-      <PageHeader title="Equipamentos" subtitle={`${equipment.length} equipamentos`} />
+      <PageHeader title="Equipamentos" subtitle="Busca por marca/modelo/serial no servidor" />
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por marca, modelo, serial ou cliente..."
+        placeholder="Buscar por marca, modelo ou serial..."
         aria-label="Buscar equipamentos"
         className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-600 dark:placeholder:text-neutral-500"
       />
-      {filtered.length === 0 ? (
+      {loading ? <Loading /> : equipment.length === 0 ? (
         <EmptyState
           icon={<Snowflake size={26} />}
           title="Nenhum equipamento encontrado"
@@ -38,8 +40,8 @@ export default function Equipamentos() {
           action={<Button onClick={() => navigate('/app/clientes')}><Users size={18} /> Ir para clientes</Button>}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {filtered.map((eq) => (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {equipment.map((eq) => (
             <Card key={eq.id} onClick={() => navigate(`/app/clientes/${eq.customerId}`)}>
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
@@ -58,6 +60,11 @@ export default function Equipamentos() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+      {hasMore && (
+        <div className="mt-4 text-center">
+          <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Carregando...' : 'Carregar mais'}</Button>
         </div>
       )}
     </div>

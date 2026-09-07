@@ -37,6 +37,9 @@ export interface Company {
   executionTerm?: string;
   warranty?: string;
   defaultValidity?: string;
+  companyId?: string;
+  commissionEnabled?: boolean;
+  commissionRate?: number;
 }
 
 export interface Customer {
@@ -91,6 +94,7 @@ export interface Budget {
   number: string;
   customerId: string;
   equipmentId?: string;
+  companyId?: string;
   serviceType: string;
   description: string;
   items: BudgetItem[];
@@ -103,6 +107,8 @@ export interface Budget {
   notes: string;
   createdAt: string;
   approvedAt?: string;
+  customerSignature?: string;
+  signatureDate?: string;
 }
 
 export interface ChecklistItem {
@@ -115,6 +121,7 @@ export interface ServiceOrder {
   id: string;
   osNumber: string;
   budgetId?: string;
+  companyId?: string;
   customerId: string;
   equipmentId?: string;
   problem: string;
@@ -170,4 +177,5 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'danger';
   read: boolean;
   createdAt: string;
+  companyId?: string;
 }

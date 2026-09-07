@@ -65,11 +65,20 @@ export function itemTotal(item: Pick<BudgetItem, 'qty' | 'unitValue'>): number {
   return (item.qty || 0) * (item.unitValue || 0);
 }
 
-export function formatDate(dateStr?: string): string {
+export function asDateKey(v?: string | null): string {
+  if (!v) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  return toISODate(d);
+}
+
+export function formatDate(dateStr?: string | null): string {
   if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('pt-BR');
+  const key = asDateKey(dateStr);
+  if (!key) return dateStr;
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR');
 }
 
 export function formatDateLong(dateStr?: string): string {

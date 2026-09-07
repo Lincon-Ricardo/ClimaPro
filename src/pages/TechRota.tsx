@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
+import { useMyOrders } from '../hooks/useTechOrders';
 import { db } from '../lib/db';
 import {
   Navigation, CheckCircle2, Clock, MapPin, Phone, MessageCircle,
@@ -25,18 +26,7 @@ export default function TechRota() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const equipment = useLiveQuery(() => db.equipment.toArray(), []) || [];
 
-  const techName = (user?.name || '').trim().toLowerCase();
-  const techFirstName = (user?.firstName || '').trim().toLowerCase();
-
-  // Filtra as OS atribuídas ao técnico logado (ou todas se for admin testando)
-  const myOrders = useMemo(() => {
-    return orders.filter((o) => {
-      if (user?.role === 'admin') return true; // Dono vê tudo se quiser entrar aqui
-      const t = (o.technician || '').trim().toLowerCase();
-      if (!t) return false;
-      return t === techName || t === techFirstName || t.includes(techFirstName);
-    });
-  }, [orders, user, techName, techFirstName]);
+  const myOrders = useMyOrders(orders);
 
   // Filtra pelo dia selecionado
   const dayOrders = useMemo(() => {
@@ -101,7 +91,7 @@ export default function TechRota() {
   }
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
       {/* Top Header Cockpit */}
       <div className="rounded-2xl bg-gradient-to-r from-primary-800 to-primary-950 p-5 text-white shadow-lg">
         <div className="flex items-center justify-between">
@@ -219,7 +209,7 @@ export default function TechRota() {
                   </div>
 
                   {/* Barra de Ações Rápidas de Campo (1 toque) */}
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="mt-4 grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3 lg:grid-cols-4">
                     {/* Waze / Maps */}
                     <button
                       type="button"

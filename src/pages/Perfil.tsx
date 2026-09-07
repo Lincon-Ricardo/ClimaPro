@@ -28,7 +28,7 @@ export default function Perfil() {
     : [];
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Perfil da empresa" subtitle="Dados usados nos orçamentos e documentos" />
 
       <div className="rounded-3xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white">
@@ -75,7 +75,7 @@ export default function Perfil() {
               </div>
             ))}
 
-            <div className="grid grid-cols-2 gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-700">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 border-t border-neutral-100 pt-3 dark:border-neutral-700">
               <div className="flex items-center gap-3 text-sm">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400"><ImageIcon size={16} /></span>
                 <div>

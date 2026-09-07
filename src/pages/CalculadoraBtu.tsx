@@ -49,7 +49,7 @@ export default function CalculadoraBtu() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Calculadora de BTUs" subtitle="Descubra a capacidade ideal do aparelho" />
 
       <div className="rounded-3xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white shadow-lg">
@@ -68,7 +68,7 @@ export default function CalculadoraBtu() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Card>
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-neutral-700 dark:text-neutral-200">
             <Home size={16} className="text-primary-600 dark:text-primary-400" /> Área do ambiente

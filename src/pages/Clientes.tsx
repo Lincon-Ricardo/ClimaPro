@@ -1,44 +1,71 @@
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
-import { Users, MapPin, Phone, Plus, Trash2 } from 'lucide-react';
+import { Users, MapPin, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader, EmptyState } from '../components/PageHeader';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { formatDate } from '../lib/utils';
+import { useToast } from '../components/Toast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { audit } from '../lib/audit';
+import { useAuth } from '../context/AuthContext';
+import { usePagedList, useDebouncedValue } from '../hooks/usePagedList';
+import { Loading } from '../components/Loading';
 
 export default function Clientes() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+  const debounced = useDebouncedValue(search.trim(), 350);
   const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
-
-  const filtered = customers.filter((c) =>
-    (c.name + c.phone + c.city).toLowerCase().includes(search.toLowerCase())
+  const { rows: customers, loading, loadingMore, hasMore, loadMore, total } = usePagedList(
+    (p) => db.customers.list({ ...p, pageSize: 24, orIlike: { columns: ['name', 'phone', 'city'], term: debounced } }),
+    { orIlike: { columns: ['name', 'phone', 'city'], term: debounced } },
+    24,
   );
+  const orderCountByCustomer = useMemo(() => {
+    const m = new Map<string, number>();
+    orders.forEach((o) => m.set(o.customerId, (m.get(o.customerId) || 0) + 1));
+    return m;
+  }, [orders]);
+  const budgetCountByCustomer = useMemo(() => {
+    const m = new Map<string, number>();
+    budgets.forEach((b) => m.set(b.customerId, (m.get(b.customerId) || 0) + 1));
+    return m;
+  }, [budgets]);
 
   const lastService = (customerId: string) =>
     orders.filter((o) => o.customerId === customerId && o.status === 'concluido')
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
 
-  async function handleDelete(customerId: string, customerName: string) {
-    if (!confirm(`Excluir o cliente "${customerName}"?\n\nIsso remove também equipamentos, serviços e orçamentos dele.`)) return;
-    const eqs = await db.equipment.where('customerId').equals(customerId).toArray();
-    await Promise.all(eqs.map((e) => db.equipment.delete(e.id)));
-    const sos = await db.serviceOrders.where('customerId').equals(customerId).toArray();
-    await Promise.all(sos.map((o) => db.serviceOrders.delete(o.id)));
-    const buds = await db.budgets.where('customerId').equals(customerId).toArray();
-    await Promise.all(buds.map((b) => db.budgets.delete(b.id)));
-    await db.customers.delete(customerId);
+  const toast = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const { user } = useAuth();
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await (await import('../lib/supabaseClient')).supabase.rpc('delete_customer_cascade', { p_customer_id: deleteTarget.id });
+      if (error) throw error;
+      audit({ actor: user?.email || user?.id || 'unknown', action: 'delete_customer', entity: 'customers', entityId: deleteTarget.id, detail: deleteTarget.name });
+      toast('success', 'Cliente excluído.');
+      setDeleteTarget(null);
+    } catch {
+      toast('error', 'Não foi possível excluir.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
     <div>
       <PageHeader
         title="Clientes"
-        subtitle={`${customers.length} clientes`}
+        subtitle={`${total} clientes`}
         action={
           <Button onClick={() => navigate('/app/clientes/novo')}>
             <Plus size={18} /> Novo
@@ -54,7 +81,9 @@ export default function Clientes() {
         className="mb-4 w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500"
       />
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <Loading />
+      ) : customers.length === 0 ? (
         <EmptyState
           icon={<Users size={26} />}
           title="Nenhum cliente encontrado"
@@ -62,8 +91,8 @@ export default function Clientes() {
           action={<Button onClick={() => navigate('/app/clientes/novo')}><Plus size={18} /> Novo cliente</Button>}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {filtered.map((c) => {
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {customers.map((c) => {
             const last = lastService(c.id);
             return (
               <Card key={c.id} onClick={() => navigate(`/app/clientes/${c.id}`)}>
@@ -81,7 +110,7 @@ export default function Clientes() {
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(c.id, c.name); }}
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: c.id, name: c.name }); }}
                     className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                     title="Excluir cliente"
                     aria-label={`Excluir ${c.name}`}
@@ -91,7 +120,7 @@ export default function Clientes() {
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
                   <span>
-                    {orders.filter((o) => o.customerId === c.id).length} serviços · {budgets.filter((b) => b.customerId === c.id).length} orçamentos
+                    {orderCountByCustomer.get(c.id) || 0} serviços · {budgetCountByCustomer.get(c.id) || 0} orçamentos
                   </span>
                   <span>Último: {last ? formatDate(last.date) : '—'}</span>
                 </div>
@@ -100,6 +129,21 @@ export default function Clientes() {
           })}
         </div>
       )}
+      {hasMore && (
+        <div className="mt-4 text-center">
+          <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Carregando...' : 'Carregar mais'}
+          </Button>
+        </div>
+      )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Excluir "${deleteTarget?.name || 'cliente'}"?`}
+        message="Isso remove também equipamentos, serviços e orçamentos dele."
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

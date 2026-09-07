@@ -122,14 +122,14 @@ export default function NovaOS() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Novo serviço" subtitle="Crie uma ordem de serviço" />
       <form onSubmit={handleSave} className="space-y-4 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
         <Select label="Cliente *" required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value, equipmentId: '' })}>
           <option value="">Selecione o cliente...</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Select label="Equipamento" value={form.equipmentId} onChange={(e) => setForm({ ...form, equipmentId: e.target.value })}>
             <option value="">Nenhum equipamento</option>
             {equipment.map((eq) => <option key={eq.id} value={eq.id}>{eq.brand} {eq.model} · {eq.btus} BTUs</option>)}
@@ -139,11 +139,11 @@ export default function NovaOS() {
           </Select>
         </div>
         <Textarea label="Problema relatado / observações" rows={2} value={form.problem} onChange={(e) => setForm({ ...form, problem: e.target.value })} placeholder="O que o cliente relatou?" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Data" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           <Input label="Horário" type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Input label="Valor (R$)" inputMode="decimal" value={valueText} onChange={(e) => {
             const clean = e.target.value.replace(/[^\d,.]/g, '');
             setValueText(clean);

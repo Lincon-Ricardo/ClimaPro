@@ -4,6 +4,7 @@ import { db } from '../lib/db';
 import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Fields';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from './Toast';
 import { formatBRL, parseMoney, numberToBRLInput, uid } from '../lib/utils';
 import type { Material } from '../types';
@@ -59,13 +60,19 @@ export function MaterialCatalog({
     resetForm();
   }
 
+  const [deleteTarget, setDeleteTarget] = useState<Material | null>(null);
   async function handleDelete(m: Material) {
-    if (!confirm(`Remover "${m.name}" do catálogo?`)) return;
-    await db.materials.delete(m.id);
+    setDeleteTarget(m);
+  }
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await db.materials.delete(deleteTarget.id);
     toast('success', 'Material removido.');
+    setDeleteTarget(null);
   }
 
   return (
+    <>
     <Modal open={open} onClose={onClose} title="Catálogo de materiais" wide>
       <div className="space-y-4">
         <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
@@ -140,6 +147,14 @@ export function MaterialCatalog({
           ))}
         </div>
       </div>
-    </Modal>
+      </Modal>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Remover "${deleteTarget?.name || 'material'}"?`}
+        message="Essa ação não pode ser desfeita."
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
+    </>
   );
 }

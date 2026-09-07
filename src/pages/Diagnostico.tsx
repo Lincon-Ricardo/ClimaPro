@@ -21,7 +21,7 @@ export default function Diagnostico() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Guia de diagnóstico" subtitle="Checklist rápido para os sintomas mais comuns" />
 
       {!selected && (
@@ -29,7 +29,7 @@ export default function Diagnostico() {
           <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
             Selecione o sintoma relatado pelo cliente e veja as causas prováveis, o que verificar e como orientar.
           </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {SYMPTOMS.map((s) => (
               <Card key={s.id} onClick={() => setSelectedId(s.id)} className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-2xl dark:bg-primary-900/40">{s.icon}</div>

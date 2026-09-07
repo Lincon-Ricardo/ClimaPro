@@ -10,6 +10,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { useMyOrders } from '../hooks/useTechOrders';
 import { addMonths, telToWhats, toISODate } from '../lib/utils';
 import { format } from 'date-fns';
 
@@ -18,22 +19,12 @@ export default function Mais() {
   const { user } = useAuth();
   const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-  const unread = useLiveQuery(() => db.notifications.filter((n) => n.read === false).count(), []) ?? 0;
+  const unread = useLiveQuery(() => db.notifications.where('read').equals(false).count(), []) ?? 0;
 
   const isTech = user?.role === 'tech';
-  const techName = (user?.name || '').trim().toLowerCase();
-  const techFirstName = (user?.firstName || '').trim().toLowerCase();
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
-
-  // Técnico: só vê as próprias OS
-  const visibleOrders = isTech
-    ? orders.filter((o) => {
-        const t = (o.technician || '').trim().toLowerCase();
-        if (!t) return false;
-        return t === techName || t === techFirstName || t.includes(techFirstName);
-      })
-    : orders;
+  const visibleOrders = useMyOrders(orders);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
@@ -78,7 +69,7 @@ export default function Mais() {
       ];
 
   return (
-    <div className="max-w-4xl">
+    <div className="mx-auto w-full min-w-0 max-w-6xl">
       <PageHeader title={`Olá, ${user?.firstName}!`} subtitle="Acesse as ferramentas de gestão" />
 
       {dueReminders.length > 0 && (
@@ -103,7 +94,7 @@ export default function Mais() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {sections.map((s) => (
           <Card key={s.label} onClick={() => navigate(s.to)} className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/60 dark:text-primary-200">{s.icon}</div>
@@ -116,7 +107,7 @@ export default function Mais() {
       </div>
 
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Ferramentas</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Card onClick={() => navigate('/app/calculadora-btu')} className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300">
             <Calculator size={20} />
@@ -139,7 +130,7 @@ export default function Mais() {
 
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Gestão</h2>
       {!isTech ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Card onClick={() => navigate('/app/administrativo')} className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
               <LayoutDashboard size={20} />
@@ -160,7 +151,7 @@ export default function Mais() {
           </Card>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Card onClick={() => navigate('/app/rota')} className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300">
               <LayoutDashboard size={20} />
@@ -183,7 +174,7 @@ export default function Mais() {
       )}
 
       <h2 className="mb-3 mt-6 text-base font-bold text-neutral-800 dark:text-neutral-100">Conta e empresa</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {account.map((s) => (
           <Card key={s.label} onClick={() => navigate(s.to)} className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-neutral-700/60 dark:text-neutral-300">{s.icon}</div>

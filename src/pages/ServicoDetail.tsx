@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import autoTable from 'jspdf-autotable';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
   CheckCircle2, Clock, Trash2, Loader2,
@@ -9,25 +8,22 @@ import {
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/db';
-import { uploadServicePhoto, deleteServicePhoto } from '../lib/storage';
-import { log } from '../lib/logger';
+import { uploadServicePhoto, deleteServicePhoto, getSignedPhotoUrl } from '../lib/storage';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
 import {
-  STATUS_LABEL, STATUS_STYLE, STATUS_DOT, formatBRL, formatDate, telToWhats,
-  toggleChecklistItem, todayISO,
+  STATUS_LABEL, STATUS_STYLE, formatBRL, formatDate, telToWhats,
+  toggleChecklistItem,
 } from '../lib/utils';
-import {
-  createPdf, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter, textHeight, drawSignature, HEADER_SPACE,
-  FOOTER_SPACE, fitOneLine, measureLines, newBrandedPage, stampFooters,
-} from '../lib/pdf/theme';
-import { setPdfFont } from '../lib/pdf/fonts';
+import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
+import { useServiceOrderActions } from '../hooks/useServiceOrderActions';
 import { VoiceReport, SuperheatCalc } from '../components/FieldTools';
-import type { ChecklistItem } from '../types';
+import type { ChecklistItem, ServiceOrder } from '../types';
 
 const STEP_OPTIONS: { value: string; label: string }[] = [
   { value: 'solicitacao', label: 'Solicitação recebida' },
@@ -44,6 +40,18 @@ const PHOTO_STEPS: { key: 'fotosAntes' | 'fotosDurante' | 'fotosDepois'; label: 
   { key: 'fotosDurante', label: 'Durante' },
   { key: 'fotosDepois', label: 'Depois' },
 ];
+
+function useSignedPhotos(src: string[]) {
+  const [signed, setSigned] = useState<string[]>(src);
+  useEffect(() => {
+    let alive = true;
+    const urlLike = src.some((s) => s.includes('/service-photos/') && !s.includes('token=') && !s.includes('X-Amz-'));
+    if (!urlLike) { setSigned(src); return; }
+    Promise.all(src.map((s) => getSignedPhotoUrl(s))).then((arr) => { if (alive) setSigned(arr); });
+    return () => { alive = false; };
+  }, [src.join('|')]);
+  return signed;
+}
 
 function PhotoUpload({
   label,
@@ -63,16 +71,17 @@ function PhotoUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const toast = useToast();
+  const signed = useSignedPhotos(photos);
   return (
     <div className={className}>
       <div className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">{label}</div>
       <div className="flex flex-wrap gap-2">
-        {photos.map((p) => (
-          <div key={p} className="relative">
+        {signed.map((p, i) => (
+          <div key={photos[i]} className="relative">
             <img src={p} alt={label} className="h-20 w-20 rounded-lg object-cover" loading="lazy" />
             <button
               type="button"
-              onClick={() => onRemove(p)}
+              onClick={() => onRemove(photos[i])}
               className="absolute -right-1.5 -top-1.5 rounded-full bg-danger p-1 text-white"
             >
               <X size={12} />
@@ -160,223 +169,45 @@ export default function ServicoDetail() {
   const eq = equipment.find((e) => e.id === o.equipmentId);
   const company = companies[0];
 
-  async function setField(changes: Record<string, any>) {
-    await db.serviceOrders.update(o.id, changes);
-  }
+  const { setField, toggleItem, saveSignature, markPaid } = useServiceOrderActions(order);
 
-  async function setStatus(status: string) {
+  async function setStatus(status: ServiceOrder['status']) {
     await setField({ status });
     toast('success', `Status atualizado: ${STATUS_LABEL[status as keyof typeof STATUS_LABEL] || status}`);
   }
 
-  function toggleItem(it: ChecklistItem) {
-    const list = o.checklist ? toggleChecklistItem(o.checklist, it.id) : [];
-    setField({ checklist: list });
-  }
-
-  function saveSignature() {
+  function handleSaveSignature() {
     const dataUrl = sigRef.current?.isEmpty() ? undefined : sigRef.current?.getTrimmedCanvas().toDataURL('image/png');
     if (!dataUrl) {
       toast('error', 'Desenhe a assinatura antes de salvar.');
       return;
     }
-    setField({ customerSignature: dataUrl, signatureDate: todayISO() });
+    saveSignature(dataUrl);
     setSignOpen(false);
     toast('success', 'Assinatura salva!');
   }
 
-  async function markPaid() {
-    await setField({ paymentStatus: 'pago', paymentMethod });
-    const payment = await db.payments.where('serviceOrderId').equals(o.id).first();
-    const changes = {
-      customerId: o.customerId,
-      value: Number(o.value) || 0,
-      method: paymentMethod || 'outro',
-      status: 'pago',
-      paidAt: todayISO(),
-      createdAt: payment?.createdAt || new Date().toISOString(),
-    };
-    if (payment) {
-      await db.payments.update(payment.id, changes);
-    } else {
-      await db.payments.add({ id: crypto.randomUUID(), serviceOrderId: o.id, ...changes });
-    }
+  async function handleMarkPaid() {
+    await markPaid(paymentMethod);
     setPayOpen(false);
     toast('success', 'Pagamento registrado como pago.');
   }
 
   function generatePDF() {
-    const ctx = createPdf(company);
-    const { doc, c, ML, MR, CW, PH } = ctx;
-
-    const payLabel = o.paymentStatus === 'pago' ? 'Pago' : 'Pendente';
-    const payMethod = o.paymentStatus === 'pago' && o.paymentMethod ? ` · ${o.paymentMethod}` : '';
-    const rightLines = [
-      `Técnico: ${o.technician || user?.firstName || '-'}`,
-      `Data: ${formatDate(o.date)}`,
-      `OS Nº ${o.osNumber}`,
-    ];
-    const headerArgs = {
-      company,
-      title: 'ORDEM DE SERVIÇO',
-      docName: 'Atendimento técnico',
-      rightLines,
-    };
-
-    const header = () => {
-      drawBrandHeader(ctx, headerArgs);
-      drawBrandFooter(ctx, company);
-    };
-    header();
-
-    let y = HEADER_SPACE;
-
-    // ── cliente + equipamento ───────────────────────────────────
-    const colW = (CW - 6) / 2;
-    const drawBox = (x: number, label: string, title: string, s1?: string, s2?: string, s3?: string) => {
-      const innerW = colW - 14;
-      const labelTop = y - 4;
-      const titleLines = measureLines(doc, title, 10, 'semibold', innerW).length;
-      const len1 = s1 ? measureLines(doc, s1, 8, 'normal', innerW).length : 0;
-      const len2 = s2 ? measureLines(doc, s2, 8, 'normal', innerW).length : 0;
-      const len3 = s3 ? measureLines(doc, s3, 8, 'normal', innerW).length : 0;
-      const contentH = 10 + titleLines * 4.2 + (len1 + len2 + len3) * 3.8 + 2;
-      const boxHeight = Math.max(26, contentH);
-      doc.setFillColor(c.soft[0], c.soft[1], c.soft[2]);
-      doc.setDrawColor(c.line[0], c.line[1], c.line[2]);
-      doc.setLineWidth(0.25);
-      doc.roundedRect(x, labelTop, colW, boxHeight, 2, 2, 'FD');
-      doc.setFillColor(c.brand[0], c.brand[1], c.brand[2]);
-      doc.roundedRect(x, labelTop, 2.2, 6, 1, 1, 'F');
-      sectionLabel(doc, label, x + 5, y + 1, c.muted);
-      let ty = y + 7.5;
-      const n0 = text(doc, { x: x + 5, y: ty, str: title, size: 10, weight: 'semibold', color: c.ink, w: innerW });
-      ty += n0 * 4.2 + 1.5;
-      if (s1) { const n = text(doc, { x: x + 5, y: ty, str: s1, size: 8, weight: 'normal', color: c.muted, w: innerW }); ty += n * 3.8 + 0.8; }
-      if (s2) { const n = text(doc, { x: x + 5, y: ty, str: s2, size: 8, weight: 'normal', color: c.muted, w: innerW }); ty += n * 3.8 + 0.8; }
-      if (s3) text(doc, { x: x + 5, y: ty, str: s3, size: 8, weight: 'normal', color: c.muted, w: innerW });
-      return boxHeight;
-    };
-
-    const custAddr = [customer?.street, customer?.number, customer?.district, customer?.city].filter(Boolean).join(', ') || o.address;
-    const custContact = [customer?.phone, customer?.email].filter(Boolean).join('   ·   ');
-    const eqTitle = eq ? [`${eq.brand} ${eq.model}`.trim(), `${eq.btus} BTU`].filter(Boolean).join(' · ') : (o.service || '-');
-    const eqSub = eq ? [eq.type, eq.installLocation, eq.serial && `S/N ${eq.serial}`].filter(Boolean).join('   ·   ') : '';
-    const boxH = Math.max(drawBox(ML, 'CLIENTE', customer?.name || '-', custAddr || undefined, custContact || undefined), drawBox(ML + colW + 6, 'EQUIPAMENTO', eqTitle, eqSub || undefined, eq?.warranty || undefined));
-    y += boxH + 8;
-
-    // ── serviço solicitado ──────────────────────────────────────
-    sectionLabel(doc, 'Serviço solicitado', ML, y, c.brand);
-    const problemTxt = (o.service || '') + (o.problem ? ` — ${o.problem}` : '');
-    text(doc, { x: ML, y: y + 6, str: problemTxt || '-', size: 9, weight: 'normal', color: c.ink, w: CW });
-    y += 6 + textHeight(doc, problemTxt || '-', 9, CW);
-
-    // ── checklist executado ─────────────────────────────────────
-    const doneItems = (o.checklist || []).filter((it: ChecklistItem) => it.done);
-    if (doneItems.length > 0) {
-      y += 6;
-      divider(doc, c, y - 2, ML, MR);
-      sectionLabel(doc, 'Executado', ML, y, c.brand);
-      y += 2;
-      const half = Math.ceil(doneItems.length / 2);
-      setPdfFont(doc, 'normal', 8);
-      doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
-      let cy = y + 6;
-      const colMax = Math.max(half, doneItems.length - half);
-      const itemW = CW / 2 - 10;
-      for (let i = 0; i < colMax; i++) {
-        if (cy > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); cy = y + 6; setPdfFont(doc, 'normal', 8); doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]); }
-        if (doneItems[i]) { doc.setFillColor(c.success[0], c.success[1], c.success[2]); doc.circle(ML + 1.5, cy - 1.5, 1.1, 'F'); doc.text(fitOneLine(doc, doneItems[i].label, itemW), ML + 5, cy); }
-        if (doneItems[half + i]) {
-          const x2 = ML + CW / 2 + 5;
-          doc.setFillColor(c.success[0], c.success[1], c.success[2]); doc.circle(x2 - 3, cy - 1.5, 1.1, 'F');
-          doc.text(fitOneLine(doc, doneItems[half + i].label, itemW), x2 + 1, cy);
-        }
-        cy += 5;
-      }
-      y = cy + 4;
-    }
-
-    // ── observações técnicas ────────────────────────────────────
-    if (o.observacoesTecnicas) {
-      const obsH = 6 + textHeight(doc, o.observacoesTecnicas, 8.5, CW);
-      if (y + obsH > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
-      sectionLabel(doc, 'Observações técnicas', ML, y, c.brand);
-      text(doc, { x: ML, y: y + 6, str: o.observacoesTecnicas, size: 8.5, weight: 'normal', color: c.muted, w: CW });
-      y += 6 + textHeight(doc, o.observacoesTecnicas, 8.5, CW);
-    }
-
-    // ── valores ─────────────────────────────────────────────────
-    y += 6;
-    const valRows: Array<[string, string]> = [
-      ['Valor do serviço', formatBRL(Number(o.value) || 0)],
-      ['Status', STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status],
-      ['Pagamento', payLabel + payMethod],
-    ];
-    const boxW2 = 120;
-    const bx2X = MR - boxW2;
-    const boxH2 = valRows.length * 6 + 6;
-    if (y + boxH2 > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
-    doc.setFillColor(c.soft[0], c.soft[1], c.soft[2]);
-    doc.setDrawColor(c.line[0], c.line[1], c.line[2]);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(bx2X, y - 4, boxW2, boxH2, 2, 2, 'FD');
-    let vy = y;
-    setPdfFont(doc, 'normal', 8.5);
-    for (const [k, v] of valRows) {
-      text(doc, { x: bx2X + 5, y: vy + 3, str: k, size: 8.5, weight: 'normal', color: c.muted });
-      text(doc, { x: MR - 5, y: vy + 3, str: v, size: 8.5, weight: 'semibold', color: c.ink, align: 'right' });
-      vy += 6;
-    }
-    y = vy + 2;
-
-    // ── assinaturas (bloco no fluxo, com respiro antes do rodapé)
-    const sigNeed = 42;
-    if (y + sigNeed > PH - FOOTER_SPACE) { y = newBrandedPage(ctx, headerArgs); }
-    const sigTop = y + 6;
-    const sigW = (CW - 16) / 2;
-    const sigGap = 16;
-    const sigY = sigTop + 24;
-    divider(doc, c, sigTop, ML, MR);
-    // cliente
-    const ccol = ML + sigW / 2;
-    setPdfFont(doc, 'semibold', 8);
-    doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
-    doc.text(fitOneLine(doc, customer?.name || 'Cliente', sigW - 10), ccol, sigTop + 7, { align: 'center' });
-    if (o.customerSignature && o.customerSignature !== 'undefined') {
-      drawSignature(doc, o.customerSignature, ccol, sigY, sigW - 4, 11);
-    }
-    doc.setDrawColor(c.ink[0], c.ink[1], c.ink[2]);
-    doc.setLineWidth(0.45);
-    doc.line(ML, sigY, ML + sigW, sigY);
-    text(doc, { x: ccol, y: sigY + 5, str: 'Assinatura do cliente', size: 6.5, weight: 'normal', color: c.muted, align: 'center' });
-    // empresa
-    const sx2 = ML + sigW + sigGap;
-    const scol = sx2 + sigW / 2;
-    setPdfFont(doc, 'semibold', 8);
-    doc.setTextColor(c.ink[0], c.ink[1], c.ink[2]);
-    doc.text(fitOneLine(doc, company?.name || 'Empresa', sigW - 10), scol, sigTop + 7, { align: 'center' });
-    if (company?.signature) {
-      drawSignature(doc, company.signature, scol, sigY, sigW - 4, 11);
-    }
-    doc.setDrawColor(c.ink[0], c.ink[1], c.ink[2]);
-    doc.setLineWidth(0.45);
-    doc.line(sx2, sigY, sx2 + sigW, sigY);
-    text(doc, { x: scol, y: sigY + 5, str: 'Responsável', size: 6.5, weight: 'normal', color: c.muted, align: 'center' });
-
-    stampFooters(ctx, company);
-    doc.save(`OS-${o.osNumber}.pdf`);
+    generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
     toast('success', 'PDF gerado!');
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
   async function handleDelete() {
-    if (!confirm(`Excluir a OS "${o.osNumber}"?\n\nEssa ação não pode ser desfeita.`)) return;
     try {
       await db.serviceOrders.delete(o.id);
       toast('success', 'Serviço excluído!');
       navigate('/app/servicos');
     } catch {
       toast('error', 'Não foi possível excluir. Tente novamente.');
+    } finally {
+      setConfirmDelete(false);
     }
   }
 
@@ -384,7 +215,7 @@ export default function ServicoDetail() {
   const waLink = phone ? `https://wa.me/${telToWhats(phone)}` : null;
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader
         title={`OS Nº ${o.osNumber}`}
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
@@ -392,7 +223,7 @@ export default function ServicoDetail() {
           <div className="flex gap-2">
             {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>}
             <Button variant="outline" size="sm" onClick={generatePDF}><FileDown size={16} /> PDF</Button>
-            <Button variant="danger" size="sm" onClick={handleDelete} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
+            <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
           </div>
         }
       />
@@ -440,11 +271,11 @@ export default function ServicoDetail() {
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3 lg:grid-cols-4">
           {STEP_OPTIONS.filter((s) => s.value !== 'cancelado').map((s) => (
             <button
               key={s.value}
-              onClick={() => setStatus(s.value)}
+              onClick={() => setStatus(s.value as ServiceOrder['status'])}
               className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition ${
                 o.status === s.value ? 'bg-primary-700 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50 dark:bg-neutral-700/60 dark:text-neutral-300 dark:hover:bg-primary-900/40'
               }`}
@@ -456,7 +287,7 @@ export default function ServicoDetail() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <div className="font-bold text-neutral-800 dark:text-neutral-100">Cliente</div>
           <dl className="mt-2 space-y-1 text-sm">
@@ -576,7 +407,7 @@ export default function ServicoDetail() {
           </Select>
           <div className="flex gap-3">
             <Button variant="outline" type="button" onClick={() => setPayOpen(false)}>Cancelar</Button>
-            <Button onClick={markPaid}>Marcar como pago</Button>
+            <Button onClick={handleMarkPaid}>Marcar como pago</Button>
           </div>
         </div>
       </Modal>
@@ -597,13 +428,14 @@ export default function ServicoDetail() {
         </div>
       </Modal>
 
+      <ConfirmDialog open={confirmDelete} title={`Excluir ${o.osNumber}?`} message="Essa ação não pode ser desfeita." onConfirm={handleDelete} onClose={() => setConfirmDelete(false)} />
       <Modal open={signOpen} onClose={() => setSignOpen(false)} title="Assinatura do cliente">
         <div className="rounded-xl border-2 border-dashed border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-800">
           <SignatureCanvas ref={sigRef} canvasProps={{ className: 'h-40 w-full' }} />
         </div>
         <div className="mt-4 flex gap-3">
           <Button variant="outline" type="button" onClick={() => sigRef.current?.clear()}>Limpar</Button>
-          <Button onClick={saveSignature}>Salvar assinatura</Button>
+          <Button onClick={handleSaveSignature}>Salvar assinatura</Button>
         </div>
       </Modal>
     </div>

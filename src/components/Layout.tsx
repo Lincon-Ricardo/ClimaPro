@@ -30,14 +30,6 @@ import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
 import { generateNotifications } from '../lib/notifications';
 
-const bottomItems = [
-  { to: '/app', icon: Home, label: 'Início' },
-  { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
-  { to: '/app/clientes', icon: Users, label: 'Clientes' },
-  { to: '/app/orcamentos', icon: Wallet, label: 'Orçamentos' },
-  { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
-];
-
 const moreItems = [
   { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
   { to: '/app/financeiro', icon: TrendingUp, label: 'Financeiro' },
@@ -67,7 +59,7 @@ export function Layout() {
   const toast = useToast();
   const { resolved, setTheme } = useTheme();
   const unreadCount = useLiveQuery(
-    () => db.notifications.filter((n) => n.read === false).count(),
+    () => db.notifications.where('read').equals(false).count(),
     []
   ) ?? 0;
 
@@ -120,8 +112,8 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
-      <div className="hidden lg:flex">
-        <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-primary-800 text-white">
+      <div className="hidden md:flex">
+        <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-primary-800 text-white xl:w-64">
           <div className="px-5 py-6">
             <Logo light />
           </div>
@@ -171,13 +163,15 @@ export function Layout() {
             </button>
           </div>
         </aside>
-        <main className="ml-64 flex-1 px-6 py-6">
-          {!isTech && <BillingBanner />}
-          <Outlet />
+        <main className="ml-60 flex min-w-0 flex-1 justify-center px-4 py-6 xl:ml-64 xl:px-6">
+          <div className="w-full max-w-6xl">
+            {!isTech && <BillingBanner />}
+            <Outlet />
+          </div>
         </main>
       </div>
 
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <header className="sticky top-0 z-20 flex items-center justify-between bg-primary-800 px-4 py-3 text-white">
           <Logo light />
           <div className="flex items-center gap-2">
@@ -209,7 +203,7 @@ export function Layout() {
             </button>
           </div>
         </header>
-        <main className="px-4 pb-24 pt-4">
+        <main className="mx-auto w-full max-w-6xl px-3 pb-28 pt-4 sm:px-4">
           {!isTech && <BillingBanner />}
           <Outlet />
         </main>

@@ -147,7 +147,7 @@ export default function Empresa() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Editar perfil da empresa" subtitle="Essas informações aparecem nos orçamentos e documentos" />
       <form onSubmit={handleSave} className="space-y-5 rounded-2xl bg-white p-5 shadow-card dark:bg-neutral-800">
         {/* Logo */}
@@ -174,16 +174,16 @@ export default function Empresa() {
 
         {/* Dados */}
         <Input label="Nome da empresa" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="CNPJ/CPF" value={form.cnpj} onChange={(e) => setForm({ ...form, cnpj: e.target.value })} />
           <Input label="Telefone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="WhatsApp" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
           <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
         <Textarea label="Endereço" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Instagram" value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
           <Input label="Site" value={form.site} onChange={(e) => setForm({ ...form, site: e.target.value })} />
         </div>
@@ -195,7 +195,7 @@ export default function Empresa() {
           <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
             Essas condições aparecem automaticamente nos PDFs de orçamento.
           </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Input
               label="Forma de pagamento"
               value={form.paymentCondition}

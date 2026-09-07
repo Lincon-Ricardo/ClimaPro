@@ -209,7 +209,7 @@ export default function ClienteOrcamento() {
             <p className="mt-2 text-center text-sm text-neutral-500 dark:text-neutral-400">Este orçamento foi recusado. Fale com o prestador para ajustes.</p>
           ) : (
             <>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Button variant="danger" disabled={busy} onClick={() => handleDecision('recusado')}><X size={18} /> Recusar</Button>
                 <Button variant="success" disabled={busy} onClick={() => handleDecision('aprovado')}><Check size={18} /> Aprovar</Button>
               </div>

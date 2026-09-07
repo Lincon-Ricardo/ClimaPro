@@ -11,6 +11,7 @@ import { Input } from '../components/Fields';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useSubscription } from '../hooks/useSubscription';
 
 const emptyForm = { name: '', email: '', password: '', role: 'tech' as 'tech' | 'admin' };
@@ -95,7 +96,7 @@ export default function Users() {
           toast('error', 'Este e-mail já está cadastrado.');
           return;
         }
-        const companyId = user?.companyId || companies[0]?.id || companies[0]?.companyId;
+        const companyId = user?.companyId || companies[0]?.id;
         if (!companyId) {
           toast('error', 'Empresa não encontrada. Tente recarregar a página.');
           return;
@@ -167,6 +168,8 @@ export default function Users() {
     setForm(emptyForm);
   }
 
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+
   async function handleDelete(id: string) {
     if (!isAdmin) {
       toast('error', 'Somente o dono pode remover usuários.');
@@ -176,10 +179,15 @@ export default function Users() {
       toast('error', 'Você não pode remover a própria conta.');
       return;
     }
-    if (!confirm('Remover este usuário? Ele perderá o acesso à empresa.')) return;
+    setDeleteUserId(id);
+  }
+
+  async function confirmDeleteUser() {
+    if (!deleteUserId) return;
     try {
-      await db.users.delete(id);
+      await db.users.delete(deleteUserId);
       toast('info', 'Usuário removido.');
+      setDeleteUserId(null);
     } catch (err: any) {
       toast('error', `Erro ao remover: ${err?.message || 'tente novamente'}`);
     }
@@ -187,7 +195,7 @@ export default function Users() {
 
   if (user && !isAdmin) {
     return (
-      <div className="max-w-2xl">
+      <div className="mx-auto w-full min-w-0 max-w-2xl">
         <PageHeader title="Técnicos" subtitle="Acesso restrito" />
         <Card><p className="text-sm text-neutral-500 dark:text-neutral-400">Somente o dono da empresa pode gerenciar a equipe.</p></Card>
       </div>
@@ -195,7 +203,7 @@ export default function Users() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader
         title="Técnicos"
         subtitle={`${users.length} usuário(s) na equipe`}
@@ -254,6 +262,13 @@ export default function Users() {
         Técnicos entram no ClimaPro com o e-mail e senha cadastrados aqui. Para trocar a senha de um técnico, peça para ele usar "Esqueci minha senha" na tela de login.
       </p>
 
+      <ConfirmDialog
+        open={!!deleteUserId}
+        title="Remover usuário?"
+        message="Ele perderá o acesso à empresa."
+        onConfirm={confirmDeleteUser}
+        onClose={() => setDeleteUserId(null)}
+      />
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editing ? 'Editar técnico' : 'Cadastrar novo técnico'}>
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input label="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Rafael Técnico" />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
+import { useMyOrders } from '../hooks/useTechOrders';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
@@ -17,28 +18,11 @@ export default function Agenda() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
-  const allOrders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const team = useLiveQuery(() => db.users.toArray(), []) || [];
   const isAdmin = user?.role === 'admin';
   const [view, setView] = useState<'dia' | 'semana' | 'mes'>('semana');
   const [anchor, setAnchor] = useState(new Date());
-
-  const isTech = user?.role === 'tech';
-  const techName = (user?.name || '').trim().toLowerCase();
-  const techFirstName = (user?.firstName || '').trim().toLowerCase();
-
-  // Técnico: agenda isolada nas próprias atribuições
-  const orders = useMemo(() => {
-    if (!isTech) return allOrders;
-    return allOrders.filter((o) => {
-      const t = (o.technician || '').trim().toLowerCase();
-      if (!t) return false;
-      return t === techName || t === techFirstName || t.includes(techFirstName);
-    });
-  }, [allOrders, isTech, techName, techFirstName]);
-
-  const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
   const weekDays = useMemo(() => {
     const start = new Date(anchor);
@@ -50,12 +34,29 @@ export default function Agenda() {
       return d;
     });
   }, [anchor]);
-
   const orderDate = (d: Date) => toISODate(d);
+  const anchorISO = orderDate(anchor);
+  const weekISOs = useMemo(() => new Set(weekDays.map((d) => orderDate(d))), [weekDays]);
+  const monthStr = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}`;
+  const rangeFrom = view === 'dia' ? anchorISO : view === 'semana' ? orderDate(weekDays[0]) : `${monthStr}-01`;
+  const rangeTo = view === 'dia' ? anchorISO : view === 'semana' ? orderDate(weekDays[6]) : `${monthStr}-31`;
+
+  const periodOrders = useLiveQuery(
+    () => db.serviceOrders.list({ pageSize: 500, gte: { date: rangeFrom }, lte: { date: rangeTo } }).then((r) => r.rows),
+    [rangeFrom, rangeTo],
+  ) || [];
+  const noDateOrders = useLiveQuery(
+    () => db.serviceOrders.list({ pageSize: 200, eq: { date: '' } }).then((r) => r.rows),
+    [],
+  ) || [];
+  const allOrders = useMemo(() => [...periodOrders, ...noDateOrders.filter((o) => !periodOrders.some((p) => p.id === o.id))], [periodOrders, noDateOrders]);
+  const orders = useMyOrders(allOrders);
+
+  const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
   function move(dir: number) {
     const n = new Date(anchor);
-    if (view === 'dia') n.setDate(n.getDate() + dir * 7);
+    if (view === 'dia') n.setDate(n.getDate() + dir);
     else if (view === 'semana') n.setDate(n.getDate() + dir * 7);
     else n.setMonth(n.getMonth() + dir);
     setAnchor(n);
@@ -68,10 +69,6 @@ export default function Agenda() {
   const scheduled = orders.filter((o) => o.status === 'agendado' || o.status === 'em_andamento');
   const finished = orders.filter((o) => o.status === 'concluido' || o.status === 'cancelado');
   const noDate = scheduled.filter((o) => !o.date);
-
-  const anchorISO = orderDate(anchor);
-  const weekISOs = useMemo(() => new Set(weekDays.map(orderDate)), [weekDays]);
-  const monthStr = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, '0')}`;
 
   function matchesPeriod(o: any): boolean {
     if (!o.date) return false;
@@ -167,7 +164,7 @@ export default function Agenda() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="mx-auto w-full min-w-0 max-w-6xl">
       <div className="mb-4">
         <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Agenda</h1>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">
@@ -189,11 +186,11 @@ export default function Agenda() {
           ))}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Semana anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'mes' ? 'Mês anterior' : 'Semana anterior (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
+          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior (7 dias)' : 'Mês anterior'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
           <span className="min-w-0 flex-1 break-words text-center text-xs font-bold text-neutral-700 dark:text-neutral-200 sm:text-sm">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
-          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próxima semana' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'mes' ? 'Próximo mês' : 'Próxima semana (7 dias)'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
+          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana (7 dias)' : 'Próximo mês'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
           {orderDate(anchor) !== todayISO() && (
             <button onClick={goToday} className="shrink-0 rounded-lg border border-neutral-200 bg-white px-2.5 py-2.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-primary-300 dark:hover:bg-primary-900/40">Hoje</button>
           )}

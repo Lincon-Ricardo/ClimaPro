@@ -35,7 +35,7 @@ export default function SystemHealth() {
   const warns = logs.filter((l) => l.level === 'warn').length;
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-2xl space-y-4">
       <PageHeader title="Saúde do sistema" subtitle="Diagnóstico técnico para suporte" />
 
       <div className="grid grid-cols-3 gap-2.5">
@@ -80,7 +80,7 @@ export default function SystemHealth() {
                   <span className="ml-auto shrink-0 font-mono text-[10px] text-neutral-400">{new Date(l.ts).toLocaleString('pt-BR')}</span>
                 </div>
                 <p className="mt-0.5 break-words text-neutral-600 dark:text-neutral-300">{l.message}</p>
-                {l.extra && <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-[10px] text-neutral-400">{JSON.stringify(l.extra, null, 1).slice(0, 500)}</pre>}
+                {l.extra && <pre className="mt-1 table-scroll whitespace-pre-wrap break-words font-mono text-[10px] text-neutral-400">{JSON.stringify(l.extra, null, 1).slice(0, 500)}</pre>}
               </div>
             ))}
           </div>

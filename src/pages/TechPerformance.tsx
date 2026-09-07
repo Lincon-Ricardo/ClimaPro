@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
+import { useMyOrders } from '../hooks/useTechOrders';
 import { db } from '../lib/db';
 import {
   Trophy, TrendingUp, CheckCircle2, Calendar, DollarSign,
@@ -17,23 +18,12 @@ export default function TechPerformance() {
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const company = companies[0];
 
-  const techName = (user?.name || '').trim().toLowerCase();
-  const techFirstName = (user?.firstName || '').trim().toLowerCase();
-
-  // O dono define se há comissão e qual a taxa nas configurações da empresa
   const commissionEnabled = company?.commissionEnabled !== false;
   const commissionRate = company?.commissionRate !== undefined && company?.commissionRate !== null
     ? Number(company.commissionRate)
     : 15;
 
-  const myOrders = useMemo(() => {
-    return orders.filter((o) => {
-      if (user?.role === 'admin') return true;
-      const t = (o.technician || '').trim().toLowerCase();
-      if (!t) return false;
-      return t === techName || t === techFirstName || t.includes(techFirstName);
-    });
-  }, [orders, user, techName, techFirstName]);
+  const myOrders = useMyOrders(orders);
 
   const currentMonthISO = format(new Date(), 'yyyy-MM');
 
@@ -82,7 +72,7 @@ export default function TechPerformance() {
   const companyName = company?.name?.trim() || 'ClimaPro';
 
   return (
-    <div className="max-w-3xl space-y-3 sm:space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-3 sm:space-y-4">
       <div className="mb-1">
         <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Meu Desempenho</h1>
         <p className="break-words text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">

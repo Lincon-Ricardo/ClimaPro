@@ -1,4 +1,3 @@
-import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, Plus } from 'lucide-react';
 import { db } from '../lib/db';
@@ -7,6 +6,9 @@ import { Button } from '../components/Button';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { formatBRL, formatDate } from '../lib/utils';
 import { useState } from 'react';
+import { useLiveQuery } from '../hooks/useLiveQuery';
+import { usePagedList, useDebouncedValue } from '../hooks/usePagedList';
+import { Loading } from '../components/Loading';
 
 const STATUS_STYLE: Record<string, string> = {
   rascunho: 'bg-neutral-100 dark:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300',
@@ -25,30 +27,30 @@ const STATUS_LABEL: Record<string, string> = {
 export default function Orcamentos() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
+  const debounced = useDebouncedValue(search.trim(), 350);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
-
-  const filtered = budgets
-    .filter((b) => (custName(b.customerId) + b.number).toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const { rows: budgets, loading, loadingMore, hasMore, loadMore } = usePagedList(
+    (p) => db.budgets.list({ ...p, pageSize: 20, order: { column: 'createdAt' }, ...(debounced ? { orIlike: { columns: ['number', 'serviceType'], term: debounced } } : {}) }),
+    { ...(debounced ? { orIlike: { columns: ['number', 'serviceType'], term: debounced } } : {}) },
+    20,
+  );
 
   return (
     <div>
       <PageHeader
         title="Orçamentos"
-        subtitle={`${budgets.length} orçamentos`}
+        subtitle="Busca por número/tipo no servidor + filtro cliente local"
         action={<Button onClick={() => navigate('/app/orcamentos/novo')}><Plus size={18} /> Novo</Button>}
       />
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por cliente ou número..."
+        placeholder="Buscar por número ou tipo (ex.: Higienização)..."
         aria-label="Buscar orçamentos"
         className="mb-4 w-full rounded-xl border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-4 py-2.5 text-sm dark:text-neutral-100 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
-      {filtered.length === 0 ? (
+      {loading ? <Loading /> : budgets.length === 0 ? (
         <EmptyState
           icon={<Wallet size={26} />}
           title="Nenhum orçamento"
@@ -57,7 +59,7 @@ export default function Orcamentos() {
         />
       ) : (
         <div className="space-y-3">
-          {filtered.map((b) => (
+          {budgets.map((b) => (
             <Card key={b.id} onClick={() => navigate(`/app/orcamentos/${b.id}`)}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -77,6 +79,11 @@ export default function Orcamentos() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+      {hasMore && (
+        <div className="mt-4 text-center">
+          <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Carregando...' : 'Carregar mais'}</Button>
         </div>
       )}
     </div>

@@ -71,12 +71,45 @@ create table if not exists customers (
   city text default '',
   zip text default '',
   notes text default '',
-  created_at text default '',
+  created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
 -- Migração para múltiplos endereços por cliente (casa, comércio, etc.)
 alter table customers add column if not exists saved_addresses jsonb default '[]'::jsonb;
+-- Migração created_at text -> timestamptz (ordenação e cobrança confiáveis)
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_name='customers' and column_name='created_at' and data_type='text') then
+    alter table customers alter column created_at drop default;
+    alter table customers alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table customers alter column created_at set default now();
+  end if;
+  if exists (select 1 from information_schema.columns where table_name='budgets' and column_name='created_at' and data_type='text') then
+    alter table budgets alter column created_at drop default;
+    alter table budgets alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table budgets alter column created_at set default now();
+  end if;
+  if exists (select 1 from information_schema.columns where table_name='service_orders' and column_name='created_at' and data_type='text') then
+    alter table service_orders alter column created_at drop default;
+    alter table service_orders alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table service_orders alter column created_at set default now();
+  end if;
+  if exists (select 1 from information_schema.columns where table_name='payments' and column_name='created_at' and data_type='text') then
+    alter table payments alter column created_at drop default;
+    alter table payments alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table payments alter column created_at set default now();
+  end if;
+  if exists (select 1 from information_schema.columns where table_name='notifications' and column_name='created_at' and data_type='text') then
+    alter table notifications alter column created_at drop default;
+    alter table notifications alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table notifications alter column created_at set default now();
+  end if;
+  if exists (select 1 from information_schema.columns where table_name='materials' and column_name='created_at' and data_type='text') then
+    alter table materials alter column created_at drop default;
+    alter table materials alter column created_at type timestamptz using (nullif(created_at,'')::timestamptz);
+    alter table materials alter column created_at set default now();
+  end if;
+end $$;
 
 -- ---------- EQUIPAMENTOS ----------
 create table if not exists equipment (
@@ -112,7 +145,7 @@ create table if not exists budgets (
   status text default 'rascunho' check (status in ('rascunho','enviado','aprovado','recusado')),
   validity text default '',
   notes text default '',
-  created_at text default '',
+  created_at timestamptz default now(),
   approved_at text default null
 );
 
@@ -142,7 +175,7 @@ create table if not exists service_orders (
   customer_signature text default null,
   signature_date text default null,
   reminder_months int default null,
-  created_at text default ''
+  created_at timestamptz default now()
 );
 
 -- ---------- PAGAMENTOS ----------
@@ -155,7 +188,7 @@ create table if not exists payments (
   method text default '',
   status text default 'pendente' check (status in ('pendente','pago')),
   paid_at text default null,
-  created_at text default ''
+  created_at timestamptz default now()
 );
 
 -- ---------- NOTIFICAÇÕES ----------
@@ -166,7 +199,7 @@ create table if not exists notifications (
   message text default '',
   type text default 'info' check (type in ('info','success','warning','danger')),
   read boolean default false,
-  created_at text default ''
+  created_at timestamptz default now()
 );
 
 -- ---------- MATERIAIS (catálogo para orçamentos) ----------
@@ -242,8 +275,15 @@ create trigger trg_protect_profile_changes
   for each row execute procedure protect_profile_changes();
 
 drop policy if exists "convites admin" on company_invites;
-create policy "convites admin" on company_invites
+drop policy if exists "convites admin insert" on company_invites;
+drop policy if exists "convites admin select" on company_invites;
+drop policy if exists "convites admin delete" on company_invites;
+create policy "convites admin insert" on company_invites
   for insert with check (company_id = auth_company_id() and is_company_admin());
+create policy "convites admin select" on company_invites
+  for select using (company_id = auth_company_id() and is_company_admin());
+create policy "convites admin delete" on company_invites
+  for delete using (company_id = auth_company_id() and is_company_admin());
 
 -- Empresas: quem cria tem acesso
 drop policy if exists "empresa owner" on companies;
@@ -535,12 +575,17 @@ create index if not exists idx_profiles_company on profiles (company_id);
 -- Rode também no Dashboard > Storage > New bucket: service-photos (public)
 -- =============================================================
 insert into storage.buckets (id, name, public)
-values ('service-photos', 'service-photos', true)
-on conflict (id) do update set public = true;
+values ('service-photos', 'service-photos', false)
+on conflict (id) do update set public = false;
 
 drop policy if exists "fotos publicas" on storage.objects;
-create policy "fotos publicas" on storage.objects
-  for select using (bucket_id = 'service-photos');
+drop policy if exists "fotos leitura empresa" on storage.objects;
+create policy "fotos leitura empresa" on storage.objects
+  for select using (
+    bucket_id = 'service-photos'
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = auth_company_id()::text
+  );
 
 drop policy if exists "fotos upload empresa" on storage.objects;
 create policy "fotos upload empresa" on storage.objects
@@ -651,6 +696,51 @@ create trigger on_company_trial
 insert into subscriptions (company_id, plan, status, trial_ends_at)
 select id, 'pro', 'trialing', case when exists (select 1 from service_orders so where so.company_id = companies.id) then now() + interval '14 days' else null end from companies
 on conflict (company_id) do nothing;
+
+-- =============================================================
+-- EXCLUSÃO ATÔMICA DE CLIENTE (evita órfãos do Promise.all no front)
+-- Uso: select delete_customer_cascade('uuid-do-cliente')
+-- Apenas admin da empresa do cliente; roda em transação única.
+-- =============================================================
+create or replace function delete_customer_cascade(p_customer_id uuid)
+returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_company uuid;
+  v_orders int := 0;
+  v_budgets int := 0;
+  v_equipment int := 0;
+begin
+  select company_id into v_company from customers where id = p_customer_id;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'Cliente não encontrado.');
+  end if;
+  if v_company is distinct from auth_company_id() or not is_company_admin() then
+    return jsonb_build_object('ok', false, 'error', 'Sem permissão.');
+  end if;
+  delete from equipment where customer_id = p_customer_id;
+  get diagnostics v_equipment = row_count;
+  delete from service_orders where customer_id = p_customer_id;
+  get diagnostics v_orders = row_count;
+  delete from budgets where customer_id = p_customer_id;
+  get diagnostics v_budgets = row_count;
+  delete from payments where customer_id = p_customer_id;
+  delete from appointments where customer_id = p_customer_id;
+  delete from customers where id = p_customer_id;
+  return jsonb_build_object('ok', true, 'orders', v_orders, 'budgets', v_budgets, 'equipment', v_equipment);
+end;
+$$;
+
+-- =============================================================
+-- REALTIME: publication para postgres_changes (useLiveQuery)
+-- Ative no Dashboard > Database > Replication ou rode aqui.
+-- =============================================================
+do $$ begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+end $$;
+alter publication supabase_realtime add table customers, service_orders, budgets, equipment, companies, notifications, payments, profiles, appointments, materials;
 
 -- Força o PostgREST a recarregar o cache do schema (evita "table not in schema cache")
 notify pgrst, 'reload schema';

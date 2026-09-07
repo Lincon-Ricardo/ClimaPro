@@ -11,7 +11,8 @@ import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
-import { formatBRL, formatDate, todayISO, telToWhats } from '../lib/utils';
+import { formatBRL, formatDate, todayISO } from '../lib/utils';
+import { calcAdminData, calcFunnel, calcTeam, getMetaMensal, setMetaMensal, parseMetaInput } from '../lib/reports';
 
 function ScoreRing({ score }: { score: number }) {
   const r = 30;
@@ -39,8 +40,8 @@ function ScoreRing({ score }: { score: number }) {
 export default function Administrativo() {
   const navigate = useNavigate();
   const toast = useToast();
-  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
-  const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
+  const orders = useLiveQuery(() => db.serviceOrders.list({ pageSize: 1000, order: { column: 'createdAt' } }).then((r) => r.rows), []) || [];
+  const budgets = useLiveQuery(() => db.budgets.list({ pageSize: 1000, order: { column: 'createdAt' } }).then((r) => r.rows), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const users = useLiveQuery(() => db.users.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
@@ -49,113 +50,27 @@ export default function Administrativo() {
   const today = todayISO();
   const monthKey = today.slice(0, 7);
 
-  const [meta, setMeta] = useState<number>(() => {
-    const v = Number(localStorage.getItem('climapro_meta_mensal') || 30000);
-    return isNaN(v) || v <= 0 ? 30000 : v;
-  });
+  const [meta, setMeta] = useState<number>(() => getMetaMensal());
   const [editingMeta, setEditingMeta] = useState(false);
   const [metaText, setMetaText] = useState(String(meta));
 
   function saveMeta() {
-    const v = Number(String(metaText).replace(/[^\d.,]/g, '').replace(',', '.'));
-    if (!v || v <= 0) {
+    const v = parseMetaInput(metaText);
+    if (!v) {
       toast('error', 'Informe um valor de meta válido.');
       return;
     }
     setMeta(v);
-    localStorage.setItem('climapro_meta_mensal', String(v));
+    setMetaMensal(v);
     setEditingMeta(false);
     toast('success', 'Meta do mês atualizada!');
   }
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
-  const data = useMemo(() => {
-    const valid = orders.filter((o) => o.status !== 'cancelado');
-    const done = valid.filter((o) => o.status === 'concluido');
-    const monthDone = done.filter((o) => (o.date || '').startsWith(monthKey));
-    const revenueMonth = monthDone.reduce((s, o) => s + (Number(o.value) || 0), 0);
-    const revenueTotal = done.reduce((s, o) => s + (Number(o.value) || 0), 0);
-    const toReceive = orders
-      .filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado')
-      .reduce((s, o) => s + (Number(o.value) || 0), 0);
-    const receivedMonth = valid
-      .filter((o) => o.paymentStatus === 'pago' && (o.date || '').startsWith(monthKey))
-      .reduce((s, o) => s + (Number(o.value) || 0), 0);
-
-    const open = valid.filter((o) => o.status !== 'concluido');
-    const overdue = open.filter((o) => o.date && o.date < today);
-    const todayList = valid.filter((o) => o.date === today);
-    const noTech = open.filter((o) => !(o.technician || '').trim());
-    const noDate = open.filter((o) => !o.date);
-
-    const staleBudgets = budgets.filter((b) => !['aprovado', 'recusado'].includes(b.status));
-    const pipelineValue = staleBudgets.reduce((s, b) => s + (Number(b.total) || 0), 0);
-    const approved = budgets.filter((b) => b.status === 'aprovado').length;
-    const approvalRate = budgets.length ? Math.round((approved / budgets.length) * 100) : 0;
-    const ticket = done.length ? revenueTotal / done.length : 0;
-    const cancelRate = orders.length ? (orders.filter((o) => o.status === 'cancelado').length / orders.length) * 100 : 0;
-
-    // Score de saúde da operação (0-100)
-    let score = 100;
-    score -= Math.min(30, overdue.length * 6);
-    score -= Math.min(20, staleBudgets.length * 2);
-    score -= Math.min(15, noTech.length * 5);
-    score -= Math.min(15, cancelRate);
-    if (toReceive > revenueTotal * 0.5 && revenueTotal > 0) score -= 10;
-    score = Math.max(5, Math.round(score));
-
-    return {
-      valid, done, monthDone, revenueMonth, revenueTotal, toReceive, receivedMonth,
-      open, overdue, todayList, noTech, noDate, staleBudgets, pipelineValue,
-      approved, approvalRate, ticket, cancelRate, score,
-    };
-  }, [orders, budgets, monthKey, today]);
-
-  const funnel = useMemo(() => {
-    const stages = [
-      { key: 'solicitacao', label: 'Solicitado' },
-      { key: 'orcamento', label: 'Orçado' },
-      { key: 'agendado', label: 'Agendado' },
-      { key: 'em_andamento', label: 'Executando' },
-      { key: 'concluido', label: 'Concluído' },
-      { key: 'pago', label: 'Pago' },
-    ];
-    const counts: Record<string, number> = {
-      solicitacao: orders.filter((o) => o.status === 'solicitacao').length,
-      orcamento: orders.filter((o) => ['orcamento_enviado', 'aguardando_aprovacao'].includes(o.status)).length + budgets.filter((b) => !['aprovado', 'recusado'].includes(b.status)).length,
-      agendado: orders.filter((o) => o.status === 'agendado').length,
-      em_andamento: orders.filter((o) => o.status === 'em_andamento').length,
-      concluido: orders.filter((o) => o.status === 'concluido').length,
-      pago: orders.filter((o) => o.paymentStatus === 'pago' && o.status !== 'cancelado').length,
-    };
-    const max = Math.max(1, ...stages.map((s) => counts[s.key] || 0));
-    return { stages, counts, max };
-  }, [orders, budgets]);
-
-  const team = useMemo(() => {
-    const map = new Map<string, { name: string; open: number; done: number; revenue: number; today: number }>();
-    orders.filter((o) => o.status !== 'cancelado').forEach((o) => {
-      const name = (o.technician || 'Sem técnico').trim() || 'Sem técnico';
-      const e = map.get(name) || { name, open: 0, done: 0, revenue: 0, today: 0 };
-      if (o.status === 'concluido') {
-        e.done += 1;
-        e.revenue += Number(o.value) || 0;
-      } else {
-        e.open += 1;
-      }
-      if (o.date === today && o.status !== 'concluido') e.today += 1;
-      map.set(name, e);
-    });
-    return Array.from(map.values())
-      .map((t) => ({
-        ...t,
-        total: t.done + t.open,
-        efficiency: t.done + t.open > 0 ? Math.round((t.done / (t.done + t.open)) * 100) : 0,
-        ticket: t.done > 0 ? t.revenue / t.done : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [orders, today]);
+  const data = useMemo(() => calcAdminData(orders, budgets, monthKey, today), [orders, budgets, monthKey, today]);
+  const funnel = useMemo(() => calcFunnel(orders, budgets), [orders, budgets]);
+  const team = useMemo(() => calcTeam(orders, today), [orders, today]);
 
   const alerts = useMemo(() => {
     const list: Array<{ level: 'crit' | 'warn' | 'info'; title: string; desc: string; action: string; to: string }> = [];
@@ -177,11 +92,11 @@ export default function Administrativo() {
         to: '/app/servicos',
       });
     }
-    if (data.staleBudgets.length > 0) {
+    if (data.stale.length > 0) {
       list.push({
         level: 'warn',
         title: `${formatBRL(data.pipelineValue)} parado em orçamentos`,
-        desc: `${data.staleBudgets.length} proposta(s) aguardando resposta. Follow-up hoje vira receita.`,
+        desc: `${data.stale.length} proposta(s) aguardando resposta. Follow-up hoje vira receita.`,
         action: 'Atacar funil',
         to: '/app/orcamentos',
       });
@@ -220,7 +135,7 @@ export default function Administrativo() {
   }
 
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
       {/* ── Centro de Comando ── */}
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 via-primary-950 to-primary-800 p-5 text-white shadow-xl">
         <div className="flex items-center justify-between gap-4">
@@ -328,13 +243,13 @@ export default function Administrativo() {
       )}
 
       {/* ── Pulso financeiro ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<BadgeDollarSign size={20} />} label="Receita no mês" value={formatBRL(data.revenueMonth)} color="text-emerald-600" />
         <StatCard icon={<Wallet size={20} />} label="Recebido no mês" value={formatBRL(data.receivedMonth)} color="text-primary-600" />
         <StatCard icon={<Clock size={20} />} label="A receber total" value={formatBRL(data.toReceive)} color="text-orange-600" />
         <StatCard icon={<Quote size={20} />} label="Funil a converter" value={formatBRL(data.pipelineValue)} color="text-violet-600" />
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Target size={20} />} label="Aprovação orç." value={`${data.approvalRate}%`} color="text-success" bg="bg-green-50 dark:bg-green-900/30" />
         <StatCard icon={<CalendarCheck size={20} />} label="Atendimentos hoje" value={String(data.todayList.length)} color="text-sky-600" />
         <StatCard icon={<Flame size={20} />} label="OS atrasadas" value={String(data.overdue.length)} color="text-danger" />
@@ -347,7 +262,7 @@ export default function Administrativo() {
           <Zap size={18} className="text-amber-500" /> Funil da operação
         </h2>
         <p className="text-xs text-neutral-400">Onde cada OS está travada agora</p>
-        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {funnel.stages.map((s) => (
             <button
               key={s.key}
@@ -378,7 +293,7 @@ export default function Administrativo() {
             <Users size={13} /> Gerenciar equipe <ChevronRight size={13} />
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {team.length === 0 && (
             <Card><p className="text-sm text-neutral-500">Nenhum serviço vinculado a técnico ainda.</p></Card>
           )}

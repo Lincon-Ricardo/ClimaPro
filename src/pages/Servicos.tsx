@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { db } from '../lib/db';
-import { useAuth } from '../context/AuthContext';
+import { useMyOrders } from '../hooks/useTechOrders';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { formatBRL, formatDate } from '../lib/utils';
 
 const FILTERS = [
@@ -22,34 +23,36 @@ const FILTERS = [
 export default function Servicos() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { user } = useAuth();
-  const [filter, setFilter] = useState<string>('todos');
+  const [params, setParams] = useSearchParams();
+  const VALID = new Set(['todos', 'pendentes', 'agendados', 'concluidos', 'cancelados']);
+  const raw = params.get('filter');
+  const filter = raw && VALID.has(raw) ? raw : 'todos';
+
+  function setFilterAndSync(next: string) {
+    const sp = new URLSearchParams(params);
+    if (next === 'todos') sp.delete('filter');
+    else sp.set('filter', next);
+    setParams(sp, { replace: true });
+  }
   const allOrders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-
-  const isTech = user?.role === 'tech';
-  const techName = (user?.name || '').trim().toLowerCase();
-  const techFirstName = (user?.firstName || '').trim().toLowerCase();
-
-  // Técnico: apenas OS atribuídas a ele
-  const orders = useMemo(() => {
-    if (!isTech) return allOrders;
-    return allOrders.filter((o) => {
-      const t = (o.technician || '').trim().toLowerCase();
-      if (!t) return false;
-      return t === techName || t === techFirstName || t.includes(techFirstName);
-    });
-  }, [allOrders, isTech, techName, techFirstName]);
+  const orders = useMyOrders(allOrders);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; osNumber: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  async function handleDelete(orderId: string, osNumber: string) {
-    if (!confirm(`Excluir o serviço "${osNumber}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await db.serviceOrders.delete(orderId);
+      await db.serviceOrders.delete(pendingDelete.id);
       toast('success', 'Serviço excluído!');
+      setPendingDelete(null);
     } catch {
       toast('error', 'Não foi possível excluir. Tente novamente.');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -66,16 +69,16 @@ export default function Servicos() {
     <div>
       <PageHeader
         title="Serviços"
-        subtitle={`${orders.length} no total`}
+        subtitle={`${filtered.length} ${filter === 'pendentes' ? 'pendente(s)' : filter === 'todos' ? 'no total' : `em ${filter}`}`}
         action={<Button onClick={() => navigate('/app/servicos/novo')}><Plus size={18} /> Novo</Button>}
       />
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-4 flex gap-2 table-scroll pb-1">
         {FILTERS.map((f) => (
           <button
             key={f.key}
             type="button"
             aria-pressed={filter === f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => setFilterAndSync(f.key)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
               filter === f.key ? 'bg-primary-700 text-white' : 'bg-white text-neutral-600 border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
             }`}
@@ -122,7 +125,7 @@ export default function Servicos() {
                   <StatusBadge status={o.status} />
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(o.id, o.osNumber); }}
+                    onClick={(e) => { e.stopPropagation(); setPendingDelete({ id: o.id, osNumber: o.osNumber }); }}
                     className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
                     title="Excluir serviço"
                     aria-label={`Excluir ${o.osNumber}`}
@@ -135,6 +138,14 @@ export default function Servicos() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Excluir ${pendingDelete?.osNumber || 'serviço'}?`}
+        message="Essa ação não pode ser desfeita."
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

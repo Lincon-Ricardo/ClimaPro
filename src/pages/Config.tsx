@@ -3,10 +3,12 @@ import { LogOut, Trash2, Sun, Moon, Monitor } from 'lucide-react';
 import { db } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useState } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const themeOptions = [
   { value: 'light', label: 'Claro', icon: Sun },
@@ -20,12 +22,13 @@ export default function Config() {
   const toast = useToast();
   const { theme, setTheme } = useTheme();
 
+  const [confirmWipe, setConfirmWipe] = useState(false);
   async function wipe() {
     if (user?.role !== 'admin') {
       toast('error', 'Somente administradores podem apagar os dados.');
       return;
     }
-    if (!confirm('Apagar todos os dados? Essa ação não pode ser desfeita.')) return;
+    setConfirmWipe(false);
     await Promise.all([
       db.customers.clear(),
       db.equipment.clear(),
@@ -41,7 +44,7 @@ export default function Config() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader title="Configurações" />
       <div className="space-y-3">
         <Card>
@@ -78,9 +81,10 @@ export default function Config() {
         {user?.role === 'admin' && <Card>
           <h2 className="text-base font-bold text-neutral-800 dark:text-neutral-100">Dados</h2>
           <div className="mt-3">
-            <Button variant="danger" onClick={wipe}><Trash2 size={16} /> Apagar todos os dados</Button>
+            <Button variant="danger" onClick={() => setConfirmWipe(true)}><Trash2 size={16} /> Apagar todos os dados</Button>
           </div>
         </Card>}
+        <ConfirmDialog open={confirmWipe} title="Apagar todos os dados?" message="Essa ação não pode ser desfeita." onConfirm={wipe} onClose={() => setConfirmWipe(false)} />
       </div>
     </div>
   );

@@ -3,12 +3,17 @@ import { log } from './logger';
 
 const BUCKET = 'service-photos';
 
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+
 export async function uploadServicePhoto(
   companyId: string,
   orderId: string,
   step: string,
   file: File,
 ): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Arquivo precisa ser imagem.');
+  if (file.size > MAX_PHOTO_BYTES) throw new Error('Foto maior que 10MB.');
+  if (!companyId || !orderId) throw new Error('Sessão inválida para upload.');
   const compressed = await compressImage(file);
   const ext = 'jpg';
   const path = `${companyId}/${orderId}/${step}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -20,8 +25,21 @@ export async function uploadServicePhoto(
     log.error('storage.upload', error.message, { orderId, step });
     throw new Error('Falha no upload da foto: ' + error.message);
   }
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  const { data, error: urlError } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600 * 24 * 7);
+  if (urlError || !data?.signedUrl) {
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return pub.publicUrl;
+  }
+  return data.signedUrl;
+}
+
+export async function getSignedPhotoUrl(pathOrUrl: string, expiresIn = 3600): Promise<string> {
+  const marker = `/${BUCKET}/`;
+  const idx = pathOrUrl.indexOf(marker);
+  const path = idx !== -1 ? pathOrUrl.slice(idx + marker.length).split('?')[0] : pathOrUrl;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresIn);
+  if (error || !data?.signedUrl) return pathOrUrl;
+  return data.signedUrl;
 }
 
 export async function deleteServicePhoto(publicUrl: string): Promise<void> {

@@ -1,12 +1,26 @@
 import { supabase } from './supabaseClient';
 import { emitDataChanged } from './tableBus';
+import type { Customer, Equipment, Budget, ServiceOrder, Company, Notification, Payment, Appointment, Material, User } from '../types';
+
+type DbRow = Record<string, unknown>;
+type EntityMap = {
+  customers: Customer;
+  service_orders: ServiceOrder;
+  budgets: Budget;
+  equipment: Equipment;
+  companies: Company & { commissionEnabled?: boolean; commissionRate?: number };
+  notifications: Notification;
+  payments: Payment;
+  profiles: User & Record<string, unknown>;
+  appointments: Appointment;
+  materials: Material;
+  subscriptions: DbRow;
+};
 
 /**
  * Camada de dados compatível com a API usada pelas telas (padrão Dexie-like),
  * operando sobre o Supabase. Campos JS (camelCase) <-> colunas (snake_case).
  */
-
-type TableName = 'customers' | 'service_orders' | 'budgets' | 'equipment' | 'companies' | 'notifications' | 'payments' | 'profiles' | 'appointments' | 'materials' | 'subscriptions';
 
 const FIELD_MAP: Record<string, Record<string, string>> = {
   customers: { createdAt: 'created_at', updatedAt: 'updated_at', savedAddresses: 'saved_addresses' },
@@ -80,34 +94,53 @@ for (const [t, mp] of Object.entries(FIELD_MAP)) {
   for (const [k, v] of Object.entries(mp)) REV_MAP[t][v] = k;
 }
 
-function toDB(table: string, obj: Record<string, any>): Record<string, any> {
+function toDB(table: string, obj: Record<string, unknown>): DbRow {
   const map = FIELD_MAP[table];
-  const out: Record<string, any> = {};
+  const out: DbRow = {};
   for (const [k, v] of Object.entries(obj)) {
-    out[map?.[k] || k] = v;
+    out[map?.[k] || k] = v as unknown;
   }
   return out;
 }
 
-function fromDB(table: string, row: Record<string, any>): Record<string, any> {
+function fromDB(table: string, row: DbRow): DbRow {
   const rev = REV_MAP[table] || {};
-  const out: Record<string, any> = {};
+  const out: DbRow = {};
   for (const [k, v] of Object.entries(row)) {
     out[rev[k] || k] = v;
   }
   return out;
 }
 
-function mapRows(table: string, rows: any[]): any[] {
-  return rows.map((r) => fromDB(table, r));
+function mapRows<T>(table: string, rows: DbRow[]): T[] {
+  return rows.map((r) => fromDB(table, r) as unknown as T);
 }
 
-export interface RowSet {
-  toArray(): Promise<any[]>;
+export interface RowSet<T> {
+  toArray(): Promise<T[]>;
   count(): Promise<number>;
-  get(key: string): Promise<any | undefined>;
-  first(): Promise<any | undefined>;
-  single(): Promise<any | undefined>;
+  get(key: string): Promise<T | undefined>;
+  first(): Promise<T | undefined>;
+  single(): Promise<T | undefined>;
+}
+
+export interface ListParams {
+  page?: number;
+  pageSize?: number;
+  order?: { column: string; ascending?: boolean };
+  ilike?: { column: string; term: string };
+  orIlike?: { columns: string[]; term: string };
+  eq?: Record<string, unknown>;
+  in?: Record<string, unknown[]>;
+  notIn?: Record<string, unknown[]>;
+  gte?: Record<string, string>;
+  lte?: Record<string, string>;
+}
+
+export interface ListResult<T> {
+  rows: T[];
+  total: number;
+  hasMore: boolean;
 }
 
 const PAGE_SIZE = 1000;
@@ -116,98 +149,136 @@ const TABLES_WITH_CREATED_AT = new Set([
   'companies', 'customers', 'budgets', 'service_orders', 'payments', 'notifications', 'materials', 'profiles',
 ]);
 
-async function fetchPaged(table: string, build?: (q: any) => any): Promise<any[]> {
-  const out: any[] = [];
+async function fetchPaged(table: string, build?: (q: unknown) => unknown): Promise<DbRow[]> {
+  const out: DbRow[] = [];
   for (let page = 0; ; page++) {
-    let q: any = supabase.from(table).select('*');
+    let q: unknown = supabase.from(table).select('*');
     if (TABLES_WITH_CREATED_AT.has(table)) {
-      q = q.order('created_at', { ascending: false, nullsFirst: false });
+      q = (q as { order: (col: string, opts: unknown) => unknown }).order('created_at', { ascending: false, nullsFirst: false });
     }
-    q = q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+    q = (q as { range: (a: number, b: number) => unknown }).range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
     if (build) q = build(q);
-    const { data, error } = await q;
+    const { data, error } = await (q as { then: unknown } & Promise<{ data: DbRow[] | null; error: { message: string } | null }>);
     if (error) throw error;
-    const rows = (data as any[]) || [];
+    const rows = (data as DbRow[]) || [];
     out.push(...rows);
     if (rows.length < PAGE_SIZE) break;
   }
   return out;
 }
 
-function queryRows(table: string, filters?: Record<string, any>): RowSet {
+function queryRows<T>(table: string, filters?: Record<string, unknown>): RowSet<T> {
   const build = filters
-    ? (q: any) => {
-        for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-        return q;
+    ? (q: unknown) => {
+        let cur: unknown = q;
+        for (const [k, v] of Object.entries(filters)) cur = (cur as { eq: (k: string, v: unknown) => unknown }).eq(k, v);
+        return cur;
       }
     : undefined;
   async function run() {
-    return mapRows(table, await fetchPaged(table, build));
+    return mapRows<T>(table, await fetchPaged(table, build));
   }
   return {
     toArray: run,
     count: async () => {
-      let q: any = supabase.from(table).select('id', { count: 'exact', head: true });
-      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-      const { count, error } = await q;
-      if (error) throw error;
+      let q: unknown = supabase.from(table).select('id', { count: 'exact', head: true });
+      if (filters) for (const [k, v] of Object.entries(filters)) q = (q as { eq: (k: string, v: unknown) => unknown }).eq(k, v);
+      const { count, error } = await (q as Promise<{ count: number | null; error: unknown }>);
+      if (error) throw error as Error;
       return count ?? 0;
     },
     get: async (key: string) => {
       const { data, error } = await supabase.from(table).select('*').eq('id', key).maybeSingle();
       if (error) throw error;
-      return data ? fromDB(table, data) : undefined;
+      return data ? (fromDB(table, data as DbRow) as unknown as T) : undefined;
     },
     first: async () => {
-      let q: any = supabase.from(table).select('*').limit(1);
-      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-      const { data, error } = await q.maybeSingle();
-      if (error) throw error;
-      return data ? fromDB(table, data) : undefined;
+      let q: unknown = supabase.from(table).select('*').limit(1);
+      if (filters) for (const [k, v] of Object.entries(filters)) q = (q as { eq: (k: string, v: unknown) => unknown }).eq(k, v);
+      const { data, error } = await (q as { maybeSingle: () => Promise<{ data: DbRow | null; error: unknown }> }).maybeSingle();
+      if (error) throw error as Error;
+      return data ? (fromDB(table, data as DbRow) as unknown as T) : undefined;
     },
     single: async () => {
-      let q: any = supabase.from(table).select('*').limit(1);
-      if (filters) for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
-      const { data, error } = await q.maybeSingle();
-      if (error) throw error;
-      return data ? fromDB(table, data) : undefined;
+      let q: unknown = supabase.from(table).select('*').limit(1);
+      if (filters) for (const [k, v] of Object.entries(filters)) q = (q as { eq: (k: string, v: unknown) => unknown }).eq(k, v);
+      const { data, error } = await (q as { maybeSingle: () => Promise<{ data: DbRow | null; error: unknown }> }).maybeSingle();
+      if (error) throw error as Error;
+      return data ? (fromDB(table, data as DbRow) as unknown as T) : undefined;
     },
   };
 }
 
-export interface Table {
-  toArray(): Promise<any[]>;
+type QueryLike = {
+  eq: (c: string, v: unknown) => QueryLike;
+  ilike: (c: string, v: string) => QueryLike;
+  or: (s: string) => QueryLike;
+  in: (c: string, v: unknown[]) => QueryLike;
+  gte: (c: string, v: string) => QueryLike;
+  lte: (c: string, v: string) => QueryLike;
+  order: (c: string, o: unknown) => QueryLike;
+  range: (a: number, b: number) => QueryLike;
+  limit: (n: number) => QueryLike;
+};
+
+export interface Table<T> {
+  toArray(): Promise<T[]>;
   count(): Promise<number>;
-  get(key: string): Promise<any | undefined>;
-  add(obj: Record<string, any>): Promise<void>;
-  bulkAdd(objs: Record<string, any>[]): Promise<void>;
-  update(key: string, changes: Record<string, any>): Promise<void>;
+  get(key: string): Promise<T | undefined>;
+  list(params?: ListParams): Promise<ListResult<T>>;
+  add(obj: T | DbRow): Promise<void>;
+  bulkAdd(objs: Array<T | DbRow>): Promise<void>;
+  update(key: string, changes: Partial<T> | DbRow): Promise<void>;
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
   where(field: string): {
-    equals(value: any): RowSet;
-    anyOf(value: any[]): RowSet & { toArray(): Promise<any[]> };
+    equals(value: unknown): RowSet<T>;
+    anyOf(value: unknown[]): RowSet<T> & { toArray(): Promise<T[]> };
   };
-  filter(fn: (row: any) => boolean): RowSet;
+  filter(fn: (row: T) => boolean): RowSet<T>;
 }
 
-function makeTable(table: string): Table {
+function makeTable<T>(table: string): Table<T> {
   return {
-    toArray: () => queryRows(table).toArray(),
-    count: () => queryRows(table).count(),
-    get: (key: string) => queryRows(table).get(key),
+    toArray: () => queryRows<T>(table).toArray(),
+    count: () => queryRows<T>(table).count(),
+    get: (key: string) => queryRows<T>(table).get(key),
+    list: async (params: ListParams = {}) => {
+      const { page = 0, pageSize = 25, order, ilike, orIlike, eq, in: inFilter, gte, lte } = params;
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const colOf = (camel: string, fallback: string) => FIELD_MAP[table]?.[camel] || fallback;
+      let q = supabase.from(table).select('*', { count: 'exact' }) as unknown as QueryLike;
+      if (eq) for (const [k, v] of Object.entries(eq)) q = q.eq(colOf(k, k), v);
+      if (inFilter) for (const [k, v] of Object.entries(inFilter)) q = q.in(colOf(k, k), v);
+      if (gte) for (const [k, v] of Object.entries(gte)) q = q.gte(colOf(k, k), v);
+      if (lte) for (const [k, v] of Object.entries(lte)) q = q.lte(colOf(k, k), v);
+      if (ilike && ilike.term.trim()) q = q.ilike(colOf(ilike.column, ilike.column), `%${ilike.term.trim()}%`);
+      if (orIlike && orIlike.term.trim()) {
+        const esc = orIlike.term.trim().replace(/[,()]/g, '');
+        q = q.or(orIlike.columns.map((c) => `${colOf(c, c)}.ilike.%${esc}%`).join(','));
+      }
+      const hasCreatedAt = TABLES_WITH_CREATED_AT.has(table);
+      const orderCol = order?.column ? colOf(order.column, order.column) : hasCreatedAt ? 'created_at' : 'id';
+      const { data, error, count } = await (q
+        .order(orderCol, { ascending: order?.ascending ?? false, nullsFirst: false })
+        .range(from, to) as unknown as Promise<{ data: DbRow[] | null; error: { message: string } | null; count: number | null }>);
+      if (error) throw error;
+      const total = count ?? 0;
+      return { rows: mapRows<T>(table, (data as DbRow[]) || []), total, hasMore: from + pageSize < total };
+    },
     add: async (obj) => {
-      const { error } = await supabase.from(table).insert(toDB(table, obj));
+      const { error } = await supabase.from(table).insert(toDB(table, obj as Record<string, unknown>));
       if (error) throw error;
       emitDataChanged(table);
     },
     bulkAdd: async (objs) => {
-      const { error } = await supabase.from(table).insert(objs.map((o) => toDB(table, o)));
+      const { error } = await supabase.from(table).insert(objs.map((o) => toDB(table, o as Record<string, unknown>)));
       if (error) throw error;
       emitDataChanged(table);
     },
     update: async (key, changes) => {
-      const { error } = await supabase.from(table).update(toDB(table, changes)).eq('id', key);
+      const { error } = await supabase.from(table).update(toDB(table, changes as Record<string, unknown>)).eq('id', key);
       if (error) throw error;
       emitDataChanged(table);
     },
@@ -222,17 +293,17 @@ function makeTable(table: string): Table {
       emitDataChanged(table);
     },
     where: (field) => ({
-      equals: (value) => queryRows(table, { [FIELD_MAP[table]?.[field] || field]: value }),
-      anyOf: (values: any[]) => {
-        const base = queryRows(table, undefined);
+      equals: (value) => queryRows<T>(table, { [FIELD_MAP[table]?.[field] || field]: value }),
+      anyOf: (values: unknown[]) => {
+        const base = queryRows<T>(table, undefined);
         const col = FIELD_MAP[table]?.[field] || field;
         return {
           ...base,
           toArray: async () => {
             if (!values.length) return [];
-            return mapRows(
+            return mapRows<T>(
               table,
-              await fetchPaged(table, (q: any) => q.in(col, values)),
+              await fetchPaged(table, (q: unknown) => (q as { in: (c: string, v: unknown[]) => unknown }).in(col, values as unknown[])),
             );
           },
           count: async () => {
@@ -240,7 +311,7 @@ function makeTable(table: string): Table {
             const { count, error } = await supabase
               .from(table)
               .select('id', { count: 'exact', head: true })
-              .in(col, values);
+              .in(col, values as unknown[]);
             if (error) throw error;
             return count ?? 0;
           },
@@ -248,7 +319,7 @@ function makeTable(table: string): Table {
       },
     }),
     filter: (fn) => {
-      const all = queryRows(table);
+      const all = queryRows<T>(table);
       return {
         toArray: async () => (await all.toArray()).filter(fn),
         count: async () => (await all.toArray()).filter(fn).length,
@@ -264,18 +335,18 @@ function makeTable(table: string): Table {
 }
 
 export const db = {
-  customers: makeTable('customers'),
-  serviceOrders: makeTable('service_orders'),
-  budgets: makeTable('budgets'),
-  equipment: makeTable('equipment'),
-  companies: makeTable('companies'),
-  notifications: makeTable('notifications'),
-  payments: makeTable('payments'),
-  profiles: makeTable('profiles'),
-  users: makeTable('profiles'),
-  appointments: makeTable('appointments'),
-  materials: makeTable('materials'),
-  subscriptions: makeTable('subscriptions'),
+  customers: makeTable<Customer>('customers'),
+  serviceOrders: makeTable<ServiceOrder>('service_orders'),
+  budgets: makeTable<Budget>('budgets'),
+  equipment: makeTable<Equipment>('equipment'),
+  companies: makeTable<Company & { commissionEnabled?: boolean; commissionRate?: number }>('companies'),
+  notifications: makeTable<Notification>('notifications'),
+  payments: makeTable<Payment>('payments'),
+  profiles: makeTable<EntityMap['profiles']>('profiles'),
+  users: makeTable<EntityMap['profiles']>('profiles'),
+  appointments: makeTable<Appointment>('appointments'),
+  materials: makeTable<Material>('materials'),
+  subscriptions: makeTable<DbRow>('subscriptions'),
 };
 
 export async function seedIfEmpty() {

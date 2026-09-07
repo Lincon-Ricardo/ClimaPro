@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { z } from 'zod';
 
-interface UseFormValidationResult<T> {
+interface UseFormValidationResult<_T> {
   errors: Record<string, string>;
   hasError: (field: string) => boolean;
   getError: (field: string) => string | undefined;

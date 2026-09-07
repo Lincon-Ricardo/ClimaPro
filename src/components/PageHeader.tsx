@@ -1,13 +1,17 @@
 import type { ReactNode } from 'react';
 
+export function Page({ children, narrow }: { children: ReactNode; narrow?: boolean }) {
+  return <div className={`mx-auto w-full min-w-0 ${narrow ? 'max-w-3xl' : 'max-w-6xl'}`}>{children}</div>;
+}
+
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100">{title}</h1>
-        {subtitle && <p className="text-sm text-neutral-500 dark:text-neutral-400">{subtitle}</p>}
+    <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="truncate text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">{title}</h1>
+        {subtitle && <p className="mt-0.5 break-words text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">{action}</div>}
     </div>
   );
 }

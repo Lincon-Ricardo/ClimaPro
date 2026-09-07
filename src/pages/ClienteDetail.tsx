@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { useToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   Phone, MessageCircle, MapPin, Plus, Snowflake, Pencil, Wallet, Wrench, Trash2,
 } from 'lucide-react';
@@ -66,39 +67,51 @@ export default function ClienteDetail() {
     setEqForm(emptyEqForm);
   }
 
+  const [confirmState, setConfirmState] = useState<{ kind: 'order' | 'budget' | 'equipment' | 'customer'; id?: string } | null>(null);
+
   async function removeOrder(orderId: string) {
-    if (!confirm('Remover este serviço da linha do tempo?')) return;
-    await db.serviceOrders.delete(orderId);
-    toast('success', 'Serviço removido.');
+    setConfirmState({ kind: 'order', id: orderId });
   }
 
   async function removeBudget(budgetId: string) {
-    if (!confirm('Remover este orçamento da linha do tempo?')) return;
-    await db.budgets.delete(budgetId);
-    toast('success', 'Orçamento removido.');
+    setConfirmState({ kind: 'budget', id: budgetId });
   }
 
   async function removeEquipment(equipmentId: string) {
-    if (!confirm('Remover este equipamento?')) return;
-    await db.equipment.delete(equipmentId);
-    toast('success', 'Equipamento removido.');
+    setConfirmState({ kind: 'equipment', id: equipmentId });
   }
 
   async function deleteCustomer() {
-    if (!confirm(`Excluir o cliente "${customer!.name}"?\n\nIsso remove também equipamentos, serviços e orçamentos dele.`)) return;
-    const eqs = await db.equipment.where('customerId').equals(id!).toArray();
-    await Promise.all(eqs.map((eq) => db.equipment.delete(eq.id)));
-    const sos = await db.serviceOrders.where('customerId').equals(id!).toArray();
-    await Promise.all(sos.map((o) => db.serviceOrders.delete(o.id)));
-    const buds = await db.budgets.where('customerId').equals(id!).toArray();
-    await Promise.all(buds.map((b) => db.budgets.delete(b.id)));
-    await db.customers.delete(id!);
-    toast('success', 'Cliente excluído.');
-    navigate('/app/clientes');
+    setConfirmState({ kind: 'customer' });
+  }
+
+  async function confirmAction() {
+    if (!confirmState) return;
+    try {
+      if (confirmState.kind === 'order' && confirmState.id) {
+        await db.serviceOrders.delete(confirmState.id);
+        toast('success', 'Serviço removido.');
+      } else if (confirmState.kind === 'budget' && confirmState.id) {
+        await db.budgets.delete(confirmState.id);
+        toast('success', 'Orçamento removido.');
+      } else if (confirmState.kind === 'equipment' && confirmState.id) {
+        await db.equipment.delete(confirmState.id);
+        toast('success', 'Equipamento removido.');
+      } else if (confirmState.kind === 'customer') {
+        const { error } = await (await import('../lib/supabaseClient')).supabase.rpc('delete_customer_cascade', { p_customer_id: id! });
+        if (error) throw error;
+        toast('success', 'Cliente excluído.');
+        navigate('/app/clientes');
+      }
+    } catch {
+      toast('error', 'Não foi possível excluir. Tente novamente.');
+    } finally {
+      setConfirmState(null);
+    }
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full min-w-0 max-w-3xl">
       <button type="button" onClick={() => navigate(-1)} className="mb-4 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400">← Voltar</button>
 
       <div className="rounded-3xl bg-white dark:bg-neutral-800 p-6 shadow-card">
@@ -126,7 +139,7 @@ export default function ClienteDetail() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-cols-4">
           <div className="rounded-xl bg-neutral-50 dark:bg-neutral-700/40 p-3">
             <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(totalGasto)}</div>
             <div className="text-xs text-neutral-500 dark:text-neutral-400">Total gasto</div>
@@ -152,7 +165,7 @@ export default function ClienteDetail() {
           <Plus size={16} /> Adicionar
         </Button>
       </div>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {equipment.length === 0 && (
           <Card><p className="text-sm text-neutral-500 dark:text-neutral-400">Nenhum equipamento cadastrado.</p></Card>
         )}
@@ -276,20 +289,27 @@ export default function ClienteDetail() {
         )}
       </div>
 
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.kind === 'customer' ? `Excluir "${customer!.name}"?` : 'Remover registro?'}
+        message={confirmState?.kind === 'customer' ? 'Isso remove também equipamentos, serviços e orçamentos dele.' : 'Essa ação não pode ser desfeita.'}
+        onConfirm={confirmAction}
+        onClose={() => setConfirmState(null)}
+      />
       <Modal open={showAddEq} onClose={() => { setShowAddEq(false); setEditingEqId(null); }} title={editingEqId ? 'Editar equipamento' : 'Adicionar equipamento'} wide>
         <form onSubmit={saveEquipment} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input aria-label="Marca" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Marca" value={eqForm.brand} onChange={(e) => setEqForm({ ...eqForm, brand: e.target.value })} />
             <input aria-label="Modelo" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Modelo" value={eqForm.model} onChange={(e) => setEqForm({ ...eqForm, model: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <select aria-label="Tipo" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100" value={eqForm.type} onChange={(e) => setEqForm({ ...eqForm, type: e.target.value })}>
               {['Split Higien Wall','Split Piso Teto','Split Cassete','Split Inverter','Janela','Multi Split','VRF / VRV'].map((t) => <option key={t}>{t}</option>)}
             </select>
             <input type="number" inputMode="numeric" aria-label="BTUs" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="BTUs" value={eqForm.btus} onChange={(e) => setEqForm({ ...eqForm, btus: +e.target.value })} />
           </div>
           <input aria-label="Número de série" className="w-full rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Número de série" value={eqForm.serial} onChange={(e) => setEqForm({ ...eqForm, serial: e.target.value })} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input aria-label="Local de instalação" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" placeholder="Local de instalação" value={eqForm.installLocation} onChange={(e) => setEqForm({ ...eqForm, installLocation: e.target.value })} />
             <input type="date" aria-label="Data de instalação" className="rounded-xl border border-neutral-300 dark:border-neutral-600 px-3 py-2.5 text-sm dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500" value={eqForm.installDate} onChange={(e) => setEqForm({ ...eqForm, installDate: e.target.value })} />
           </div>

@@ -82,14 +82,14 @@ export default function NovoOrcamento() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full min-w-0 max-w-3xl">
       <PageHeader title="Novo orçamento" subtitle="Monte os itens e o valor total" />
       <form onSubmit={(e) => handleSave(e, 'enviado')} className="space-y-4 rounded-2xl bg-white dark:bg-neutral-800 p-5 shadow-card">
         <Select label="Cliente *" required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
           <option value="">Selecione o cliente...</option>
           {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Select label="Tipo de serviço" value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })}>
             {SERVICE_TYPES.map((t) => <option key={t}>{t}</option>)}
           </Select>
@@ -101,7 +101,7 @@ export default function NovoOrcamento() {
 
         <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-3.5">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Custos do serviço</div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Input
               label="Mão de obra"
               inputMode="decimal"

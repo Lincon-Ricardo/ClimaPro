@@ -35,10 +35,10 @@ export default function Dashboard() {
   const doneToday = todaysServiceOrders.filter((o) => o.status === 'concluido').length;
 
   return (
-    <div className="max-w-5xl">
+    <div className="mx-auto w-full min-w-0 max-w-6xl">
       {/* Saudação */}
-      <div className="rounded-3xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white shadow-lg">
-        <h1 className="text-2xl font-extrabold">
+      <div className="rounded-2xl bg-gradient-to-r from-primary-800 to-primary-600 p-4 text-white shadow-lg sm:rounded-3xl sm:p-6">
+        <h1 className="break-words text-xl font-extrabold sm:text-2xl">
           {greetings()}, {user?.firstName}! 👋
         </h1>
         <p className="mt-1 text-primary-100">
@@ -49,23 +49,23 @@ export default function Dashboard() {
       </div>
 
       {/* StatCards clicáveis */}
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-cols-4">
         <StatCard icon={<CalendarDays size={20} />} label="Serviços hoje →" value={String(todaysServiceOrders.length)} onClick={() => navigate('/app/agenda')} />
-        <StatCard icon={<Wrench size={20} />} label="Pendentes →" value={String(pending)} onClick={() => navigate('/app/servicos')} />
+        <StatCard icon={<Wrench size={20} />} label="Pendentes →" value={String(pending)} onClick={() => navigate('/app/servicos?filter=pendentes')} />
         <StatCard icon={<Wallet size={20} />} label="A receber →" value={formatBRL(receberTotal)} onClick={() => navigate('/app/financeiro')} />
-        <StatCard icon={<FileText size={20} />} label="Orçamentos →" value={String(budgetsWaiting)} onClick={() => navigate('/app/orcamentos')} />
+        <StatCard icon={<FileText size={20} />} label="Aguardando →" value={String(budgetsWaiting)} onClick={() => navigate('/app/orcamentos')} />
       </div>
 
       {/* Ações rápidas */}
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Button onClick={() => navigate('/app/servicos/novo')}><Plus size={16} className="mr-1" /> Novo serviço</Button>
-        <Button variant="secondary" onClick={() => navigate('/app/orcamentos/novo')}><Plus size={16} className="mr-1" /> Novo orçamento</Button>
-        <Button variant="secondary" onClick={() => navigate('/app/clientes/novo')}><Plus size={16} className="mr-1" /> Novo cliente</Button>
-        <Button variant="ghost" onClick={() => navigate('/app/agenda')}>Ver agenda <ArrowRight size={16} /></Button>
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+        <Button full onClick={() => navigate('/app/servicos/novo')}><Plus size={16} className="mr-1" /> Novo serviço</Button>
+        <Button full variant="secondary" onClick={() => navigate('/app/orcamentos/novo')}><Plus size={16} className="mr-1" /> Novo orçamento</Button>
+        <Button full variant="secondary" onClick={() => navigate('/app/clientes/novo')}><Plus size={16} className="mr-1" /> Novo cliente</Button>
+        <Button full variant="ghost" onClick={() => navigate('/app/agenda')}>Ver agenda <ArrowRight size={16} /></Button>
       </div>
 
       {/* Seu dia */}
-      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4 shadow-card dark:border-neutral-700 dark:bg-neutral-800">
+      <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-3 shadow-card dark:border-neutral-700 dark:bg-neutral-800 sm:mt-6 sm:p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-neutral-800 dark:text-neutral-100">Seu dia</h2>
           <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">

@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { log } from '../lib/logger';
 import type { User } from '../types';
 
 interface AuthCtx {

@@ -14,10 +14,47 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 
 button {
   touch-action: manipulation;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+img {
+  overflow: hidden;
+}
+
+/* Evita zoom automático do iOS ao focar campos */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Tabelas nunca quebram o layout: rolagem interna */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Alvos de toque mínimos */
+@media (pointer: coarse) {
+  button, a, select, [role='button'] {
+    min-height: 40px;
+  }
+  input[type='checkbox'], input[type='radio'] {
+    min-height: 24px;
+    min-width: 24px;
+  }
 }
 
 body {

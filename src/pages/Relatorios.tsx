@@ -8,11 +8,15 @@ import {
 import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
-import { PageHeader } from '../components/PageHeader';
-import { formatBRL, formatDate, toISODate, todayISO, telToWhats } from '../lib/utils';
+import { formatBRL, telToWhats } from '../lib/utils';
 import { useToast } from '../components/Toast';
-
-type RangeKey = 'hoje' | 'semana' | 'mes' | 'trimestre' | 'ano' | 'tudo';
+import {
+  rangeBounds, filterOrdersByPeriod, filterBudgetsByPeriod,
+  calcKpi, revenueSeries as buildSeries, techRanking as buildRanking,
+  serviceMix as buildMix, topDebtors as buildDebtors, staleBudgets as buildStale,
+} from '../lib/reports';
+import type { RangeKey } from '../lib/reports';
+import { exportReportPdf } from '../lib/pdf/reportPdf';
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: 'hoje', label: 'Hoje' },
@@ -38,259 +42,42 @@ export default function Relatorios() {
   const [techFilter, setTechFilter] = useState<string>('todos');
   const [generating, setGenerating] = useState(false);
 
-  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
-  const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
-  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
-  const technicians = useLiveQuery(() => db.users.toArray(), []) || [];
-
   const company = companies[0];
+  const { from, to, label } = useMemo(() => rangeBounds(range), [range]);
 
-  const { from, to, label } = useMemo(() => {
-    const t = new Date();
-    const today = todayISO();
-    if (range === 'hoje') return { from: today, to: today, label: 'Hoje' };
-    if (range === 'semana') {
-      const s = new Date(t);
-      s.setDate(s.getDate() - 6);
-      return { from: toISODate(s), to: today, label: 'Últimos 7 dias' };
-    }
-    if (range === 'mes') {
-      const s = new Date(t.getFullYear(), t.getMonth(), 1);
-      return { from: toISODate(s), to: today, label: t.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) };
-    }
-    if (range === 'trimestre') {
-      const s = new Date(t.getFullYear(), t.getMonth() - 2, 1);
-      return { from: toISODate(s), to: today, label: 'Últimos 3 meses' };
-    }
-    if (range === 'ano') {
-      const s = new Date(t.getFullYear(), 0, 1);
-      return { from: toISODate(s), to: today, label: `Ano de ${t.getFullYear()}` };
-    }
-    return { from: '0000-01-01', to: '9999-12-31', label: 'Todo o histórico' };
-  }, [range]);
+  const orders = useLiveQuery(
+    () => db.serviceOrders.list({ pageSize: 1000, gte: { date: from }, lte: { date: to } }).then((r) => r.rows),
+    [from, to],
+  ) || [];
+  const budgets = useLiveQuery(
+    () => db.budgets.list({ pageSize: 1000 }).then((r) => r.rows),
+    [],
+  ) || [];
+  const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
 
-  const periodOrdersRaw = useMemo(() => {
-    return orders.filter((o) => (o.date || '') >= from && (o.date || '') <= to);
-  }, [orders, from, to]);
-
+  const periodOrdersRaw = useMemo(() => filterOrdersByPeriod(orders, from, to), [orders, from, to]);
   const periodOrders = useMemo(() => {
     if (techFilter === 'todos') return periodOrdersRaw;
     return periodOrdersRaw.filter((o) => (o.technician || '') === techFilter);
   }, [periodOrdersRaw, techFilter]);
+  const periodBudgets = useMemo(() => filterBudgetsByPeriod(budgets, from, to), [budgets, from, to]);
 
-  const periodBudgets = useMemo(() => {
-    let list = budgets.filter((b) => {
-      const d = (b.createdAt || '').slice(0, 10);
-      return !d || (d >= from && d <= to);
-    });
-    return list;
-  }, [budgets, from, to]);
-
-  const kpi = useMemo(() => {
-    const valid = periodOrders.filter((o) => o.status !== 'cancelado');
-    const done = valid.filter((o) => o.status === 'concluido');
-    const revenue = done.reduce((s, o) => s + (Number(o.value) || 0), 0);
-    const ticket = done.length > 0 ? revenue / done.length : 0;
-
-    const paid = valid.filter((o) => o.paymentStatus === 'pago').reduce((s, o) => s + (Number(o.value) || 0), 0);
-    const pending = revenue - valid.filter((o) => o.paymentStatus === 'pago' && o.status === 'concluido').reduce((s, o) => s + (Number(o.value) || 0), 0);
-
-    const cancelled = periodOrders.filter((o) => o.status === 'cancelado').length;
-    const cancelRate = periodOrders.length > 0 ? (cancelled / periodOrders.length) * 100 : 0;
-
-    // Funil de orçamentos
-    const totalBud = periodBudgets.length;
-    const approved = periodBudgets.filter((b) => b.status === 'aprovado');
-    const conversion = totalBud > 0 ? (approved.length / totalBud) * 100 : 0;
-    const pipelineValue = periodBudgets
-      .filter((b) => !['aprovado', 'recusado'].includes(b.status))
-      .reduce((s, b) => s + (Number(b.total) || 0), 0);
-
-    // Recompra
-    const custCount = new Map<string, number>();
-    valid.forEach((o) => custCount.set(o.customerId, (custCount.get(o.customerId) || 0) + 1));
-    const recurring = Array.from(custCount.values()).filter((n) => n > 1).length;
-    const totalCusts = custCount.size;
-
-    return { valid, done, revenue, ticket, paid, pending, cancelled, cancelRate, totalBud, approved: approved.length, conversion, pipelineValue, recurring, totalCusts };
-  }, [periodOrders, periodBudgets]);
-
-  // Evolução semanal/mensal da receita (últimos 8 pontos)
-  const revenueSeries = useMemo(() => {
-    const pts: { label: string; value: number }[] = [];
-    const now = new Date();
-    if (range === 'ano' || range === 'tudo') {
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const v = orders
-          .filter((o) => o.status === 'concluido' && (o.date || '').startsWith(key))
-          .reduce((s, o) => s + (Number(o.value) || 0), 0);
-        pts.push({ label: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''), value: v });
-      }
-    } else {
-      for (let i = 7; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i * (range === 'hoje' ? 0 : range === 'semana' ? 1 : 4));
-        const iso = toISODate(d);
-        const v = orders
-          .filter((o) => o.status === 'concluido' && (o.date || '') === iso)
-          .reduce((s, o) => s + (Number(o.value) || 0), 0);
-        pts.push({ label: `${d.getDate()}/${d.getMonth() + 1}`, value: v });
-      }
-    }
-    return pts;
-  }, [orders, range]);
-
+  const kpi = useMemo(() => calcKpi(periodOrders, periodBudgets), [periodOrders, periodBudgets]);
+  const revenueSeries = useMemo(() => buildSeries(periodOrdersRaw, range), [periodOrdersRaw, range]);
   const maxSeries = Math.max(1, ...revenueSeries.map((p) => p.value));
-
-  // Ranking de técnicos
-  const techRanking = useMemo(() => {
-    const map = new Map<string, { name: string; done: number; revenue: number; open: number }>();
-    periodOrdersRaw.filter((o) => o.status !== 'cancelado').forEach((o) => {
-      const name = (o.technician || 'Sem técnico').trim() || 'Sem técnico';
-      const e = map.get(name) || { name, done: 0, revenue: 0, open: 0 };
-      if (o.status === 'concluido') {
-        e.done += 1;
-        e.revenue += Number(o.value) || 0;
-      } else {
-        e.open += 1;
-      }
-      map.set(name, e);
-    });
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [periodOrdersRaw]);
-
-  // Mix de serviços mais lucrativos
-  const serviceMix = useMemo(() => {
-    const map = new Map<string, { count: number; revenue: number }>();
-    periodOrders.filter((o) => o.status === 'concluido').forEach((o) => {
-      const name = (o.service || 'Serviço').trim() || 'Serviço';
-      const e = map.get(name) || { count: 0, revenue: 0 };
-      e.count += 1;
-      e.revenue += Number(o.value) || 0;
-      map.set(name, e);
-    });
-    return Array.from(map.entries())
-      .map(([name, v]) => ({ name, ...v }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8);
-  }, [periodOrders]);
-
+  const techRanking = useMemo(() => buildRanking(periodOrdersRaw), [periodOrdersRaw]);
+  const serviceMix = useMemo(() => buildMix(periodOrders), [periodOrders]);
   const maxServiceRevenue = Math.max(1, ...serviceMix.map((s) => s.revenue));
-
-  // Cobrança: maiores devedores
-  const debtors = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; phone: string; total: number; count: number }>();
-    orders
-      .filter((o) => o.paymentStatus !== 'pago' && o.status !== 'cancelado' && Number(o.value) > 0)
-      .forEach((o) => {
-        const c = customers.find((x) => x.id === o.customerId);
-        const e = map.get(o.customerId) || { id: o.customerId, name: c?.name || 'Cliente', phone: c?.whatsapp || c?.phone || '', total: 0, count: 0 };
-        e.total += Number(o.value) || 0;
-        e.count += 1;
-        map.set(o.customerId, e);
-      });
-    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 8);
-  }, [orders, customers]);
-
-  // Orçamentos parados (follow-up)
-  const staleBudgets = useMemo(() => {
-    return periodBudgets
-      .filter((b) => !['aprovado', 'recusado'].includes(b.status))
-      .sort((a, b) => Number(b.total) - Number(a.total))
-      .slice(0, 6);
-  }, [periodBudgets]);
+  const debtors = useMemo(() => buildDebtors(orders, customers), [orders, customers]);
+  const staleBudgets = useMemo(() => buildStale(periodBudgets), [periodBudgets]);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
   async function exportPDF() {
     setGenerating(true);
     try {
-      const pdfTheme = await import('../lib/pdf/theme');
-      const { createPdf, drawBrandHeader, drawBrandFooter, sectionLabel, divider, text, stampFooters, newBrandedPage } = pdfTheme;
-      const ctx = createPdf(company);
-      const { doc, c, ML, MR, CW, PH } = ctx;
-      const headerArgs = {
-        company,
-        title: 'RELATÓRIO GERENCIAL',
-        docName: label,
-        rightLines: [
-          `Período: ${from === '0000-01-01' ? 'Todo histórico' : `${formatDate(from)} a ${formatDate(to)}`}`,
-          `Técnico: ${techFilter === 'todos' ? 'Todos' : techFilter}`,
-          `Gerado em: ${formatDate(todayISO())}`,
-        ],
-      };
-      const header = () => { drawBrandHeader(ctx, headerArgs); drawBrandFooter(ctx, company); };
-      header();
-      const FOOTER = 26;
-      let y = 56;
-
-      const need = (h: number) => {
-        if (y + h > PH - FOOTER) { y = newBrandedPage(ctx, headerArgs); }
-      };
-
-      // KPIs
-      const kpiRows: Array<[string, string]> = [
-        ['Receita concluída', formatBRL(kpi.revenue)],
-        ['Ticket médio', formatBRL(kpi.ticket)],
-        ['OS concluídas', `${kpi.done.length} de ${kpi.valid.length}`],
-        ['Taxa de cancelamento', `${kpi.cancelRate.toFixed(1)}%`],
-        ['Conversão de orçamentos', `${kpi.conversion.toFixed(1)}% (${kpi.approved}/${kpi.totalBud})`],
-        ['Pipeline em aberto', formatBRL(kpi.pipelineValue)],
-        ['Clientes recorrentes', `${kpi.recurring} de ${kpi.totalCusts}`],
-      ];
-      sectionLabel(doc, 'Indicadores do período', ML, y, c.brand);
-      y += 7;
-      kpiRows.forEach(([k, v]) => {
-        need(7);
-        text(doc, { x: ML, y, str: k, size: 9, weight: 'normal', color: c.muted });
-        text(doc, { x: MR, y, str: v, size: 9, weight: 'semibold', color: c.ink, align: 'right' });
-        y += 6;
-      });
-
-      // Ranking técnicos
-      if (techRanking.length > 0) {
-        y += 5; divider(doc, c, y - 2, ML, MR);
-        sectionLabel(doc, 'Ranking de técnicos (receita)', ML, y, c.brand);
-        y += 7;
-        techRanking.slice(0, 10).forEach((t, i) => {
-          need(7);
-          text(doc, { x: ML, y, str: `${i + 1}. ${t.name}`, size: 9, weight: 'semibold', color: c.ink, w: CW - 60 });
-          text(doc, { x: MR, y, str: `${t.done} OS · ${formatBRL(t.revenue)}`, size: 9, weight: 'normal', color: c.muted, align: 'right' });
-          y += 6;
-        });
-      }
-
-      // Mix de serviços
-      if (serviceMix.length > 0) {
-        y += 5; divider(doc, c, y - 2, ML, MR);
-        sectionLabel(doc, 'Serviços mais lucrativos', ML, y, c.brand);
-        y += 7;
-        serviceMix.forEach((s) => {
-          need(7);
-          text(doc, { x: ML, y, str: s.name, size: 9, weight: 'normal', color: c.ink, w: CW - 60 });
-          text(doc, { x: MR, y, str: `${s.count}x · ${formatBRL(s.revenue)}`, size: 9, weight: 'semibold', color: c.muted, align: 'right' });
-          y += 6;
-        });
-      }
-
-      // Devedores
-      if (debtors.length > 0) {
-        y += 5; divider(doc, c, y - 2, ML, MR);
-        sectionLabel(doc, 'Contas a receber (maiores saldos)', ML, y, c.brand);
-        y += 7;
-        debtors.forEach((d) => {
-          need(7);
-          text(doc, { x: ML, y, str: d.name, size: 9, weight: 'semibold', color: c.ink, w: CW - 60 });
-          text(doc, { x: MR, y, str: `${d.count} OS · ${formatBRL(d.total)}`, size: 9, weight: 'normal', color: c.muted, align: 'right' });
-          y += 6;
-        });
-      }
-
-      stampFooters(ctx, company);
-      doc.save(`Relatorio-ClimaPro-${todayISO()}.pdf`);
+      await exportReportPdf({ company, label, from, to, techFilter, kpi, techRanking, serviceMix, debtors });
       toast('success', 'Relatório em PDF gerado!');
     } catch (e: any) {
       toast('error', 'Não foi possível gerar o PDF: ' + (e?.message || 'erro'));
@@ -300,8 +87,7 @@ export default function Relatorios() {
   }
 
   return (
-    <div className="max-w-5xl space-y-4">
-      {/* Cabeçalho mobile-first: empilha título + botão full */}
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
       <div className="mb-4">
         <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Relatórios gerenciais</h1>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">Inteligência do negócio · {label}</p>
@@ -310,9 +96,8 @@ export default function Relatorios() {
         </Button>
       </div>
 
-      {/* Filtros com scroll horizontal no celular */}
       <Card className="p-3 sm:p-4">
-        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+        <div className="-mx-1 flex items-center gap-2 table-scroll px-1 pb-1">
           <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
             <Filter size={14} /> Período:
           </span>
@@ -349,21 +134,19 @@ export default function Relatorios() {
         </div>
       </Card>
 
-      {/* KPIs principais */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<BadgeDollarSign size={20} />} label="Receita concluída" value={formatBRL(kpi.revenue)} color="text-emerald-600" />
         <StatCard icon={<Wallet size={20} />} label="Ticket médio" value={formatBRL(kpi.ticket)} color="text-primary-600" />
         <StatCard icon={<CheckCircle2 size={20} />} label="OS concluídas" value={`${kpi.done.length}/${kpi.valid.length}`} color="text-sky-600" />
         <StatCard icon={<Target size={20} />} label="Conversão orçamentos" value={`${kpi.conversion.toFixed(0)}%`} color="text-violet-600" />
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Quote size={20} />} label="Pipeline em aberto" value={formatBRL(kpi.pipelineValue)} color="text-amber-600" />
         <StatCard icon={<Clock size={20} />} label="A receber (concluído)" value={formatBRL(kpi.pending)} color="text-orange-600" />
         <StatCard icon={<AlertTriangle size={20} />} label="Cancelamento" value={`${kpi.cancelRate.toFixed(1)}%`} color="text-red-500" />
         <StatCard icon={<Users size={20} />} label="Recorrência" value={`${kpi.recurring}/${kpi.totalCusts}`} color="text-teal-600" />
       </div>
 
-      {/* Evolução da receita */}
       <Card>
         <div className="mb-1 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
@@ -371,8 +154,8 @@ export default function Relatorios() {
           </h2>
           <span className="text-xs text-neutral-400">Valores concluídos</span>
         </div>
-        <div className="mt-3 overflow-x-auto pb-1">
-          <div className="flex h-36 min-w-[480px] items-end gap-1.5 sm:min-w-0">
+        <div className="table-scroll mt-3 pb-1">
+          <div className="flex h-36 min-w-[420px] items-end gap-1.5 sm:min-w-0">
             {revenueSeries.map((p, i) => (
               <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                 <span className="whitespace-nowrap text-[9px] font-bold text-neutral-500 dark:text-neutral-400">
@@ -393,7 +176,6 @@ export default function Relatorios() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Ranking de técnicos */}
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <Trophy size={18} className="text-amber-500" /> Ranking de técnicos
@@ -421,7 +203,6 @@ export default function Relatorios() {
           </div>
         </Card>
 
-        {/* Mix de serviços */}
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <Wrench size={18} className="text-primary-600" /> Mix de serviços
@@ -445,7 +226,6 @@ export default function Relatorios() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Cobrança */}
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <Flame size={18} className="text-danger" /> Cobrança prioritária
@@ -477,7 +257,6 @@ export default function Relatorios() {
           </div>
         </Card>
 
-        {/* Follow-up de orçamentos */}
         <Card>
           <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
             <Star size={18} className="text-violet-600" /> Orçamentos pedindo follow-up
@@ -501,12 +280,11 @@ export default function Relatorios() {
         </Card>
       </div>
 
-      {/* Funil comercial */}
       <Card>
         <h2 className="flex items-center gap-2 text-base font-bold text-neutral-800 dark:text-neutral-100">
           <FileText size={18} className="text-sky-600" /> Funil comercial do período
         </h2>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3 lg:grid-cols-4">
           {[
             { label: 'Enviados', value: periodBudgets.length, color: 'bg-sky-500' },
             { label: 'Aprovados', value: kpi.approved, color: 'bg-emerald-500' },

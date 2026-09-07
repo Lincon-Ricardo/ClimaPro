@@ -42,7 +42,7 @@ export default function Notificacoes() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl">
       <PageHeader
         title="Notificações"
         subtitle={`${unread} não lida(s)`}
