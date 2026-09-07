@@ -75,7 +75,7 @@ export function MaterialCatalog({
     <>
     <Modal open={open} onClose={onClose} title="Catálogo de materiais" wide>
       <div className="space-y-4">
-        <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 sm:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
+        <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 lg:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
           <Input
             placeholder="Nome do material (ex.: Filtro TCL)"
             value={name}

@@ -272,14 +272,14 @@ export default function ServicoDetail() {
   const waLink = phone ? `https://wa.me/${telToWhats(phone)}` : null;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-2xl">
+    <div className="mx-auto w-full min-w-0 max-w-2xl lg:max-w-4xl">
       <PageHeader
         title={`OS Nº ${o.osNumber}`}
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
         action={
-          <div className="flex gap-2">
-            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm"><MessageCircle size={16} /> WhatsApp</Button>}
-            <Button variant="outline" size="sm" onClick={generatePDF}><FileDown size={16} /> PDF</Button>
+          <div className="flex flex-wrap gap-2">
+            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm" className="flex-1 sm:flex-none"><MessageCircle size={16} /> WhatsApp</Button>}
+            <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1 sm:flex-none"><FileDown size={16} /> PDF</Button>
             <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
           </div>
         }
@@ -328,24 +328,24 @@ export default function ServicoDetail() {
             </span>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6 xl:gap-2">
           {STEP_OPTIONS.filter((s) => s.value !== 'cancelado').map((s) => (
             <button
               key={s.value}
               onClick={() => setStatus(s.value as ServiceOrder['status'])}
-              className={`flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition ${
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-center text-[11px] font-medium leading-tight transition sm:text-xs ${
                 o.status === s.value ? 'bg-primary-700 text-white' : 'bg-neutral-100 text-neutral-600 hover:bg-primary-50 dark:bg-neutral-700/60 dark:text-neutral-300 dark:hover:bg-primary-900/40'
               }`}
             >
-              {s.value === 'concluido' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-              {s.label}
+              {s.value === 'concluido' ? <CheckCircle2 size={13} className="shrink-0" /> : <Clock size={13} className="shrink-0" />}
+              <span className="truncate sm:whitespace-normal">{s.label}</span>
             </button>
           ))}
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <Card className="p-0">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Card className="p-0 lg:h-full">
           <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800 sm:px-5">
             <div className="break-words text-base font-extrabold leading-tight text-neutral-800 dark:text-neutral-100 sm:text-lg">
               {customer?.name || 'Cliente'}

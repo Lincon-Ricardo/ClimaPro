@@ -130,7 +130,7 @@ export function BudgetItemsEditor({
               </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-2 items-end gap-2 sm:grid-cols-[auto_150px_190px_auto]">
+            <div className="mt-2 grid grid-cols-1 items-end gap-2 sm:grid-cols-2 lg:grid-cols-[auto_150px_190px_auto]">
               <div className="flex items-center overflow-hidden rounded-xl border border-neutral-300 dark:border-neutral-600">
                 <button
                   type="button"

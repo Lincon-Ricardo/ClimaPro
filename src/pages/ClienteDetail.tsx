@@ -152,7 +152,7 @@ export default function ClienteDetail() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-neutral-50 dark:bg-neutral-700/40 p-3">
             <div className="text-lg font-bold text-neutral-800 dark:text-neutral-100">{formatBRL(totalGasto)}</div>
             <div className="text-xs text-neutral-500 dark:text-neutral-400">Total gasto</div>

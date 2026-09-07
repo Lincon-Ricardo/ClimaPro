@@ -78,7 +78,7 @@ export default function NovoCliente() {
         </div>
         <Input label="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <Input label="CPF/CNPJ" value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Input label="CEP" hint={zipLoading ? 'Buscando endereço...' : undefined} value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} onBlur={() => lookupCep(form.zip)} />
           <Input label="Cidade *" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           <Input label="Bairro *" value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />

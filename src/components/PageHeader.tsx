@@ -6,12 +6,12 @@ export function Page({ children, narrow }: { children: ReactNode; narrow?: boole
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="truncate text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">{title}</h1>
+    <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+      <div className="min-w-0 flex-1">
+        <h1 className="break-words text-lg font-extrabold leading-tight text-neutral-800 dark:text-neutral-100 sm:text-xl">{title}</h1>
         {subtitle && <p className="mt-0.5 break-words text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">{subtitle}</p>}
       </div>
-      {action && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">{action}</div>}
+      {action && <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">{action}</div>}
     </div>
   );
 }
