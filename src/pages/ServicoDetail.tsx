@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
-  CheckCircle2, Clock, Trash2, Loader2,
+  CheckCircle2, Clock, Trash2, Loader2, Wallet, CreditCard, Banknote,
+  Repeat, CalendarClock,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +19,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
 import {
   STATUS_LABEL, STATUS_STYLE, formatBRL, formatDate, telToWhats,
-  toggleChecklistItem,
+  toggleChecklistItem, addMonths,
 } from '../lib/utils';
 import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
 import { useServiceOrderActions } from '../hooks/useServiceOrderActions';
@@ -303,23 +304,102 @@ export default function ServicoDetail() {
           )}
         </Card>
 
-        <Card>
-          <div className="font-bold text-neutral-800 dark:text-neutral-100">Valores</div>
-          <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Valor do serviço</dt><dd className="font-bold text-primary-700 dark:text-primary-300">{formatBRL(Number(o.value) || 0)}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Pagamento</dt>
-              <dd>
-                <button onClick={() => setPayOpen(true)} className="font-medium text-primary-600 hover:underline dark:text-primary-400">
-                  {o.paymentStatus === 'pago' ? 'Pago ✓' : 'Pendente'}
-                </button>
-              </dd>
-            </div>
-          </dl>
-          {o.reminderMonths ? (
-            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">🔁 Lembrete de manutenção: {o.reminderMonths} meses</p>
-          ) : (
-            <Button variant="ghost" size="sm" className="mt-2" onClick={() => setReminderOpen(true)}>Configurar lembrete</Button>
-          )}
+        <Card className="overflow-hidden border-0 bg-gradient-to-br from-white via-white to-neutral-50 p-0 shadow-card dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-800">
+          {(() => {
+            const isPaid = o.paymentStatus === 'pago';
+            const methodLabel = o.paymentMethod ? { dinheiro: 'Dinheiro', pix: 'PIX', cartao: 'Cartão', transferencia: 'Transferência', outro: 'Outro' }[o.paymentMethod] || o.paymentMethod : null;
+            const dueDate = o.reminderMonths && o.date ? addMonths(o.date, o.reminderMonths) : null;
+            return (
+              <>
+                <div className={`px-4 py-3.5 sm:px-5 ${isPaid ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-amber-500 to-orange-500'} text-white`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
+                        {isPaid ? <Check size={20} /> : <Wallet size={20} />}
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wider opacity-90">{isPaid ? 'Recebido' : 'A receber'}</p>
+                        <p className="text-xl font-black leading-none sm:text-2xl">{formatBRL(Number(o.value) || 0)}</p>
+                      </div>
+                    </div>
+                    {isPaid ? (
+                      <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+                        <CheckCircle2 size={14} /> Pago
+                      </span>
+                    ) : (
+                      <Button size="sm" variant="light" onClick={() => setPayOpen(true)} className="shrink-0 shadow-lg">
+                        <Banknote size={16} /> Registrar
+                      </Button>
+                    )}
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${isPaid ? 'bg-white text-emerald-700' : 'bg-white/20 text-white backdrop-blur'}`}>
+                      <CreditCard size={11} />
+                      {isPaid ? (methodLabel ? `Pago via ${methodLabel}` : 'Pago') : 'Pagamento pendente'}
+                    </span>
+                    {o.status === 'concluido' && !isPaid && (
+                      <span className="rounded-full bg-danger px-2.5 py-1 text-xs font-bold text-white shadow">Ação necessária</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 p-4 sm:p-5">
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-700 dark:bg-neutral-800/60">
+                    <div className="flex items-center gap-2 text-sm font-bold text-neutral-800 dark:text-neutral-100">
+                      <Repeat size={16} className="text-primary-600" /> Lembrete recorrente
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+                      Transforme esta OS em receita previsível. Receba alerta quando for hora de revisitar o cliente.
+                    </p>
+                    {dueDate ? (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2.5 dark:bg-sky-950/30">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+                            <CalendarClock size={14} /> Próximo em {formatDate(dueDate)}
+                          </span>
+                          <span className="rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-bold text-white">
+                            a cada {o.reminderMonths} {o.reminderMonths === 1 ? 'mês' : 'meses'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setReminderOpen(true)} className="flex-1">
+                            Alterar
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setField({ reminderMonths: null as unknown as number })} className="text-danger dark:text-red-300">
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {[3, 6, 12, 1].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={async () => {
+                              await setField({ reminderMonths: m });
+                              toast('success', m === 1 ? 'Lembrete mensal ativado!' : `Lembrete a cada ${m} meses!`);
+                            }}
+                            className="rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-2.5 text-center transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-primary-700 dark:hover:bg-primary-950/30"
+                          >
+                            <span className="block text-lg font-black text-neutral-800 dark:text-neutral-100">{m}</span>
+                            <span className="text-[10px] font-bold uppercase text-neutral-500">{m === 1 ? 'mês' : 'meses'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {!isPaid && (
+                    <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                      <Wallet size={14} className="shrink-0" />
+                      <span>Este valor entra em <b>A receber</b> e na <b>Cobrança</b> até marcar como pago.</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </Card>
       </div>
 
@@ -412,17 +492,29 @@ export default function ServicoDetail() {
       </Modal>
 
       <Modal open={reminderOpen} onClose={() => setReminderOpen(false)} title="Lembrete de manutenção">
+        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">Quando devemos te lembrar deste cliente?</p>
         <div className="space-y-3">
-          <Select label="Repetir lembrete" value={String(reminderMonths)} onChange={(e) => setReminderMonths(Number(e.target.value))}>
-            <option value="1">1 mês</option>
-            <option value="2">2 meses</option>
-            <option value="3">3 meses</option>
-            <option value="6">6 meses</option>
-            <option value="12">12 meses</option>
-          </Select>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { v: 1, label: '1 mês', desc: 'Filtro/Manut. leve' },
+              { v: 3, label: '3 meses', desc: 'Padrão ClimaPro' },
+              { v: 6, label: '6 meses', desc: 'Preventiva' },
+              { v: 12, label: '12 meses', desc: 'Anual' },
+            ] as const).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setReminderMonths(o.v)}
+                className={`rounded-2xl border-2 p-3 text-left transition ${reminderMonths === o.v ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-950/40' : 'border-neutral-200 bg-white hover:border-primary-300 dark:border-neutral-700 dark:bg-neutral-800'}`}
+              >
+                <span className="block text-sm font-black text-neutral-800 dark:text-neutral-100">{o.label}</span>
+                <span className="text-[11px] text-neutral-500">{o.desc}</span>
+              </button>
+            ))}
+          </div>
           <div className="flex gap-3">
             <Button variant="outline" type="button" onClick={() => setReminderOpen(false)}>Cancelar</Button>
-            <Button onClick={() => { setField({ reminderMonths }); setReminderOpen(false); toast('success', 'Lembrete configurado!'); }}>Salvar</Button>
+            <Button onClick={() => { setField({ reminderMonths }); setReminderOpen(false); toast('success', `Lembrete a cada ${reminderMonths} ${reminderMonths === 1 ? 'mês' : 'meses'} ativado!`); }}>Salvar</Button>
           </div>
         </div>
       </Modal>
