@@ -28,8 +28,7 @@ export default function ClienteDetail() {
     brand: '', model: '', type: 'Split Higien Wall', btus: 9000, serial: '',
     installLocation: '', installDate: '', warranty: '', notes: '',
   });
-
-  if (!customer) return null;
+  const [confirmState, setConfirmState] = useState<{ kind: 'order' | 'budget' | 'equipment' | 'customer'; id?: string } | null>(null);
 
   const done = orders.filter((o) => o.status === 'concluido');
   const totalGasto = done.reduce((s, o) => s + o.value, 0);
@@ -66,8 +65,6 @@ export default function ClienteDetail() {
     setEditingEqId(null);
     setEqForm(emptyEqForm);
   }
-
-  const [confirmState, setConfirmState] = useState<{ kind: 'order' | 'budget' | 'equipment' | 'customer'; id?: string } | null>(null);
 
   async function removeOrder(orderId: string) {
     setConfirmState({ kind: 'order', id: orderId });
@@ -109,6 +106,8 @@ export default function ClienteDetail() {
       setConfirmState(null);
     }
   }
+
+  if (!customer) return null;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl">
@@ -291,7 +290,7 @@ export default function ClienteDetail() {
 
       <ConfirmDialog
         open={!!confirmState}
-        title={confirmState?.kind === 'customer' ? `Excluir "${customer!.name}"?` : 'Remover registro?'}
+        title={confirmState?.kind === 'customer' ? `Excluir "${customer?.name || 'cliente'}"?` : 'Remover registro?'}
         message={confirmState?.kind === 'customer' ? 'Isso remove também equipamentos, serviços e orçamentos dele.' : 'Essa ação não pode ser desfeita.'}
         onConfirm={confirmAction}
         onClose={() => setConfirmState(null)}

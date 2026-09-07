@@ -147,6 +147,7 @@ export default function ServicoDetail() {
   const sigRef = useRef<SignatureCanvas>(null);
   const [obs, setObs] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     setObs(order?.observacoesTecnicas || '');
@@ -163,13 +164,13 @@ export default function ServicoDetail() {
     return () => clearTimeout(t);
   }, [obs, order]);
 
+  const { setField, toggleItem, saveSignature, markPaid } = useServiceOrderActions(order);
+
   if (!order) return null;
   const o = order;
   const customer = customers.find((c) => c.id === o.customerId);
   const eq = equipment.find((e) => e.id === o.equipmentId);
   const company = companies[0];
-
-  const { setField, toggleItem, saveSignature, markPaid } = useServiceOrderActions(order);
 
   async function setStatus(status: ServiceOrder['status']) {
     await setField({ status });
@@ -197,8 +198,6 @@ export default function ServicoDetail() {
     generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
     toast('success', 'PDF gerado!');
   }
-
-  const [confirmDelete, setConfirmDelete] = useState(false);
   async function handleDelete() {
     try {
       await db.serviceOrders.delete(o.id);

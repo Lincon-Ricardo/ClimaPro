@@ -47,6 +47,9 @@ export default function OrcamentoDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  if (!budget) return <Loading />;
+  const b = budget;
+
   async function handleDelete() {
     if (!isAdmin) {
       toast('error', 'Somente o dono pode apagar orçamentos.');
@@ -65,9 +68,6 @@ export default function OrcamentoDetail() {
       setConfirmDelete(false);
     }
   }
-
-  if (!budget) return <Loading />;
-  const b = budget;
   const customer = customers.find((c) => c.id === b.customerId);
   const company = companies[0];
 
