@@ -15,7 +15,8 @@ export function generateServiceOrderPdf(
   eq: Equipment | undefined,
   company: Company | null | undefined,
   technicianName?: string,
-): void {
+  opts?: { save?: boolean },
+) {
   const ctx = createPdf(company);
   const { doc, c, ML, MR, CW, PH } = ctx;
   const payLabel = o.paymentStatus === 'pago' ? 'Pago' : 'Pendente';
@@ -125,7 +126,8 @@ export function generateServiceOrderPdf(
   doc.line(sx2, sigY, sx2 + sigW, sigY);
   text(doc, { x: scol, y: sigY + 5, str: 'Responsável', size: 6.5, weight: 'normal', color: c.muted, align: 'center' });
   stampFooters(ctx, company);
-  doc.save(`OS-${o.osNumber}.pdf`);
+  if (opts?.save) doc.save(`OS-${o.osNumber}.pdf`);
+  return doc;
 }
 
 export { measureLines };

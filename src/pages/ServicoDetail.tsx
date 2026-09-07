@@ -22,6 +22,7 @@ import {
   toggleChecklistItem, addMonths,
 } from '../lib/utils';
 import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
+import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { useServiceOrderActions } from '../hooks/useServiceOrderActions';
 import { VoiceReport, SuperheatCalc } from '../components/FieldTools';
 import type { ChecklistItem, ServiceOrder } from '../types';
@@ -150,6 +151,7 @@ export default function ServicoDetail() {
   const [obs, setObs] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { preview, openPdf, close, download } = usePdfPreview();
 
   useEffect(() => {
     setObs(order?.observacoesTecnicas || '');
@@ -249,8 +251,12 @@ export default function ServicoDetail() {
   }
 
   function generatePDF() {
-    generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
-    toast('success', 'PDF gerado!');
+    try {
+      const doc = generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
+      openPdf(doc, `OS-${o.osNumber}.pdf`, `OS ${o.osNumber} · ${customer?.name || 'Cliente'}`);
+    } catch {
+      toast('error', 'Não foi possível visualizar o PDF.');
+    }
   }
   async function handleDelete() {
     try {
@@ -619,6 +625,7 @@ export default function ServicoDetail() {
       </Modal>
 
       <ConfirmDialog open={confirmDelete} title={`Excluir ${o.osNumber}?`} message="Essa ação não pode ser desfeita." onConfirm={handleDelete} onClose={() => setConfirmDelete(false)} />
+      <PdfPreviewModal preview={preview} onClose={close} onDownload={download} whatsappHref={waLink || undefined} />
       <Modal open={signOpen} onClose={() => setSignOpen(false)} title="Assinatura do cliente">
         <div className="rounded-xl border-2 border-dashed border-neutral-300 bg-white dark:border-neutral-600 dark:bg-neutral-800">
           <SignatureCanvas ref={sigRef} canvasProps={{ className: 'h-40 w-full' }} />

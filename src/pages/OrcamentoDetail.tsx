@@ -13,6 +13,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { audit } from '../lib/audit';
 import { useAuth } from '../context/AuthContext';
+import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
 import { Loading } from '../components/Loading';
 import { generateBudgetPdf } from '../lib/pdf/budgetPdf';
@@ -46,6 +47,7 @@ export default function OrcamentoDetail() {
   const [moneyText, setMoneyText] = useState({ labor: '', displacement: '', discount: '' });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { preview, openPdf, close, download } = usePdfPreview();
 
   if (!budget) return <Loading />;
   const b = budget;
@@ -69,6 +71,15 @@ export default function OrcamentoDetail() {
     }
   }
   const customer = customers.find((c) => c.id === b.customerId);
+  const whatsappLink = () => {
+    if (!customer) return undefined;
+    const base = (() => {
+      const msg = [`Olá, ${customer.name}!`, `Orçamento ${b.number} no valor de ${formatBRL(b.total)}`].join('\n');
+      return encodeURIComponent(msg);
+    })();
+    const num = telToWhats(customer.whatsapp || customer.phone);
+    return num ? `https://wa.me/${num}?text=${base}` : undefined;
+  };
   const company = companies[0];
 
   function startEdit() {
@@ -124,21 +135,13 @@ export default function OrcamentoDetail() {
   }
 
   function baixarPDF() {
-    try {
-      const doc = generatePDF();
-      doc.save(`orcamento-${b.number}.pdf`);
-      toast('success', 'PDF gerado!');
-    } catch {
-      toast('error', 'Não foi possível gerar o PDF. Tente novamente.');
-    }
+    visualizarPDF();
   }
 
   function visualizarPDF() {
     try {
       const doc = generatePDF();
-      const blob = doc.output('blob');
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      openPdf(doc, `orcamento-${b.number}.pdf`, `Orçamento ${b.number}`);
     } catch {
       toast('error', 'Não foi possível visualizar o PDF. Tente novamente.');
     }
@@ -349,6 +352,7 @@ export default function OrcamentoDetail() {
           <Button variant="success" full onClick={agendarServico}><CalendarPlus size={16} /> Agendar serviço</Button>
         )}
       </div>
+      <PdfPreviewModal preview={preview} onClose={close} onDownload={download} whatsappHref={whatsappLink()} />
     </div>
   );
 }

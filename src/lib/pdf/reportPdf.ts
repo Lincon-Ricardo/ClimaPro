@@ -12,7 +12,7 @@ export async function exportReportPdf(opts: {
   techRanking: TechRank[];
   serviceMix: ServiceMixItem[];
   debtors: Debtor[];
-}): Promise<void> {
+}) {
   const pdfTheme = await import('./theme');
   const { createPdf, drawBrandHeader, drawBrandFooter, sectionLabel, divider, text, stampFooters, newBrandedPage } = pdfTheme;
   const ctx = createPdf(opts.company);
@@ -88,5 +88,6 @@ export async function exportReportPdf(opts: {
   }
 
   stampFooters(ctx, opts.company);
-  doc.save(`Relatorio-ClimaPro-${todayISO()}.pdf`);
+  if ((opts as unknown as { save?: boolean }).save) doc.save(`Relatorio-ClimaPro-${todayISO()}.pdf`);
+  return doc;
 }

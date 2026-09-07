@@ -9,6 +9,7 @@ import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
 import { formatBRL, telToWhats } from '../lib/utils';
+import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { useToast } from '../components/Toast';
 import {
   rangeBounds, filterOrdersByPeriod, filterBudgetsByPeriod,
@@ -41,6 +42,7 @@ export default function Relatorios() {
   const [range, setRange] = useState<RangeKey>('mes');
   const [techFilter, setTechFilter] = useState<string>('todos');
   const [generating, setGenerating] = useState(false);
+  const { preview, openPdf, close, download } = usePdfPreview();
 
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const company = companies[0];
@@ -77,8 +79,8 @@ export default function Relatorios() {
   async function exportPDF() {
     setGenerating(true);
     try {
-      await exportReportPdf({ company, label, from, to, techFilter, kpi, techRanking, serviceMix, debtors });
-      toast('success', 'Relatório em PDF gerado!');
+      const doc = await exportReportPdf({ company, label, from, to, techFilter, kpi, techRanking, serviceMix, debtors });
+      openPdf(doc, `Relatorio-ClimaPro-${label.replace(/\s+/g, '-')}.pdf`, `Relatório · ${label}`);
     } catch (e: any) {
       toast('error', 'Não foi possível gerar o PDF: ' + (e?.message || 'erro'));
     } finally {
@@ -302,6 +304,7 @@ export default function Relatorios() {
           Taxa de conversão: <b className="text-emerald-600">{kpi.conversion.toFixed(1)}%</b> · Valor parado no funil: <b className="text-amber-600">{formatBRL(kpi.pipelineValue)}</b>
         </p>
       </Card>
+      <PdfPreviewModal preview={preview} onClose={close} onDownload={download} />
     </div>
   );
 }
