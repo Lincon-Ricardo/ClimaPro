@@ -143,6 +143,7 @@ export default function ServicoDetail() {
   const [signOpen, setSignOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [payBusy, setPayBusy] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderMonths, setReminderMonths] = useState(3);
   const sigRef = useRef<SignatureCanvas>(null);
@@ -167,6 +168,10 @@ export default function ServicoDetail() {
 
   const { setField, toggleItem, saveSignature, markPaid } = useServiceOrderActions(order);
 
+  useEffect(() => {
+    if (payOpen && order?.paymentMethod) setPaymentMethod(order.paymentMethod);
+  }, [payOpen, order?.paymentMethod]);
+
   if (!order) return null;
   const o = order;
   const customer = customers.find((c) => c.id === o.customerId);
@@ -190,9 +195,57 @@ export default function ServicoDetail() {
   }
 
   async function handleMarkPaid() {
-    await markPaid(paymentMethod);
-    setPayOpen(false);
-    toast('success', 'Pagamento registrado como pago.');
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode alterar o pagamento.');
+      return;
+    }
+    setPayBusy(true);
+    try {
+      await markPaid(paymentMethod);
+      setPayOpen(false);
+      toast('success', 'Pagamento registrado como pago.');
+    } finally {
+      setPayBusy(false);
+    }
+  }
+
+  async function handleChangeMethod() {
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode alterar o pagamento.');
+      return;
+    }
+    setPayBusy(true);
+    try {
+      const valid = ['dinheiro', 'pix', 'cartao', 'transferencia', 'outro'] as const;
+      type PayMethod = (typeof valid)[number];
+      const method: PayMethod = (valid as readonly string[]).includes(paymentMethod) ? (paymentMethod as PayMethod) : 'outro';
+      await db.serviceOrders.update(o.id, { paymentMethod: method, paymentStatus: 'pago' });
+      const pay = await db.payments.where('serviceOrderId').equals(o.id).first();
+      if (pay) await db.payments.update(pay.id, { method, status: 'pago' as const });
+      toast('success', `Método alterado para ${method}.`);
+      setPayOpen(false);
+    } catch {
+      toast('error', 'Não foi possível alterar o método.');
+    } finally {
+      setPayBusy(false);
+    }
+  }
+
+  async function handleUnpay() {
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode alterar o pagamento.');
+      return;
+    }
+    setPayBusy(true);
+    try {
+      await db.serviceOrders.update(o.id, { paymentStatus: 'pendente' });
+      const pay = await db.payments.where('serviceOrderId').equals(o.id).first();
+      if (pay) await db.payments.update(pay.id, { status: 'pendente' as const });
+      toast('info', 'Pagamento voltou para pendente.');
+      setPayOpen(false);
+    } finally {
+      setPayBusy(false);
+    }
   }
 
   function generatePDF() {
@@ -349,13 +402,21 @@ export default function ServicoDetail() {
                       </div>
                     </div>
                     {isPaid ? (
-                      <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
-                        <CheckCircle2 size={14} /> Pago
-                      </span>
-                    ) : (
+                      isAdmin ? (
+                        <Button size="sm" variant="light" onClick={() => setPayOpen(true)} className="shrink-0 shadow-lg">
+                          <Pencil size={13} /> Editar
+                        </Button>
+                      ) : (
+                        <span className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+                          <CheckCircle2 size={14} /> Pago
+                        </span>
+                      )
+                    ) : isAdmin ? (
                       <Button size="sm" variant="light" onClick={() => setPayOpen(true)} className="shrink-0 shadow-lg">
                         <Banknote size={16} /> Registrar
                       </Button>
+                    ) : (
+                      <span className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-bold text-white/80">Somente dono altera</span>
                     )}
                   </div>
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -501,7 +562,7 @@ export default function ServicoDetail() {
         )}
       </Card>
 
-      <Modal open={payOpen} onClose={() => setPayOpen(false)} title="Registrar pagamento">
+      <Modal open={payOpen} onClose={() => setPayOpen(false)} title={o.paymentStatus === 'pago' ? 'Editar pagamento' : 'Registrar pagamento'}>
         <div className="space-y-3">
           <Select label="Método de pagamento" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
             <option value="dinheiro">Dinheiro</option>
@@ -510,9 +571,21 @@ export default function ServicoDetail() {
             <option value="transferencia">Transferência</option>
             <option value="outro">Outro</option>
           </Select>
+          {o.paymentStatus === 'pago' && (
+            <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
+              <CheckCircle2 size={14} /> Já recebido via {o.paymentMethod || '—'} — altere o método ou volte para pendente.
+            </div>
+          )}
           <div className="flex gap-3">
             <Button variant="outline" type="button" onClick={() => setPayOpen(false)}>Cancelar</Button>
-            <Button onClick={handleMarkPaid}>Marcar como pago</Button>
+            {o.paymentStatus === 'pago' ? (
+              <>
+                <Button variant="secondary" onClick={handleUnpay} disabled={payBusy}>Voltar p/ pendente</Button>
+                <Button onClick={handleChangeMethod} disabled={payBusy}>{payBusy ? 'Salvando...' : 'Salvar método'}</Button>
+              </>
+            ) : (
+              <Button onClick={handleMarkPaid} disabled={payBusy}>{payBusy ? 'Salvando...' : 'Marcar como pago'}</Button>
+            )}
           </div>
         </div>
       </Modal>
