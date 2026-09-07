@@ -1,4 +1,4 @@
-import { formatBRL, formatDate } from '../utils';
+import { formatBRL, formatDate, paymentLabel } from '../utils';
 import { STATUS_LABEL } from '../utils';
 import type { Company, Customer, Equipment, ServiceOrder, ChecklistItem } from '../../types';
 import {
@@ -20,7 +20,7 @@ export function generateServiceOrderPdf(
   const ctx = createPdf(company);
   const { doc, c, ML, MR, CW, PH } = ctx;
   const payLabel = o.paymentStatus === 'pago' ? 'Pago' : 'Pendente';
-  const payMethod = o.paymentStatus === 'pago' && o.paymentMethod ? ` · ${o.paymentMethod}` : '';
+  const payMethod = o.paymentStatus === 'pago' && o.paymentMethod ? ` · ${paymentLabel(o.paymentMethod)}` : '';
   const headerArgs = {
     company,
     title: 'ORDEM DE SERVIÇO',

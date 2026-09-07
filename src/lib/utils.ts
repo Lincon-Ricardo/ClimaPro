@@ -151,10 +151,28 @@ export const SERVICE_TYPES = [
 export const PAYMENT_METHODS = [
   { value: 'dinheiro', label: 'Dinheiro' },
   { value: 'pix', label: 'PIX' },
-  { value: 'cartao', label: 'Cartão' },
+  { value: 'cartao_credito', label: 'Cartão de crédito' },
+  { value: 'cartao_debito', label: 'Cartão de débito' },
   { value: 'transferencia', label: 'Transferência' },
+  { value: 'boleto', label: 'Boleto' },
   { value: 'outro', label: 'Outro' },
-];
+] as const;
+
+export const PAYMENT_LABEL: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.label]),
+);
+
+export function paymentLabel(v?: string | null): string {
+  if (!v) return '—';
+  return PAYMENT_LABEL[v] || (v === 'cartao' ? 'Cartão' : v);
+}
+
+export function normalizePaymentMethod(v?: string | null): string {
+  if (!v) return 'outro';
+  if (v === 'cartao') return 'cartao_credito';
+  const valid = PAYMENT_METHODS.map((m) => m.value) as readonly string[];
+  return valid.includes(v) ? v : 'outro';
+}
 
 export const EQUIPMENT_TYPES = [
   'Split Higien Wall',

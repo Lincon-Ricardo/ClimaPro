@@ -7,7 +7,14 @@ export type ServiceStatus =
   | 'concluido'
   | 'cancelado';
 
-export type PaymentMethod = 'dinheiro' | 'pix' | 'cartao' | 'transferencia' | 'outro';
+export type PaymentMethod =
+  | 'dinheiro'
+  | 'pix'
+  | 'cartao_credito'
+  | 'cartao_debito'
+  | 'transferencia'
+  | 'boleto'
+  | 'outro';
 export type PaymentStatus = 'pendente' | 'pago';
 
 export interface User {

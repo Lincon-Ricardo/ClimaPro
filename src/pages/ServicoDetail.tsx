@@ -19,7 +19,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
 import {
   STATUS_LABEL, STATUS_STYLE, formatBRL, formatDate, telToWhats,
-  toggleChecklistItem, addMonths,
+  toggleChecklistItem, addMonths, PAYMENT_METHODS, paymentLabel, normalizePaymentMethod,
 } from '../lib/utils';
 import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
 import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
@@ -218,9 +218,7 @@ export default function ServicoDetail() {
     }
     setPayBusy(true);
     try {
-      const valid = ['dinheiro', 'pix', 'cartao', 'transferencia', 'outro'] as const;
-      type PayMethod = (typeof valid)[number];
-      const method: PayMethod = (valid as readonly string[]).includes(paymentMethod) ? (paymentMethod as PayMethod) : 'outro';
+      const method = normalizePaymentMethod(paymentMethod) as NonNullable<ServiceOrder['paymentMethod']>;
       await db.serviceOrders.update(o.id, { paymentMethod: method, paymentStatus: 'pago' });
       const pay = await db.payments.where('serviceOrderId').equals(o.id).first();
       if (pay) await db.payments.update(pay.id, { method, status: 'pago' as const });
@@ -392,7 +390,7 @@ export default function ServicoDetail() {
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-white via-white to-neutral-50 p-0 shadow-card dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-800">
           {(() => {
             const isPaid = o.paymentStatus === 'pago';
-            const methodLabel = o.paymentMethod ? { dinheiro: 'Dinheiro', pix: 'PIX', cartao: 'Cartão', transferencia: 'Transferência', outro: 'Outro' }[o.paymentMethod] || o.paymentMethod : null;
+            const methodLabel = paymentLabel(o.paymentMethod);
             const dueDate = o.reminderMonths && o.date ? addMonths(o.date, o.reminderMonths) : null;
             return (
               <>
@@ -571,15 +569,13 @@ export default function ServicoDetail() {
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={o.paymentStatus === 'pago' ? 'Editar pagamento' : 'Registrar pagamento'}>
         <div className="space-y-3">
           <Select label="Método de pagamento" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-            <option value="dinheiro">Dinheiro</option>
-            <option value="pix">PIX</option>
-            <option value="cartao">Cartão</option>
-            <option value="transferencia">Transferência</option>
-            <option value="outro">Outro</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
           </Select>
           {o.paymentStatus === 'pago' && (
             <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 size={14} /> Já recebido via {o.paymentMethod || '—'} — altere o método ou volte para pendente.
+              <CheckCircle2 size={14} /> Já recebido via {paymentLabel(o.paymentMethod)} — altere o método ou volte para pendente.
             </div>
           )}
           <div className="flex gap-3">

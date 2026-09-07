@@ -1,6 +1,6 @@
 import { db } from '../lib/db';
-import { toggleChecklistItem, todayISO } from '../lib/utils';
-import type { ChecklistItem, PaymentMethod, ServiceOrder } from '../types';
+import { toggleChecklistItem, todayISO, normalizePaymentMethod } from '../lib/utils';
+import type { ChecklistItem, ServiceOrder } from '../types';
 
 export function useServiceOrderActions(order: ServiceOrder | undefined) {
   async function setField(changes: Partial<ServiceOrder>) {
@@ -24,9 +24,7 @@ export function useServiceOrderActions(order: ServiceOrder | undefined) {
 
   async function markPaid(paymentMethod: string) {
     if (!order) return;
-    const method = (['dinheiro', 'pix', 'cartao', 'transferencia', 'outro'] as const).includes(paymentMethod as PaymentMethod)
-      ? (paymentMethod as PaymentMethod)
-      : 'outro';
+    const method = normalizePaymentMethod(paymentMethod) as ServiceOrder['paymentMethod'];
     await setField({ paymentStatus: 'pago', paymentMethod: method });
     const payment = await db.payments.where('serviceOrderId').equals(order.id).first();
     const changes = {
