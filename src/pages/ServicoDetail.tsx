@@ -4,7 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
   CheckCircle2, Clock, Trash2, Loader2, Wallet, CreditCard, Banknote,
-  Repeat, CalendarClock,
+  Repeat, CalendarClock, MapPin, Phone,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
@@ -288,20 +288,47 @@ export default function ServicoDetail() {
       </Card>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <div className="font-bold text-neutral-800 dark:text-neutral-100">Cliente</div>
-          <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Nome</dt><dd className="font-medium">{customer?.name || '-'}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Telefone</dt><dd className="font-medium">{customer?.phone || '-'}</dd></div>
-            <div className="flex justify-between"><dt className="text-neutral-500 dark:text-neutral-400">Endereço</dt><dd className="font-medium">{o.address || customer?.street || '-'}</dd></div>
-          </dl>
-          {eq && (
-            <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-              <div className="text-xs font-semibold uppercase text-neutral-400">Equipamento</div>
-              <div className="mt-1 text-sm font-medium text-neutral-700 dark:text-neutral-200">{eq.brand} {eq.model} · {eq.btus} BTU</div>
-              <div className="text-xs text-neutral-500 dark:text-neutral-400">{eq.installLocation}</div>
+        <Card className="p-0">
+          <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800 sm:px-5">
+            <div className="break-words text-base font-extrabold leading-tight text-neutral-800 dark:text-neutral-100 sm:text-lg">
+              {customer?.name || 'Cliente'}
             </div>
-          )}
+            {(customer?.phone || customer?.whatsapp) && (
+              <a
+                href={`tel:${(customer?.phone || customer?.whatsapp || '').replace(/\D/g, '')}`}
+                className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:underline dark:text-primary-300"
+              >
+                <Phone size={12} /> {customer?.phone || customer?.whatsapp}
+              </a>
+            )}
+          </div>
+          <div className="space-y-3 px-4 py-3.5 sm:px-5">
+            <div className="flex items-start gap-2.5 rounded-2xl bg-neutral-50 p-3 dark:bg-neutral-900/60">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+                <MapPin size={15} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Endereço do atendimento</p>
+                <p className="mt-0.5 break-words text-sm font-medium leading-relaxed text-neutral-800 dark:text-neutral-100">
+                  {[
+                    o.address,
+                    [customer?.street, customer?.number].filter(Boolean).join(', '),
+                    customer?.complement,
+                    customer?.district,
+                    customer?.city,
+                    customer?.zip,
+                  ].filter(Boolean).join(' · ') || '—'}
+                </p>
+              </div>
+            </div>
+            {eq && (
+              <div className="border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <div className="text-xs font-semibold uppercase text-neutral-400">Equipamento</div>
+                <div className="mt-1 break-words text-sm font-medium text-neutral-700 dark:text-neutral-200">{eq.brand} {eq.model} · {eq.btus} BTU</div>
+                <div className="break-words text-xs text-neutral-500 dark:text-neutral-400">{eq.installLocation}</div>
+              </div>
+            )}
+          </div>
         </Card>
 
         <Card className="overflow-hidden border-0 bg-gradient-to-br from-white via-white to-neutral-50 p-0 shadow-card dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-800">
