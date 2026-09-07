@@ -80,9 +80,10 @@ export default function Servicos() {
         paymentStatus: 'pendente',
         createdAt: new Date().toISOString().slice(0, 10),
       });
-      toast('success', `Retorno agendado para ${formatDate(remindDate)}!`);
+      toast('success', `Retorno agendado para ${formatDate(remindDate)}! Ver na Agenda.`);
       setRemindOpen(false);
       setRemindTarget(null);
+      navigate(`/app/agenda?date=${remindDate}`);
     } catch {
       toast('error', 'Não foi possível agendar. Tente novamente.');
     } finally {

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
@@ -21,8 +21,25 @@ export default function Agenda() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const team = useLiveQuery(() => db.users.toArray(), []) || [];
   const isAdmin = user?.role === 'admin';
-  const [view, setView] = useState<'dia' | 'semana' | 'mes'>('semana');
-  const [anchor, setAnchor] = useState(new Date());
+  const [params] = useSearchParams();
+  const initialDate = params.get('date');
+  const [view, setView] = useState<'dia' | 'semana' | 'mes'>(initialDate ? 'dia' : 'semana');
+  const [anchor, setAnchor] = useState(() => {
+    if (initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)) {
+      const [y, m, d] = initialDate.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    return new Date();
+  });
+
+  useEffect(() => {
+    const d = params.get('date');
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [y, m, day] = d.split('-').map(Number);
+      setAnchor(new Date(y, m - 1, day));
+      setView('dia');
+    }
+  }, [params]);
 
   const weekDays = useMemo(() => {
     const start = new Date(anchor);
