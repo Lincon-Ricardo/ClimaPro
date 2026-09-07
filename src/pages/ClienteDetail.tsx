@@ -119,11 +119,25 @@ export default function ClienteDetail() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 dark:bg-primary-900/40 text-2xl font-extrabold text-primary-700 dark:text-primary-300">
               {customer.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h1 className="text-2xl font-extrabold text-neutral-800 dark:text-neutral-100">{customer.name}</h1>
-              <div className="flex items-center gap-1 text-sm text-neutral-500 dark:text-neutral-400">
-                <MapPin size={14} /> {customer.street}, {customer.number} - {customer.city}
+            <div className="min-w-0">
+              <h1 className="break-words text-2xl font-extrabold leading-tight text-neutral-800 dark:text-neutral-100">{customer.name}</h1>
+              <div className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-neutral-500 dark:text-neutral-400">
+                <MapPin size={14} className="mt-0.5 shrink-0 text-neutral-400" />
+                <span className="break-words">
+                  {[
+                    [customer.street, customer.number].filter(Boolean).join(', '),
+                    customer.complement,
+                    customer.district,
+                    customer.city,
+                    customer.zip,
+                  ].filter(Boolean).join(' · ') || 'Sem endereço cadastrado'}
+                </span>
               </div>
+              {(customer.phone || customer.document) && (
+                <div className="mt-1 break-words text-xs text-neutral-400">
+                  {[customer.phone, customer.document ? `CPF/CNPJ ${customer.document}` : null].filter(Boolean).join(' · ')}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -107,6 +107,7 @@ export default function EditarCliente() {
           <Input label="Nº" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
           <Input label="Complemento" value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} />
         </div>
+        {form.complement && <p className="break-words text-xs text-neutral-400">Complemento: {form.complement}</p>}
         <Textarea label="Observações" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         <div className="flex gap-3">
           <Button variant="outline" type="button" onClick={() => navigate(`/app/clientes/${id}`)}>Cancelar</Button>
