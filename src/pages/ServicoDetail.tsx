@@ -4,7 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import {
   MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
   CheckCircle2, Clock, Trash2, Loader2, Wallet, CreditCard, Banknote,
-  Repeat, CalendarClock, MapPin, Phone,
+  Repeat, CalendarClock, MapPin, Phone, CalendarDays,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
@@ -147,6 +147,10 @@ export default function ServicoDetail() {
   const [payBusy, setPayBusy] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderMonths, setReminderMonths] = useState(3);
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaDate, setAgendaDate] = useState('');
+  const [agendaTime, setAgendaTime] = useState('');
+  const [agendaBusy, setAgendaBusy] = useState(false);
   const sigRef = useRef<SignatureCanvas>(null);
   const [obs, setObs] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
@@ -280,6 +284,40 @@ export default function ServicoDetail() {
           <div className="flex flex-wrap gap-2">
             {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm" className="flex-1 sm:flex-none"><MessageCircle size={16} /> WhatsApp</Button>}
             <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1 sm:flex-none"><FileDown size={16} /> PDF</Button>
+            {o.date ? (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => navigate(`/app/agenda?date=${o.date}`)} title="Ver esta OS na Agenda" className="flex-1 sm:flex-none">
+                  <CalendarDays size={16} /> Na agenda
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAgendaDate(o.date);
+                    setAgendaTime(o.time || '09:00');
+                    setAgendaOpen(true);
+                  }}
+                  title="Mudar data/hora"
+                  aria-label="Reagendar"
+                >
+                  <Clock size={16} />
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setAgendaDate(todayISO());
+                  setAgendaTime(o.time || '09:00');
+                  setAgendaOpen(true);
+                }}
+                title="Escolher data e colocar na agenda"
+                className="flex-1 sm:flex-none"
+              >
+                <CalendarDays size={16} /> Agendar
+              </Button>
+            )}
             <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
           </div>
         }
@@ -646,6 +684,67 @@ export default function ServicoDetail() {
           <div className="flex gap-3">
             <Button variant="outline" type="button" onClick={() => setReminderOpen(false)} className="dark:border-neutral-600 dark:text-white">Cancelar</Button>
             <Button onClick={() => { setField({ reminderMonths }); setReminderOpen(false); toast('success', `Lembrete a cada ${reminderMonths} ${reminderMonths === 1 ? 'mês' : 'meses'} ativado!`); }}>Salvar</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={agendaOpen} onClose={() => setAgendaOpen(false)} title="Colocar na agenda">
+        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-300">
+          {o.date ? `Atual: ${formatDate(o.date)}${o.time ? ` às ${o.time}` : ''}. Escolha a nova data.` : 'Escolha a data do atendimento.'}
+        </p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-neutral-600 dark:text-neutral-300">Data</label>
+              <input type="date" value={agendaDate} onChange={(e) => setAgendaDate(e.target.value)} className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-white" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-neutral-600 dark:text-neutral-300">Hora</label>
+              <input type="time" value={agendaTime} onChange={(e) => setAgendaTime(e.target.value)} className="w-full rounded-xl border border-neutral-300 px-3 py-2.5 text-sm dark:border-neutral-600 dark:bg-neutral-800 dark:text-white" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {(['+1', '+7', '+30'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  const base = new Date(`${agendaDate || todayISO()}T00:00:00`);
+                  base.setDate(base.getDate() + Number(s));
+                  const iso = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
+                  setAgendaDate(iso);
+                }}
+                className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-2 text-xs font-bold text-neutral-600 hover:border-primary-300 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+              >
+                {s === '+1' ? 'Amanhã' : s === '+7' ? '+7 dias' : '+30 dias'}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" type="button" onClick={() => setAgendaOpen(false)}>Cancelar</Button>
+            <Button
+              full
+              disabled={agendaBusy || !agendaDate}
+              onClick={async () => {
+                if (!agendaDate) {
+                  toast('error', 'Escolha a data.');
+                  return;
+                }
+                setAgendaBusy(true);
+                try {
+                  await setField({ date: agendaDate, time: agendaTime || o.time || '09:00', status: o.status === 'agendado' || o.status === 'em_andamento' ? o.status : 'agendado' });
+                  toast('success', `Na agenda em ${formatDate(agendaDate)}!`);
+                  setAgendaOpen(false);
+                  setTimeout(() => navigate(`/app/agenda?date=${agendaDate}`), 700);
+                } catch {
+                  toast('error', 'Não foi possível agendar.');
+                } finally {
+                  setAgendaBusy(false);
+                }
+              }}
+            >
+              <CalendarDays size={16} /> {agendaBusy ? 'Agendando...' : 'Colocar na agenda'}
+            </Button>
           </div>
         </div>
       </Modal>
