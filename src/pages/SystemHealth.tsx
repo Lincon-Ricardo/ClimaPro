@@ -1,47 +1,117 @@
-import { useState } from 'react';
-import { Activity, Trash2, Copy, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Activity, Trash2, Copy, CheckCircle2, AlertTriangle, Info, RefreshCw, Radio } from 'lucide-react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { getRecentLogs, clearLogs } from '../lib/logger';
+import { getAudit, clearAudit } from '../lib/audit';
 import { useToast } from '../components/Toast';
-import { isSupabaseConfiguredSync } from '../lib/supabaseClient';
+import { runHealthChecks, realtimeResult, type HealthResult } from '../lib/health';
+import { subscribeRealtimeStatus } from '../lib/realtime';
+
+const STATE_STYLE: Record<string, string> = {
+  ok: 'text-emerald-600',
+  warn: 'text-amber-500',
+  error: 'text-red-500',
+  checking: 'text-sky-500',
+};
+
+const STATE_DOT: Record<string, string> = {
+  ok: 'bg-emerald-500',
+  warn: 'bg-amber-400',
+  error: 'bg-red-500',
+  checking: 'bg-sky-500 animate-pulse',
+};
 
 export default function SystemHealth() {
   const toast = useToast();
   const [logs, setLogs] = useState(getRecentLogs());
   const [copied, setCopied] = useState(false);
+  const [checks, setChecks] = useState<HealthResult[]>([]);
+  const [checking, setChecking] = useState(true);
 
-  function refresh() {
-    setLogs(getRecentLogs());
-  }
+  const refresh = useCallback(() => setLogs(getRecentLogs()), []);
+  const runChecks = useCallback(async () => {
+    setChecking(true);
+    try {
+      setChecks(await runHealthChecks());
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    runChecks();
+    return subscribeRealtimeStatus((s) => {
+      setChecks((prev) => {
+        if (prev.length === 0) return prev;
+        return prev.map((c) => (c.key === 'realtime' ? realtimeResult(s) : c));
+      });
+    });
+  }, [runChecks]);
 
   function handleClear() {
     clearLogs();
+    clearAudit();
     setLogs([]);
     toast('info', 'Logs locais limpos.');
   }
 
   function handleCopy() {
-    const txt = logs.map((l) => `[${l.ts}] ${l.level.toUpperCase()} [${l.scope}] ${l.message} ${l.extra ? JSON.stringify(l.extra) : ''}`).join('\n');
+    const audit = getAudit();
+    const txt = [
+      '== HEALTH ==',
+      ...checks.map((c) => `${c.label}: ${c.state.toUpperCase()} ${c.ms ? `(${c.ms}ms)` : ''} — ${c.detail}`),
+      '== LOGS ==',
+      ...logs.map((l) => `[${l.ts}] ${l.level.toUpperCase()} [${l.scope}] ${l.message} ${l.extra ? JSON.stringify(l.extra) : ''}`),
+      '== AUDIT ==',
+      ...audit.map((a) => `[${a.ts}] ${a.actor} ${a.action} ${a.entity}:${a.entityId} ${a.detail || ''}`),
+    ].join('\n');
     navigator.clipboard.writeText(txt || 'Sem logs registrados.').then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast('success', 'Logs copiados! Envie ao suporte.');
-    });
+      toast('success', 'Diagnóstico copiado! Envie ao suporte.');
+    }).catch(() => toast('error', 'Não foi possível copiar.'));
   }
 
   const errors = logs.filter((l) => l.level === 'error').length;
   const warns = logs.filter((l) => l.level === 'warn').length;
+  const worst = checks.some((c) => c.state === 'error') ? 'error' : checks.some((c) => c.state === 'warn') ? 'warn' : 'ok';
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl space-y-4">
-      <PageHeader title="Saúde do sistema" subtitle="Diagnóstico técnico para suporte" />
+      <PageHeader
+        title="Saúde do sistema"
+        subtitle="Sincronizado com Supabase, banco, fotos e tempo real"
+        action={<Button size="sm" variant="outline" onClick={runChecks} disabled={checking}><RefreshCw size={14} className={checking ? 'animate-spin' : ''} /> {checking ? 'Testando...' : 'Testar agora'}</Button>}
+      />
+
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {checks.map((c) => (
+          <Card key={c.key} className="p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5">
+              <span className={`h-2.5 w-2.5 rounded-full ${STATE_DOT[c.state]}`} />
+              {c.key === 'realtime' && <Radio size={13} className="text-neutral-400" />}
+            </div>
+            <div className={`mt-1 text-sm font-black ${STATE_STYLE[c.state]}`}>
+              {c.state === 'ok' ? 'OK' : c.state === 'warn' ? 'Atenção' : c.state === 'error' ? 'Falha' : '...'}
+              {c.ms !== undefined && <span className="ml-1 text-[11px] font-semibold text-neutral-400">{c.ms}ms</span>}
+            </div>
+            <div className="text-[11px] font-semibold text-neutral-500">{c.label}</div>
+            <div className="mt-0.5 break-words text-[10px] leading-tight text-neutral-400">{c.detail}</div>
+          </Card>
+        ))}
+        {checks.length === 0 && (
+          <Card className="col-span-2 p-3 text-center sm:col-span-4"><p className="text-xs text-neutral-400">Testando conexão...</p></Card>
+        )}
+      </div>
 
       <div className="grid grid-cols-3 gap-2.5">
         <Card className="p-3 text-center">
-          <div className="text-xl font-black text-emerald-600">{isSupabaseConfiguredSync() ? '●' : '○'}</div>
-          <div className="text-[11px] font-semibold text-neutral-500">Backend</div>
+          <div className={`text-xl font-black ${worst === 'ok' ? 'text-emerald-600' : worst === 'warn' ? 'text-amber-500' : 'text-red-500'}`}>
+            {worst === 'ok' ? '●' : worst === 'warn' ? '◐' : '○'}
+          </div>
+          <div className="text-[11px] font-semibold text-neutral-500">Geral</div>
         </Card>
         <Card className="p-3 text-center">
           <div className="text-xl font-black text-red-500">{errors}</div>
