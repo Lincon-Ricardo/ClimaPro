@@ -446,11 +446,11 @@ export default function ServicoDetail() {
                     </p>
                     {dueDate ? (
                       <div className="mt-3">
-                        <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 dark:border-sky-800 dark:bg-sky-900/40">
-                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-200">
-                            <CalendarClock size={14} /> Próximo em {formatDate(dueDate)}
+                        <div className="flex items-center justify-between gap-2 rounded-xl border border-sky-300 bg-sky-100 px-3 py-2.5 dark:border-sky-500 dark:bg-sky-800/60">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-800 dark:text-white">
+                            <CalendarClock size={14} className="shrink-0" /> Próximo em {formatDate(dueDate)}
                           </span>
-                          <span className="rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-bold text-white">
+                          <span className="shrink-0 rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-bold text-white">
                             a cada {o.reminderMonths} {o.reminderMonths === 1 ? 'mês' : 'meses'}
                           </span>
                         </div>
@@ -597,7 +597,7 @@ export default function ServicoDetail() {
       </Modal>
 
       <Modal open={reminderOpen} onClose={() => setReminderOpen(false)} title="Lembrete de manutenção">
-        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">Quando devemos te lembrar deste cliente?</p>
+        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-300">Quando devemos te lembrar deste cliente?</p>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {([
@@ -610,15 +610,16 @@ export default function ServicoDetail() {
                 key={o.v}
                 type="button"
                 onClick={() => setReminderMonths(o.v)}
-                className={`rounded-2xl border-2 p-3 text-left transition ${reminderMonths === o.v ? 'border-primary-600 bg-primary-50 dark:border-primary-500 dark:bg-primary-950/40' : 'border-neutral-200 bg-white hover:border-primary-300 dark:border-neutral-700 dark:bg-neutral-800'}`}
+                aria-pressed={reminderMonths === o.v}
+                className={`rounded-2xl border-2 p-3 text-left transition ${reminderMonths === o.v ? 'border-primary-600 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/40' : 'border-neutral-200 bg-white hover:border-primary-300 dark:border-neutral-600 dark:bg-neutral-700 dark:hover:border-primary-500'}`}
               >
-                <span className="block text-sm font-black text-neutral-800 dark:text-neutral-100">{o.label}</span>
-                <span className="text-[11px] text-neutral-500">{o.desc}</span>
+                <span className={`block text-sm font-black ${reminderMonths === o.v ? 'text-primary-800 dark:text-white' : 'text-neutral-800 dark:text-white'}`}>{o.label}</span>
+                <span className={`text-[11px] ${reminderMonths === o.v ? 'text-primary-600 dark:text-primary-200' : 'text-neutral-500 dark:text-neutral-300'}`}>{o.desc}</span>
               </button>
             ))}
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" type="button" onClick={() => setReminderOpen(false)}>Cancelar</Button>
+            <Button variant="outline" type="button" onClick={() => setReminderOpen(false)} className="dark:border-neutral-600 dark:text-white">Cancelar</Button>
             <Button onClick={() => { setField({ reminderMonths }); setReminderOpen(false); toast('success', `Lembrete a cada ${reminderMonths} ${reminderMonths === 1 ? 'mês' : 'meses'} ativado!`); }}>Salvar</Button>
           </div>
         </div>
