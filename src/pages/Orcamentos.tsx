@@ -86,7 +86,7 @@ export default function Orcamentos() {
       ) : (
         <div className="space-y-3">
           {budgets.map((b) => (
-            <Card key={b.id} onClick={() => navigate(`/app/orcamentos/${b.id}`)}>
+            <Card key={b.id} className={isAdmin ? 'border-red-100/50 dark:border-red-900/30' : undefined} onClick={() => navigate(`/app/orcamentos/${b.id}`)}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -103,17 +103,18 @@ export default function Orcamentos() {
                       {STATUS_LABEL[b.status] || b.status}
                     </span>
                   </div>
-                  {isAdmin && (
+                  {isAdmin ? (
                     <button
                       type="button"
+                      data-testid={`delete-budget-${b.id}`}
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: b.id, number: b.number }); }}
-                      className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
-                      title="Excluir orçamento (dono)"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-danger transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+                      title="Excluir orçamento (somente dono)"
                       aria-label={`Excluir orçamento ${b.number}`}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={17} />
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </Card>
