@@ -310,8 +310,7 @@ export default function ServicoDetail() {
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Endereço do atendimento</p>
                 <p className="mt-0.5 break-words text-sm font-medium leading-relaxed text-neutral-800 dark:text-neutral-100">
-                  {[
-                    o.address,
+                  {(o.address && o.address.trim()) || [
                     [customer?.street, customer?.number].filter(Boolean).join(', '),
                     customer?.complement,
                     customer?.district,
