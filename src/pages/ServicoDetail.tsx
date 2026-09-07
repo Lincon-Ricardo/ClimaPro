@@ -19,7 +19,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
 import {
   STATUS_LABEL, STATUS_STYLE, formatBRL, formatDate, telToWhats,
-  toggleChecklistItem, addMonths, PAYMENT_METHODS, paymentLabel, normalizePaymentMethod,
+  toggleChecklistItem, addMonths, todayISO, PAYMENT_METHODS, paymentLabel, normalizePaymentMethod,
 } from '../lib/utils';
 import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
 import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
@@ -468,8 +468,35 @@ export default function ServicoDetail() {
                             key={m}
                             type="button"
                             onClick={async () => {
+                              const baseDate = o.date || todayISO();
+                              const due = addMonths(baseDate, m);
                               await setField({ reminderMonths: m });
-                              toast('success', m === 1 ? 'Lembrete mensal ativado!' : `Lembrete a cada ${m} meses!`);
+                              try {
+                                await db.serviceOrders.add({
+                                  id: crypto.randomUUID(),
+                                  osNumber: `OS-${String(Date.now()).slice(-5)}`,
+                                  customerId: o.customerId,
+                                  equipmentId: o.equipmentId,
+                                  problem: `Manutenção preventiva (origem ${o.osNumber})`,
+                                  service: o.service || 'Manutenção preventiva',
+                                  value: o.value,
+                                  date: due,
+                                  time: o.time || '09:00',
+                                  address: o.address,
+                                  technician: o.technician,
+                                  status: 'agendado',
+                                  checklist: [],
+                                  fotosAntes: [],
+                                  fotosDurante: [],
+                                  fotosDepois: [],
+                                  observacoesTecnicas: '',
+                                  paymentStatus: 'pendente',
+                                  createdAt: new Date().toISOString().slice(0, 10),
+                                });
+                                toast('success', `Manutenção em ${formatDate(due)} agendada!`);
+                              } catch {
+                                toast('success', m === 1 ? 'Lembrete mensal ativado!' : `Lembrete a cada ${m} meses!`);
+                              }
                             }}
                             className="rounded-xl border border-neutral-300 bg-neutral-50 px-2 py-2.5 text-center transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-700 dark:hover:border-primary-500 dark:hover:bg-primary-900/30"
                           >
