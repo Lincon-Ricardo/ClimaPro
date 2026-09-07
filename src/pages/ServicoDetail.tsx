@@ -431,17 +431,17 @@ export default function ServicoDetail() {
                 </div>
 
                 <div className="space-y-3 p-4 sm:p-5">
-                  <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-700 dark:bg-neutral-800/60">
-                    <div className="flex items-center gap-2 text-sm font-bold text-neutral-800 dark:text-neutral-100">
-                      <Repeat size={16} className="text-primary-600" /> Lembrete recorrente
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-600 dark:bg-neutral-800">
+                    <div className="flex items-center gap-2 text-sm font-bold text-neutral-800 dark:text-white">
+                      <Repeat size={16} className="text-primary-600 dark:text-primary-400" /> Lembrete recorrente
                     </div>
-                    <p className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+                    <p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-neutral-300">
                       Transforme esta OS em receita previsível. Receba alerta quando for hora de revisitar o cliente.
                     </p>
                     {dueDate ? (
                       <div className="mt-3">
-                        <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2.5 dark:bg-sky-950/30">
-                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+                        <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 dark:border-sky-800 dark:bg-sky-900/40">
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-200">
                             <CalendarClock size={14} /> Próximo em {formatDate(dueDate)}
                           </span>
                           <span className="rounded-full bg-sky-600 px-2.5 py-1 text-[11px] font-bold text-white">
@@ -449,10 +449,10 @@ export default function ServicoDetail() {
                           </span>
                         </div>
                         <div className="mt-2 flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setReminderOpen(true)} className="flex-1">
+                          <Button variant="outline" size="sm" onClick={() => setReminderOpen(true)} className="flex-1 dark:border-neutral-600 dark:text-white">
                             Alterar
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setField({ reminderMonths: null as unknown as number })} className="text-danger dark:text-red-300">
+                          <Button variant="ghost" size="sm" onClick={() => setField({ reminderMonths: null as unknown as number })} className="text-danger dark:text-red-300 dark:hover:bg-red-950/30">
                             Remover
                           </Button>
                         </div>
@@ -467,10 +467,10 @@ export default function ServicoDetail() {
                               await setField({ reminderMonths: m });
                               toast('success', m === 1 ? 'Lembrete mensal ativado!' : `Lembrete a cada ${m} meses!`);
                             }}
-                            className="rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-2.5 text-center transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-primary-700 dark:hover:bg-primary-950/30"
+                            className="rounded-xl border border-neutral-300 bg-neutral-50 px-2 py-2.5 text-center transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-700 dark:hover:border-primary-500 dark:hover:bg-primary-900/30"
                           >
-                            <span className="block text-lg font-black text-neutral-800 dark:text-neutral-100">{m}</span>
-                            <span className="text-[10px] font-bold uppercase text-neutral-500">{m === 1 ? 'mês' : 'meses'}</span>
+                            <span className="block text-lg font-black text-neutral-900 dark:text-white">{m}</span>
+                            <span className="text-[10px] font-bold uppercase text-neutral-600 dark:text-neutral-300">{m === 1 ? 'mês' : 'meses'}</span>
                           </button>
                         ))}
                       </div>
