@@ -472,8 +472,9 @@ export default function ServicoDetail() {
                               const due = addMonths(baseDate, m);
                               await setField({ reminderMonths: m });
                               try {
+                                const newId = crypto.randomUUID();
                                 await db.serviceOrders.add({
-                                  id: crypto.randomUUID(),
+                                  id: newId,
                                   osNumber: `OS-${String(Date.now()).slice(-5)}`,
                                   customerId: o.customerId,
                                   equipmentId: o.equipmentId,
@@ -493,7 +494,8 @@ export default function ServicoDetail() {
                                   paymentStatus: 'pendente',
                                   createdAt: new Date().toISOString().slice(0, 10),
                                 });
-                                toast('success', `Manutenção em ${formatDate(due)} agendada!`);
+                                toast('success', `Manutenção em ${formatDate(due)} agendada! Toque para ver na Agenda.`);
+                                setTimeout(() => navigate(`/app/agenda?date=${due}`), 900);
                               } catch {
                                 toast('success', m === 1 ? 'Lembrete mensal ativado!' : `Lembrete a cada ${m} meses!`);
                               }
