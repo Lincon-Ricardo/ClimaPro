@@ -12,6 +12,7 @@ import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { audit } from '../lib/audit';
+import { useAuth } from '../context/AuthContext';
 import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
 import { Loading } from '../components/Loading';
 import { generateBudgetPdf } from '../lib/pdf/budgetPdf';
@@ -34,6 +35,8 @@ export default function OrcamentoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const budget = useLiveQuery(() => db.budgets.get(id!), [id]);
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
@@ -45,10 +48,14 @@ export default function OrcamentoDetail() {
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode apagar orçamentos.');
+      return;
+    }
     setDeleting(true);
     try {
       await db.budgets.delete(b.id);
-      try { audit({ actor: 'admin', action: 'delete_budget', entity: 'budgets', entityId: b.id, detail: b.number }); } catch { /* noop */ }
+      try { audit({ actor: user?.email || 'admin', action: 'delete_budget', entity: 'budgets', entityId: b.id, detail: b.number }); } catch { /* noop */ }
       toast('success', 'Orçamento excluído!');
       navigate('/app/orcamentos');
     } catch {
@@ -216,7 +223,7 @@ export default function OrcamentoDetail() {
             {!editing && (
               <Button variant="outline" size="sm" onClick={startEdit}><Pencil size={15} /> Editar</Button>
             )}
-            <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir orçamento" title="Excluir orçamento"><Trash2 size={15} /></Button>
+            {isAdmin && <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir orçamento" title="Excluir orçamento (dono)"><Trash2 size={15} /></Button>}
             <ConfirmDialog
               open={confirmDelete}
               title={`Excluir orçamento ${b.number}?`}

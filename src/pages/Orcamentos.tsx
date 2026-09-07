@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Wallet, Plus, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -29,6 +30,8 @@ const STATUS_LABEL: Record<string, string> = {
 export default function Orcamentos() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; number: string } | null>(null);
@@ -36,6 +39,10 @@ export default function Orcamentos() {
 
   async function confirmDelete() {
     if (!deleteTarget) return;
+    if (!isAdmin) {
+      toast('error', 'Somente o dono pode apagar orçamentos.');
+      return;
+    }
     setDeleting(true);
     try {
       await db.budgets.delete(deleteTarget.id);
@@ -96,15 +103,17 @@ export default function Orcamentos() {
                       {STATUS_LABEL[b.status] || b.status}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: b.id, number: b.number }); }}
-                    className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
-                    title="Excluir orçamento"
-                    aria-label={`Excluir orçamento ${b.number}`}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: b.id, number: b.number }); }}
+                      className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/40 dark:hover:text-red-300"
+                      title="Excluir orçamento (dono)"
+                      aria-label={`Excluir orçamento ${b.number}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             </Card>
