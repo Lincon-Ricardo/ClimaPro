@@ -80,6 +80,15 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const READ_ONLY_PATHS = ['/app', '/app/clientes', '/app/servicos', '/app/agenda', '/app/orcamentos', '/app/relatorios', '/app/financeiro'];
+
+function BillingGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return <>{children}</>;
+}
+
+export { BillingGuard, READ_ONLY_PATHS };
+
 export default function App() {
   const { user } = useAuth();
 

@@ -75,7 +75,7 @@ export default function Planos() {
   const { sub, plan, isTrial } = useSubscription();
   const [busy, setBusy] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
-  const [method, setMethod] = useState<CheckoutMethod>('pix');
+  const [method, setMethod] = useState<CheckoutMethod>('card');
   const [pix, setPix] = useState<{ qr: string | null; code: string | null; url: string | null } | null>(null);
 
   const left = sub ? trialDaysLeft(sub) : 0;
@@ -88,11 +88,16 @@ export default function Planos() {
   async function handleSubscribe(planKey: string) {
     setBusy(planKey);
     try {
+      const { track } = await import('../lib/analytics');
+      track('checkout_start', { plan: planKey, cycle: annual ? 'yearly' : 'monthly', method });
       const result = await startCheckout(planKey, annual ? 'yearly' : 'monthly', method);
       if (method === 'pix' && (result.pixQr || result.pixCode)) {
         setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl });
-        toast('success', 'QR Code PIX gerado! Escaneie para pagar e depois clique em Já paguei.');
+        toast('success', result.message || 'QR Code PIX gerado! Escaneie para pagar e depois clique em Já paguei.');
         return;
+      }
+      if (result.pixManual && result.message) {
+        toast('info', result.message);
       }
       if (result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
@@ -163,14 +168,14 @@ export default function Planos() {
           </div>
 
           <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
-            {(['pix', 'card', 'boleto'] as CheckoutMethod[]).map((m) => (
+            {(['card', 'pix', 'boleto'] as CheckoutMethod[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMethod(m)}
                 className={`rounded-full px-5 py-2 text-xs font-black uppercase transition ${method === m ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
               >
-                {m === 'pix' ? 'PIX' : m === 'card' ? 'Cartão' : 'Boleto'}
+                {m === 'pix' ? 'PIX' : m === 'card' ? 'Cartão ★' : 'Boleto'}
               </button>
             ))}
           </div>
@@ -297,7 +302,7 @@ export default function Planos() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPix(null)}>
           <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-black text-neutral-900 dark:text-white">Pague com PIX</h3>
-            <p className="mt-1 text-xs text-neutral-500">Escaneie o QR Code e depois clique em Já paguei.</p>
+            <p className="mt-1 text-xs text-neutral-500">PIX vale para a 1ª parcela — a recorrência mensal é no cartão. Escaneie e clique em Já paguei.</p>
             {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-52 w-52 rounded-2xl border" />}
             {pix.code && (
               <button

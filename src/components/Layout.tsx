@@ -1,5 +1,6 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useSubscription } from '../hooks/useSubscription';
 import {
   Home,
   CalendarDays,
@@ -64,7 +65,15 @@ export function Layout() {
   ) ?? 0;
 
   const isTech = user?.role === 'tech';
+  const location = useLocation();
+  const { locked } = useSubscription();
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+
+  useEffect(() => {
+    if (locked && user?.role === 'admin' && !location.pathname.startsWith('/app/expirado') && !location.pathname.startsWith('/app/planos') && !location.pathname.startsWith('/app/config')) {
+      navigate('/app/expirado');
+    }
+  }, [locked, location.pathname]);
   const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
 
   // Navegação do Técnico (Cockpit de Campo) — rótulo muda conforme regra da empresa
@@ -207,6 +216,16 @@ export function Layout() {
           {!isTech && <BillingBanner />}
           <Outlet />
         </main>
+        {!locked && (
+          <button
+            type="button"
+            aria-label="Nova OS"
+            onClick={() => navigate('/app/servicos/novo')}
+            className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-xl font-black text-white shadow-2xl transition hover:bg-primary-800 active:scale-95 md:bottom-8 md:right-8"
+          >
+            +
+          </button>
+        )}
         <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-700 dark:bg-neutral-900">
           {currentBottomItems.map((it) => (
             <NavItem

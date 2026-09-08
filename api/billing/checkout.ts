@@ -102,8 +102,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const method = String((body as any)?.method || 'pix').toLowerCase();
-    const billingType = method === 'card' ? 'CREDIT_CARD' : method === 'boleto' ? 'BOLETO' : 'PIX';
+    const method = String((body as any)?.method || 'card').toLowerCase();
+    const billingType = method === 'pix' ? 'PIX' : method === 'boleto' ? 'BOLETO' : 'CREDIT_CARD';
+    const pixManual = billingType === 'PIX' && billing.cycle === 'monthly';
     const subscription = await asaasRequest<AsaasSubscription>('/subscriptions', {
       method: 'POST',
       body: JSON.stringify({
@@ -141,7 +142,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       updated_at: new Date().toISOString(),
     }, { onConflict: 'company_id' });
 
-    return response.status(200).json({ checkoutUrl, subscriptionId: subscription.id, pixQr, pixCode, billingType });
+    return response.status(200).json({ checkoutUrl, subscriptionId: subscription.id, pixQr, pixCode, billingType, pixManual, message: pixManual ? 'PIX válido para a 1ª parcela. As próximas são geradas todo mês no app — ative o lembrete.' : null });
   } catch (error: any) {
     console.error('[billing/checkout]', error);
     return response.status(400).json({ error: error?.message || 'Não foi possível criar a assinatura.' });

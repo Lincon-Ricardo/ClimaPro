@@ -23,12 +23,42 @@ const STATE_DOT: Record<string, string> = {
   checking: 'bg-sky-500 animate-pulse',
 };
 
+function FunnelBlock({ tick }: { tick: number }) {
+  const [stats, setStats] = useState({ signup: 0, firstOs: 0, checkout: 0, paid: 0, activation: 0, checkoutRate: 0, paidRate: 0, events: [] as any[] });
+  useEffect(() => {
+    import('../lib/analytics').then((m) => setStats(m.funnelStats() as any));
+  }, [tick]);
+  const cells = [
+    { label: 'Cadastros', value: stats.signup },
+    { label: '1ª OS', value: stats.firstOs },
+    { label: 'Checkout', value: stats.checkout },
+    { label: 'Pagos', value: stats.paid },
+    { label: 'Ativação', value: `${stats.activation}%` },
+    { label: 'Checkout/OS', value: `${stats.checkoutRate}%` },
+    { label: 'Pago/Checkout', value: `${stats.paidRate}%` },
+  ];
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {cells.map((c) => (
+          <div key={c.label} className="rounded-xl bg-neutral-50 p-3 text-center dark:bg-neutral-900/60">
+            <div className="text-xl font-black text-neutral-900 dark:text-white">{c.value}</div>
+            <div className="text-[11px] font-semibold text-neutral-500">{c.label}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-neutral-400">Meta sênior: ativação ≥60% · checkout/OS ≥25% · pago/checkout ≥70%.</p>
+    </div>
+  );
+}
+
 export default function SystemHealth() {
   const toast = useToast();
   const [logs, setLogs] = useState(getRecentLogs());
   const [copied, setCopied] = useState(false);
   const [checks, setChecks] = useState<HealthResult[]>([]);
   const [checking, setChecking] = useState(true);
+  const [funnelTick, setFunnelTick] = useState(0);
 
   const refresh = useCallback(() => setLogs(getRecentLogs()), []);
   const runChecks = useCallback(async () => {
@@ -122,6 +152,16 @@ export default function SystemHealth() {
           <div className="text-[11px] font-semibold text-neutral-500">Avisos</div>
         </Card>
       </div>
+
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold">
+            <Activity size={16} className="text-primary-600" /> Funil de vendas (neste navegador)
+          </h2>
+          <Button size="sm" variant="outline" onClick={() => setFunnelTick((t) => t + 1)}>Atualizar</Button>
+        </div>
+        <FunnelBlock tick={funnelTick} />
+      </Card>
 
       <Card>
         <div className="mb-3 flex items-center justify-between">

@@ -114,6 +114,8 @@ export default function NovaOS() {
         paymentStatus: 'pendente',
         createdAt: new Date().toISOString().slice(0, 10),
       });
+      const { track } = await import('../lib/analytics');
+      track('first_os');
       toast('success', 'Serviço agendado!');
       navigate('/app/agenda');
     } finally {

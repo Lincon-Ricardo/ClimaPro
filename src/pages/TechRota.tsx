@@ -209,19 +209,19 @@ export default function TechRota() {
                   </div>
 
                   {/* Barra de Ações Rápidas de Campo (1 toque) */}
-                  <div className="mt-4 grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                     {/* Waze / Maps */}
                     <button
                       type="button"
                       onClick={() => openWaze(fullAddress)}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
+                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
                     >
                       <Navigation size={15} /> Waze
                     </button>
                     <button
                       type="button"
                       onClick={() => openMaps(fullAddress)}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-700/60 dark:text-neutral-200"
+                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-700/60 dark:text-neutral-200"
                     >
                       <MapPin size={15} /> Maps
                     </button>
@@ -230,7 +230,7 @@ export default function TechRota() {
                     <button
                       type="button"
                       onClick={() => notifyArrival(o)}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
                     >
                       <MessageCircle size={15} /> A caminho
                     </button>
@@ -240,7 +240,7 @@ export default function TechRota() {
                       <button
                         type="button"
                         onClick={() => quickStart(o)}
-                        className="flex items-center justify-center gap-1.5 rounded-xl bg-primary-700 px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-primary-800"
+                        className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl bg-primary-700 px-3 text-sm font-bold text-white shadow-sm transition hover:bg-primary-800"
                       >
                         <Play size={14} /> Iniciar
                       </button>
@@ -249,7 +249,7 @@ export default function TechRota() {
                       <button
                         type="button"
                         onClick={() => navigate(`/app/servicos/${o.id}`)}
-                        className="flex items-center justify-center gap-1.5 rounded-xl bg-neutral-800 px-3 py-2.5 text-xs font-bold text-white transition hover:bg-neutral-900 dark:bg-neutral-700"
+                        className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl bg-neutral-800 px-3 text-sm font-bold text-white transition hover:bg-neutral-900 dark:bg-neutral-700"
                       >
                         Ver detalhes <ChevronRight size={14} />
                       </button>

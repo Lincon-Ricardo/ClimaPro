@@ -25,6 +25,8 @@ export default function Expirado() {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'Falha na sincronização.');
       if (body.synced) {
+        const { track } = await import('../lib/analytics');
+        track('checkout_paid');
         toast('success', 'Pagamento confirmado! Seu plano foi liberado.');
         window.location.assign('/app');
       } else {
