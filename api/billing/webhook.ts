@@ -11,8 +11,9 @@ function statusFromEvent(event: string): string | null {
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método não permitido.' });
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
-  const received = request.headers['asaas-access-token'] || request.headers['x-asaas-token'];
-  const receivedToken = Array.isArray(received) ? received[0] : received;
+  const h = request.headers as Record<string, string | string[] | undefined>;
+  const pick = (v: string | string[] | undefined) => Array.isArray(v) ? v[0] : v;
+  const receivedToken = pick(h['asaas-access-token']) || pick(h['x-asaas-token']) || pick(h['webhook-token']) || (request.query as any)?.token;
   if (!expected || !receivedToken || receivedToken !== expected) return response.status(401).json({ error: 'Não autorizado.' });
 
   try {
