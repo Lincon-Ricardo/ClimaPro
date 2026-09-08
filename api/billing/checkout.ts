@@ -43,13 +43,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
     customerId = current?.asaas_customer_id || '';
 
     if (!customerId) {
+      const doc = String(company.cnpj || '').replace(/\D/g, '');
+      if (doc && doc.length !== 11 && doc.length !== 14) {
+        return response.status(400).json({ error: 'CPF/CNPJ da empresa inválido. Corrija em Empresa antes de assinar.' });
+      }
       const customer = await asaasRequest<AsaasCustomer>('/customers', {
         method: 'POST',
         body: JSON.stringify({
           name: company.name,
           email: company.email || profile.email || auth.user.email,
           phone: company.phone || undefined,
-          cpfCnpj: company.cnpj || undefined,
+          cpfCnpj: doc || undefined,
           externalReference: profile.company_id,
         }),
       });
