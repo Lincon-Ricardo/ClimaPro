@@ -1,11 +1,41 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snowflake, Lock, Download, Eye, FileDown, ArrowRight, MessageCircle } from 'lucide-react';
+import { Snowflake, Lock, Download, Eye, FileDown, ArrowRight, MessageCircle, RefreshCw } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { Button } from '../components/Button';
+import { useToast } from '../components/Toast';
+import { supabase } from '../lib/supabaseClient';
 
 export default function Expirado() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { osThisMonth, techCount } = useSubscription();
+  const [syncing, setSyncing] = useState(false);
+
+  async function handleSync() {
+    setSyncing(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sua sessão expirou. Entre novamente.');
+      const response = await fetch('/api/billing/sync', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || 'Falha na sincronização.');
+      if (body.synced) {
+        toast('success', 'Pagamento confirmado! Seu plano foi liberado.');
+        window.location.assign('/app');
+      } else {
+        toast('info', body.message || 'Pagamento ainda pendente no Asaas.');
+      }
+    } catch (error: any) {
+      toast('error', error?.message || 'Não foi possível sincronizar.');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-4 py-6 text-center">
@@ -36,6 +66,9 @@ export default function Expirado() {
       <div className="space-y-2">
         <Button full onClick={() => navigate('/app/planos')}>
           Ver planos a partir de R$ 47/mês <ArrowRight size={16} />
+        </Button>
+        <Button full variant="outline" disabled={syncing} onClick={handleSync}>
+          <RefreshCw size={16} /> {syncing ? 'Verificando pagamento...' : 'Já paguei — liberar meu acesso'}
         </Button>
         <Button
           full
