@@ -9,7 +9,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { formatBRL } from '../lib/utils';
-import { startCheckout } from '../lib/billing';
+import { startCheckout, type CheckoutMethod } from '../lib/billing';
 
 const PLAN_STYLE: Record<string, { icon: any; gradient: string; glow: string; accent: string }> = {
   start: {
@@ -75,6 +75,8 @@ export default function Planos() {
   const { sub, plan, isTrial } = useSubscription();
   const [busy, setBusy] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
+  const [method, setMethod] = useState<CheckoutMethod>('pix');
+  const [pix, setPix] = useState<{ qr: string | null; code: string | null; url: string | null } | null>(null);
 
   const left = sub ? trialDaysLeft(sub) : 0;
   const trialPct = Math.max(0, Math.min(100, ((14 - left) / 14) * 100));
@@ -86,7 +88,12 @@ export default function Planos() {
   async function handleSubscribe(planKey: string) {
     setBusy(planKey);
     try {
-      const result = await startCheckout(planKey, annual ? 'yearly' : 'monthly');
+      const result = await startCheckout(planKey, annual ? 'yearly' : 'monthly', method);
+      if (method === 'pix' && (result.pixQr || result.pixCode)) {
+        setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl });
+        toast('success', 'QR Code PIX gerado! Escaneie para pagar e depois clique em Já paguei.');
+        return;
+      }
       if (result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
       } else {
@@ -153,6 +160,19 @@ export default function Planos() {
             <span className="flex items-center gap-1"><ShieldCheck size={13} className="text-emerald-400" /> 14 dias grátis</span>
             <span className="flex items-center gap-1"><Zap size={13} className="text-amber-300" /> Ativação imediata</span>
             <span className="flex items-center gap-1"><Headset size={13} className="text-sky-300" /> Suporte em português</span>
+          </div>
+
+          <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
+            {(['pix', 'card', 'boleto'] as CheckoutMethod[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMethod(m)}
+                className={`rounded-full px-5 py-2 text-xs font-black uppercase transition ${method === m ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
+              >
+                {m === 'pix' ? 'PIX' : m === 'card' ? 'Cartão' : 'Boleto'}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -272,6 +292,32 @@ export default function Planos() {
           O pagamento é feito pelo Asaas (PIX, boleto ou cartão) e liberamos seu acesso automaticamente.
         </p>
       </Card>
+
+      {pix && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPix(null)}>
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Pague com PIX</h3>
+            <p className="mt-1 text-xs text-neutral-500">Escaneie o QR Code e depois clique em Já paguei.</p>
+            {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-52 w-52 rounded-2xl border" />}
+            {pix.code && (
+              <button
+                type="button"
+                onClick={() => { navigator.clipboard?.writeText(pix.code || ''); toast('success', 'Código PIX copiado!'); }}
+                className="mt-3 w-full break-all rounded-xl bg-neutral-100 p-3 text-left text-[11px] font-mono text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200"
+              >
+                {pix.code}
+              </button>
+            )}
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {pix.url && (
+                <Button variant="outline" onClick={() => window.open(pix.url || '', '_blank')}>Abrir fatura</Button>
+              )}
+              <Button onClick={() => window.location.assign('/app/expirado')}>Já paguei</Button>
+            </div>
+            <button type="button" onClick={() => setPix(null)} className="mt-2 w-full py-1 text-xs text-neutral-400 hover:underline">Fechar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

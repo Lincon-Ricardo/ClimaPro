@@ -96,11 +96,13 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const method = String((body as any)?.method || 'pix').toLowerCase();
+    const billingType = method === 'card' ? 'CREDIT_CARD' : method === 'boleto' ? 'BOLETO' : 'PIX';
     const subscription = await asaasRequest<AsaasSubscription>('/subscriptions', {
       method: 'POST',
       body: JSON.stringify({
         customer: customerId,
-        billingType: 'UNDEFINED',
+        billingType,
         value: billing.value,
         cycle: billing.asaasCycle,
         nextDueDate,
@@ -111,7 +113,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     const payments = await asaasRequest<{ data?: AsaasPayment[] }>(`/subscriptions/${subscription.id}/payments`);
     const payment = payments.data?.[0];
-    const checkoutUrl = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.paymentLink || null;
+    let checkoutUrl = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.paymentLink || null;
+    let pixQr: string | null = null;
+    let pixCode: string | null = null;
+    if (billingType === 'PIX' && (payment as any)?.id) {
+      try {
+        const qr = await asaasRequest<{ encodedImage?: string; payload?: string }>(`/payments/${(payment as any).id}/pixQrCode`, { method: 'GET' });
+        pixQr = qr.encodedImage ? `data:image/png;base64,${qr.encodedImage}` : null;
+        pixCode = qr.payload || null;
+        if (!checkoutUrl) checkoutUrl = payment?.invoiceUrl || null;
+      } catch { /* mantém checkoutUrl padrão */ }
+    }
 
     await supabase.from('subscriptions').upsert({
       company_id: profile.company_id,
@@ -123,7 +135,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       updated_at: new Date().toISOString(),
     }, { onConflict: 'company_id' });
 
-    return response.status(200).json({ checkoutUrl, subscriptionId: subscription.id });
+    return response.status(200).json({ checkoutUrl, subscriptionId: subscription.id, pixQr, pixCode, billingType });
   } catch (error: any) {
     console.error('[billing/checkout]', error);
     return response.status(400).json({ error: error?.message || 'Não foi possível criar a assinatura.' });
