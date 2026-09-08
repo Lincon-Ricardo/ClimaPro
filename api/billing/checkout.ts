@@ -34,11 +34,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
     let customerId = '';
     const { data: current } = await supabase
       .from('subscriptions')
-      .select('asaas_customer_id, asaas_subscription_id, status')
+      .select('asaas_customer_id, asaas_subscription_id, status, plan, billing_cycle')
       .eq('company_id', profile.company_id)
       .maybeSingle();
+    const samePlan = current?.asaas_subscription_id && (current as any).plan === billing.planKey && (current as any).billing_cycle === billing.cycle && ['active', 'past_due'].includes(current.status);
+    if (samePlan) {
+      return response.status(409).json({ error: 'Sua empresa já está neste plano. Para trocar, escolha outro plano ou ciclo.' });
+    }
     if (current?.asaas_subscription_id && ['active', 'past_due'].includes(current.status)) {
-      return response.status(409).json({ error: 'Sua empresa já possui uma assinatura em andamento.' });
+      try {
+        await asaasRequest(`/subscriptions/${current.asaas_subscription_id}`, { method: 'DELETE' });
+      } catch { /* segue e cria a nova mesmo se a antiga já estiver inativa no Asaas */ }
     }
     customerId = current?.asaas_customer_id || '';
 
