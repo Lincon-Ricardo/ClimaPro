@@ -76,7 +76,11 @@ export type BudgetInput = z.infer<typeof budgetSchema>;
 // Company
 export const companySchema = z.object({
   name: z.string().min(3, 'Nome da empresa obrigatório'),
-  cnpj: z.string().min(14, 'CNPJ inválido').optional().or(z.literal('')),
+  cnpj: z.string().refine((v) => {
+    if (!v) return true;
+    const clean = v.replace(/\D/g, '');
+    return clean.length === 11 || clean.length === 14;
+  }, 'CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos').optional().or(z.literal('')),
   phone: z.string().min(10, 'Telefone inválido'),
   whatsapp: z.string().min(10, 'WhatsApp inválido').optional().or(z.literal('')),
   email: z.string().email('E-mail inválido'),
