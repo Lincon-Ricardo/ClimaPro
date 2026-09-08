@@ -47,27 +47,50 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (doc && doc.length !== 11 && doc.length !== 14) {
         return response.status(400).json({ error: 'CPF/CNPJ da empresa inválido. Corrija em Empresa antes de assinar.' });
       }
+      const email = company.email || profile.email || auth.user.email || '';
       const base = {
         name: company.name,
-        email: company.email || profile.email || auth.user.email,
+        email,
         phone: company.phone || undefined,
         externalReference: profile.company_id,
       };
-      try {
-        const customer = await asaasRequest<AsaasCustomer>('/customers', {
-          method: 'POST',
-          body: JSON.stringify(doc ? { ...base, cpfCnpj: doc } : base),
-        });
-        customerId = customer.id;
-      } catch (e: any) {
-        if (doc && /cpf|cnpj/i.test(e?.message || '')) {
-          const retry = await asaasRequest<AsaasCustomer>('/customers', {
+      const findExisting = async (): Promise<string> => {
+        const queries = [
+          ...(doc ? [`/customers?cpfCnpj=${doc}`] : []),
+          ...(email ? [`/customers?email=${encodeURIComponent(email)}`] : []),
+        ];
+        for (const q of queries) {
+          try {
+            const found = await asaasRequest<{ data?: { id: string }[] }>(q, { method: 'GET' });
+            if (found.data?.[0]?.id) return found.data[0].id;
+          } catch { /* ignora e tenta proxima */ }
+        }
+        return '';
+      };
+      customerId = await findExisting();
+      if (!customerId) {
+        try {
+          const customer = await asaasRequest<AsaasCustomer>('/customers', {
             method: 'POST',
-            body: JSON.stringify(base),
+            body: JSON.stringify(doc ? { ...base, cpfCnpj: doc } : base),
           });
-          customerId = retry.id;
-        } else {
-          throw e;
+          customerId = customer.id;
+        } catch (e: any) {
+          customerId = await findExisting();
+          if (!customerId) {
+            if (doc) {
+              try {
+                const retry = await asaasRequest<AsaasCustomer>('/customers', {
+                  method: 'POST',
+                  body: JSON.stringify(base),
+                });
+                customerId = retry.id;
+              } catch {
+                customerId = await findExisting();
+              }
+            }
+            if (!customerId) throw e;
+          }
         }
       }
     }
