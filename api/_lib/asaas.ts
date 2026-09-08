@@ -18,6 +18,7 @@ export async function asaasRequest<T>(path: string, init: RequestInit = {}): Pro
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
+    console.error('[asaas]', path, response.status, JSON.stringify(body).slice(0, 2000));
     const detail = Array.isArray(body?.errors) ? body.errors.map((e: any) => e.description).join('; ') : 'Resposta inválida do Asaas.';
     throw new Error(detail);
   }
