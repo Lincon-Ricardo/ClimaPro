@@ -1,5 +1,5 @@
-import { asaasRequest, getBillingPlan, type AsaasCustomer, type AsaasPayment, type AsaasSubscription } from '../_lib/asaas';
-import { getAdminClient, getBearerToken } from '../_lib/supabase';
+import { asaasRequest, getBillingPlan, type AsaasCustomer, type AsaasPayment, type AsaasSubscription } from '../_lib/asaas.js';
+import { getAdminClient, getBearerToken } from '../_lib/supabase.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {

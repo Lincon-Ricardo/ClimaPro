@@ -1,4 +1,4 @@
-import { getAdminClient } from '../_lib/supabase';
+import { getAdminClient } from '../_lib/supabase.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 function statusFromEvent(event: string): string | null {
