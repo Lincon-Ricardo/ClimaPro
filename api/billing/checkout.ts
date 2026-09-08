@@ -47,17 +47,29 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (doc && doc.length !== 11 && doc.length !== 14) {
         return response.status(400).json({ error: 'CPF/CNPJ da empresa inválido. Corrija em Empresa antes de assinar.' });
       }
-      const customer = await asaasRequest<AsaasCustomer>('/customers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: company.name,
-          email: company.email || profile.email || auth.user.email,
-          phone: company.phone || undefined,
-          cpfCnpj: doc || undefined,
-          externalReference: profile.company_id,
-        }),
-      });
-      customerId = customer.id;
+      const base = {
+        name: company.name,
+        email: company.email || profile.email || auth.user.email,
+        phone: company.phone || undefined,
+        externalReference: profile.company_id,
+      };
+      try {
+        const customer = await asaasRequest<AsaasCustomer>('/customers', {
+          method: 'POST',
+          body: JSON.stringify(doc ? { ...base, cpfCnpj: doc } : base),
+        });
+        customerId = customer.id;
+      } catch (e: any) {
+        if (doc && /cpf|cnpj/i.test(e?.message || '')) {
+          const retry = await asaasRequest<AsaasCustomer>('/customers', {
+            method: 'POST',
+            body: JSON.stringify(base),
+          });
+          customerId = retry.id;
+        } else {
+          throw e;
+        }
+      }
     }
 
     const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
