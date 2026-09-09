@@ -319,7 +319,7 @@ export default function ServicoDetail() {
             {o.date ? (
               <>
                 <Button variant="secondary" size="sm" onClick={() => navigate(`/app/agenda?date=${o.date}`)} title="Ver esta OS na Agenda" className="flex-1 sm:flex-none">
-                  <CalendarDays size={16} /> Na agenda
+                  <CalendarDays size={16} className="stroke-current" /> Na agenda
                 </Button>
                 <Button
                   variant="outline"
@@ -332,7 +332,7 @@ export default function ServicoDetail() {
                   title="Mudar data/hora"
                   aria-label="Reagendar"
                 >
-                  <Clock size={16} />
+                  <Clock size={16} className="stroke-current" />
                 </Button>
               </>
             ) : (
@@ -347,7 +347,7 @@ export default function ServicoDetail() {
                 title="Escolher data e colocar na agenda"
                 className="flex-1 sm:flex-none"
               >
-                <CalendarDays size={16} /> Agendar
+                <CalendarDays size={16} className="stroke-current" /> Agendar
               </Button>
             )}
             <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
@@ -660,7 +660,7 @@ export default function ServicoDetail() {
             <div className="text-xs text-neutral-500 dark:text-neutral-400">{o.signatureDate ? `Assinado em ${formatDate(o.signatureDate)}` : 'Ainda não assinado'}</div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setSignOpen(true)}>
-            <Pencil size={15} /> {o.customerSignature ? 'Refazer' : 'Assinar'}
+            <Pencil size={15} className="stroke-current" /> {o.customerSignature ? 'Refazer' : 'Assinar'}
           </Button>
         </div>
         {o.customerSignature && (
@@ -778,7 +778,7 @@ export default function ServicoDetail() {
                 }
               }}
             >
-              <CalendarDays size={16} /> {agendaBusy ? 'Agendando...' : 'Colocar na agenda'}
+              <CalendarDays size={16} className="stroke-current" /> {agendaBusy ? 'Agendando...' : 'Colocar na agenda'}
             </Button>
           </div>
         </div>
