@@ -27,8 +27,8 @@ export async function uploadServicePhoto(
   }
   const { data, error: urlError } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600 * 24 * 7);
   if (urlError || !data?.signedUrl) {
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return pub.publicUrl;
+    log.error('storage.signedUrl', urlError?.message || 'sem URL assinada', { orderId, step });
+    throw new Error('Upload concluído, mas não foi possível gerar acesso seguro à foto.');
   }
   return data.signedUrl;
 }
@@ -50,8 +50,8 @@ export async function deleteServicePhoto(publicUrl: string): Promise<void> {
     const path = publicUrl.slice(idx + marker.length).split('?')[0];
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
     if (error) log.warn('storage.remove', error.message, { path });
-  } catch (e: any) {
-    log.warn('storage.remove', e?.message || String(e));
+  } catch (e: unknown) {
+    log.warn('storage.remove', e instanceof Error ? e.message : String(e));
   }
 }
 

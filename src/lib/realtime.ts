@@ -1,12 +1,13 @@
 import { supabase } from './supabaseClient';
 import { emitDataChanged } from './tableBus';
 
-const channels = new Map<string, ReturnType<typeof supabase.channel>>();
+let channel: ReturnType<typeof supabase.channel> | null = null;
 let started = false;
 
 const TABLES = [
   'customers', 'service_orders', 'budgets', 'equipment', 'companies',
   'notifications', 'payments', 'profiles', 'appointments', 'materials',
+  'subscriptions',
 ] as const;
 
 export type RealtimeStatus = 'off' | 'connecting' | 'on' | 'error';
@@ -34,17 +35,15 @@ export function startRealtime(): void {
   started = true;
   setStatus('connecting');
   try {
+    const builder = supabase.channel('rt-app');
     TABLES.forEach((table) => {
-      const ch = supabase
-        .channel(`rt-${table}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-          emitDataChanged(table);
-        })
-        .subscribe((st) => {
-          if (st === 'SUBSCRIBED') setStatus('on');
-          if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') setStatus('error');
-        });
-      channels.set(table, ch);
+      builder.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+        emitDataChanged(table);
+      });
+    });
+    channel = builder.subscribe((st) => {
+      if (st === 'SUBSCRIBED') setStatus('on');
+      if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') setStatus('error');
     });
     setTimeout(() => { if (getRealtimeStatus() === 'connecting') setStatus('on'); }, 4000);
   } catch {
@@ -54,7 +53,9 @@ export function startRealtime(): void {
 }
 
 export function stopRealtime(): void {
-  channels.forEach((ch) => { try { supabase.removeChannel(ch); } catch { /* noop */ } });
-  channels.clear();
+  if (channel) {
+    try { supabase.removeChannel(channel); } catch { /* noop */ }
+    channel = null;
+  }
   started = false;
 }

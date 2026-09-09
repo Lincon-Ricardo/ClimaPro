@@ -9,7 +9,6 @@ import {
 import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
 import { Button } from '../components/Button';
-import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { formatBRL, formatDate, todayISO } from '../lib/utils';
 import { calcAdminData, calcFunnel, calcTeam, getMetaMensal, setMetaMensal, parseMetaInput } from '../lib/reports';
@@ -43,7 +42,6 @@ export default function Administrativo() {
   const orders = useLiveQuery(() => db.serviceOrders.list({ pageSize: 1000, order: { column: 'createdAt' } }).then((r) => r.rows), []) || [];
   const budgets = useLiveQuery(() => db.budgets.list({ pageSize: 1000, order: { column: 'createdAt' } }).then((r) => r.rows), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
-  const users = useLiveQuery(() => db.users.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
 
   const company = companies[0];

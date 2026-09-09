@@ -7,10 +7,10 @@ import { useMyOrders } from '../hooks/useTechOrders';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
-import { PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { formatBRL, toISODate, todayISO, formatDate } from '../lib/utils';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import type { ServiceStatus } from '../types';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -87,7 +87,7 @@ export default function Agenda() {
   const finished = orders.filter((o) => o.status === 'concluido' || o.status === 'cancelado');
   const noDate = scheduled.filter((o) => !o.date);
 
-  function matchesPeriod(o: any): boolean {
+  function matchesPeriod(o: { date?: string }): boolean {
     if (!o.date) return false;
     if (view === 'dia') return o.date === anchorISO;
     if (view === 'semana') return weekISOs.has(o.date);
@@ -100,10 +100,10 @@ export default function Agenda() {
 
   const countFor = (iso: string) => scheduled.filter((o) => o.date === iso).length;
   const heatColor = (count: number) =>
-    count === 0 ? 'bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400'
-    : count === 1 ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/60 dark:text-primary-200'
-    : count === 2 ? 'bg-primary-300 text-primary-900 dark:bg-primary-400/60 dark:text-neutral-900'
-    : 'bg-primary-600 text-white';
+    count === 0 ? 'bg-neutral-100 text-neutral-500 dark:bg-white/10 dark:text-neutral-300'
+    : count === 1 ? 'bg-sky-100 text-sky-900 dark:bg-sky-500/25 dark:text-sky-100'
+    : count === 2 ? 'bg-sky-300 text-sky-950 dark:bg-sky-400/50 dark:text-white'
+    : 'bg-gradient-to-br from-primary-700 to-sky-500 text-white';
 
   function buildMonthCells(d: Date) {
     const year = d.getFullYear();
@@ -117,7 +117,7 @@ export default function Agenda() {
   }
 
 
-  function renderDetail(o: any) {
+  function renderDetail(o: { id: string; customerId: string; address?: string; date?: string; time?: string; service?: string; technician?: string; value?: number; status: ServiceStatus }) {
     const showDate = view !== 'dia';
     const customer = customers.find((c) => c.id === o.customerId);
     const fullAddress = o.address || [customer?.street, customer?.number, customer?.district, customer?.city].filter(Boolean).join(', ');
@@ -156,12 +156,12 @@ export default function Agenda() {
                     }`}
                   >
                     <option value="">⚠️ Sem técnico — atribuir</option>
-                    {team.map((u: any) => (
+                    {team.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
                       </option>
                     ))}
-                    {o.technician && !team.some((u: any) => u.name === o.technician) && (
+                    {o.technician && !team.some((u) => u.name === o.technician) && (
                       <option value={o.technician}>{o.technician} (antigo)</option>
                     )}
                   </select>
@@ -182,34 +182,36 @@ export default function Agenda() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl">
-      <div className="mb-4">
-        <h1 className="text-lg font-extrabold text-neutral-800 dark:text-neutral-100 sm:text-xl">Agenda</h1>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">
-          {scheduled.length} agendado(s) · {done.length} encerrado(s) neste período
-        </p>
-        <Button onClick={() => navigate('/app/servicos/novo')} full className="mt-2.5 sm:mt-0 sm:w-auto"><Plus size={18} /> Novo serviço</Button>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-display break-words text-[22px] font-extrabold tracking-tight text-neutral-900 dark:text-white sm:text-[26px]">Agenda</h1>
+          <p className="mt-0.5 break-words text-xs font-medium text-neutral-500 dark:text-neutral-300 sm:text-sm">
+            {scheduled.length} agendado(s) · {done.length} encerrado(s) neste período
+          </p>
+        </div>
+        <Button onClick={() => navigate('/app/servicos/novo')} full className="sm:w-auto"><Plus size={18} /> Novo serviço</Button>
       </div>
 
-      <div className="mb-4 space-y-3">
-        <div className="flex rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-700 dark:bg-neutral-800">
+      <div className="cp-card mb-4 space-y-3 !p-3 sm:!p-4">
+        <div className="flex rounded-2xl bg-neutral-100 p-1 dark:bg-white/10">
           {(['dia', 'semana', 'mes'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize touch-manipulation ${view === v ? 'bg-primary-700 text-white' : 'text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700/60'}`}
+              className={`flex-1 rounded-xl px-2 py-2.5 text-[13px] font-extrabold capitalize touch-manipulation transition-all duration-200 active:scale-[.98] ${view === v ? 'bg-gradient-to-br from-primary-700 to-sky-600 text-white shadow' : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-white'}`}
             >
               {v === 'dia' ? 'Dia' : v === 'semana' ? 'Semana' : 'Mês'}
             </button>
           ))}
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior (7 dias)' : 'Mês anterior'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronLeft size={18} /></button>
-          <span className="min-w-0 flex-1 break-words text-center text-xs font-bold text-neutral-700 dark:text-neutral-200 sm:text-sm">
+        <div className="flex items-center gap-2">
+          <button onClick={() => move(-1)} aria-label={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior' : 'Mês anterior'} title={view === 'dia' ? 'Dia anterior' : view === 'semana' ? 'Semana anterior (7 dias)' : 'Mês anterior'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-700 transition active:scale-95 hover:bg-neutral-50 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"><ChevronLeft size={19} strokeWidth={2.5} /></button>
+          <span className="min-w-0 flex-1 break-words text-center text-xs font-extrabold text-neutral-800 dark:text-white sm:text-sm">
             {view === 'semana' ? `${formatDate(orderDate(weekDays[0]))} — ${formatDate(orderDate(weekDays[6]))}` : formatDate(orderDate(anchor))}
           </span>
-          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana (7 dias)' : 'Próximo mês'} className="rounded-lg border border-neutral-200 bg-white p-2.5 hover:bg-neutral-100 dark:border-neutral-600 dark:bg-neutral-800 dark:hover:bg-neutral-700/60"><ChevronRight size={18} /></button>
+          <button onClick={() => move(1)} aria-label={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana' : 'Próximo mês'} title={view === 'dia' ? 'Próximo dia' : view === 'semana' ? 'Próxima semana (7 dias)' : 'Próximo mês'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-neutral-700 transition active:scale-95 hover:bg-neutral-50 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"><ChevronRight size={19} strokeWidth={2.5} /></button>
           {orderDate(anchor) !== todayISO() && (
-            <button onClick={goToday} className="shrink-0 rounded-lg border border-neutral-200 bg-white px-2.5 py-2.5 text-xs font-semibold text-primary-700 hover:bg-primary-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-primary-300 dark:hover:bg-primary-900/40">Hoje</button>
+            <button onClick={goToday} className="h-11 shrink-0 rounded-2xl bg-primary-600 px-3.5 text-xs font-black text-white shadow transition active:scale-95">Hoje</button>
           )}
         </div>
       </div>

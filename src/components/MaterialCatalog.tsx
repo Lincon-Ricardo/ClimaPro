@@ -6,7 +6,7 @@ import { Button } from './Button';
 import { Input } from './Fields';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from './Toast';
-import { formatBRL, parseMoney, numberToBRLInput, uid } from '../lib/utils';
+import { formatBRL, parseMoney, numberToBRLInput } from '../lib/utils';
 import type { Material } from '../types';
 import { Package, Plus, Search, Trash2, Pencil, Check, ClipboardList } from 'lucide-react';
 
@@ -20,11 +20,12 @@ export function MaterialCatalog({
   onInsert: (m: Pick<Material, 'name' | 'unitValue'>) => void;
 }) {
   const toast = useToast();
-  const materials = useLiveQuery(() => db.materials.toArray(), []) || [];
+  const materials = useLiveQuery(() => db.materials.toArray(), [], 'materials') || [];
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [valueText, setValueText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const filtered = materials.filter((m) =>
     m.name.toLowerCase().includes(search.trim().toLowerCase())
@@ -42,55 +43,73 @@ export function MaterialCatalog({
     setValueText('');
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave() {
+    if (saving) return;
     const trimmed = name.trim();
     if (!trimmed) {
       toast('error', 'Informe o nome do material.');
       return;
     }
     const unitValue = parseMoney(valueText);
-    if (editingId) {
-      await db.materials.update(editingId, { name: trimmed, unitValue });
-      toast('success', 'Material atualizado!');
-    } else {
-      await db.materials.add({ id: uid('mat'), name: trimmed, unitValue });
-      toast('success', 'Material adicionado ao catálogo!');
+    setSaving(true);
+    try {
+      if (editingId) {
+        await db.materials.update(editingId, { name: trimmed, unitValue });
+        toast('success', 'Material atualizado!');
+      } else {
+        await db.materials.add({ id: crypto.randomUUID(), name: trimmed, unitValue });
+        toast('success', 'Material adicionado ao catálogo!');
+      }
+      resetForm();
+    } catch (err: unknown) {
+      toast('error', 'Não foi possível salvar: ' + (err instanceof Error ? err.message : 'tente novamente'));
+    } finally {
+      setSaving(false);
     }
-    resetForm();
   }
 
   const [deleteTarget, setDeleteTarget] = useState<Material | null>(null);
+  const [deleting, setDeleting] = useState(false);
   async function handleDelete(m: Material) {
     setDeleteTarget(m);
   }
   async function confirmDelete() {
-    if (!deleteTarget) return;
-    await db.materials.delete(deleteTarget.id);
-    toast('success', 'Material removido.');
-    setDeleteTarget(null);
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      await db.materials.delete(deleteTarget.id);
+      if (editingId === deleteTarget.id) resetForm();
+      toast('success', 'Material removido.');
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      toast('error', 'Não foi possível remover: ' + (err instanceof Error ? err.message : 'tente novamente'));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
     <>
     <Modal open={open} onClose={onClose} title="Catálogo de materiais" wide>
       <div className="space-y-4">
-        <form onSubmit={handleSave} className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 lg:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
+        <div className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 lg:grid-cols-[1fr_140px_auto] dark:border-neutral-700 dark:bg-neutral-900/60">
           <Input
             placeholder="Nome do material (ex.: Filtro TCL)"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
           />
           <Input
             placeholder="Valor unit."
             value={valueText}
             inputMode="decimal"
             onChange={(e) => setValueText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
           />
-          <Button type="submit" variant={editingId ? 'secondary' : 'primary'} className="sm:self-end">
-            {editingId ? <><Check size={16} /> Salvar</> : <><Plus size={16} /> Adicionar</>}
+          <Button type="button" disabled={saving} onClick={handleSave} variant={editingId ? 'secondary' : 'primary'} className="sm:self-end">
+            {editingId ? <><Check size={16} /> Salvar</> : <><Plus size={16} /> {saving ? 'Salvando…' : 'Adicionar'}</>}
           </Button>
-        </form>
+        </div>
 
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -152,6 +171,7 @@ export function MaterialCatalog({
         open={!!deleteTarget}
         title={`Remover "${deleteTarget?.name || 'material'}"?`}
         message="Essa ação não pode ser desfeita."
+        busy={deleting}
         onConfirm={confirmDelete}
         onClose={() => setDeleteTarget(null)}
       />

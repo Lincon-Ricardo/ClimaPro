@@ -1,6 +1,5 @@
-import type { PdfContext, PdfColors } from './theme';
+import type { PdfContext } from './theme';
 import { sectionLabel, text, measureLines } from './theme';
-import { setPdfFont } from './fonts';
 
 export function drawInfoBox(
   ctx: PdfContext,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snowflake, Lock, UserPlus } from 'lucide-react';
+import { Lock, UserPlus, Mail, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Fields';
@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast';
 import { Spinner } from '../components/Loading';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { loginSchema } from '../lib/schemas';
+import { AuthLayout } from '../components/AuthLayout';
 
 export default function Login() {
   const { login, loading } = useAuth();
@@ -23,11 +24,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     clearErrors();
-
-    if (!validate({ email, password })) {
-      return;
-    }
-
+    if (!validate({ email, password })) return;
     setBusy(true);
     const res = await login(email, password);
     setBusy(false);
@@ -42,65 +39,51 @@ export default function Login() {
   if (loading) return <Spinner />;
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-primary-800 to-primary-900">
-      <div className="flex items-center justify-center gap-2 pt-12">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
-          <Snowflake size={28} className="text-white" />
+    <AuthLayout title="Bem-vindo de volta 👋" subtitle="Acesse e continue gelando sem parar.">
+      <form onSubmit={handleLogin} className="cp-card rounded-[28px] p-6 sm:p-7">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-sky-500 text-white">
+            <Lock size={17} />
+          </span>
+          <div>
+            <h2 className="font-display text-lg font-extrabold text-neutral-900 dark:text-white">Entrar</h2>
+            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar</p>
+          </div>
         </div>
-        <div className="text-2xl font-extrabold text-white">ClimaPro</div>
-      </div>
-      <p className="mt-1 text-center text-sm text-primary-200">Gestão profissional para climatização</p>
 
-      <div className="mx-auto mt-8 w-full max-w-md flex-1 px-4 pb-10">
-        <form onSubmit={handleLogin} className="rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-800">
-          <h1 className="text-xl font-extrabold text-neutral-800 dark:text-neutral-100">Entrar</h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar.</p>
+        {error && (
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">{error}</div>
+        )}
 
-          {error && (
-            <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</div>
-          )}
-
-          <div className="mt-5 space-y-4">
-            <div>
-              <Input
-                label="E-mail"
-                type="email"
-                placeholder="voce@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              {hasError('email') && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getError('email')}</p>}
-            </div>
-            <div>
-              <Input
-                label="Senha"
-                type="password"
-                placeholder="••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              {hasError('password') && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getError('password')}</p>}
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/forgot-password')}
-              className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
-            >
+        <div className="mt-5 space-y-4">
+          <div className="relative">
+            <Input label="E-mail" type="email" placeholder="voce@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Mail size={15} className="pointer-events-none absolute right-4 top-[38px] text-neutral-400" />
+            {hasError('email') && <p className="mt-1 text-[13px] font-medium text-red-600 dark:text-red-300">{getError('email')}</p>}
+          </div>
+          <div className="relative">
+            <Input label="Senha" type="password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <KeyRound size={15} className="pointer-events-none absolute right-4 top-[38px] text-neutral-400" />
+            {hasError('password') && <p className="mt-1 text-[13px] font-medium text-red-600 dark:text-red-300">{getError('password')}</p>}
+          </div>
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => navigate('/forgot-password')} className="text-[13px] font-bold text-primary-600 hover:underline dark:text-primary-300">
               Esqueci minha senha
             </button>
-            <Button type="submit" full size="lg" disabled={busy}>
-              {busy ? <Spinner /> : <><Lock size={18} /> Entrar</>}
-            </Button>
+            <span className="text-[11px] font-semibold text-neutral-400">🔒 Dados protegidos</span>
           </div>
-        </form>
+          <Button type="submit" full size="lg" disabled={busy}>
+            {busy ? <Spinner /> : <><Lock size={17} /> Entrar no ClimaPro</>}
+          </Button>
+        </div>
+      </form>
 
-        <button
-          onClick={() => navigate('/onboarding')}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 py-3.5 text-sm font-semibold text-white transition hover:bg-white/20"
-        >
-          <UserPlus size={18} /> Criar conta nova
-        </button>
-      </div>
-    </div>
+      <button
+        onClick={() => navigate('/onboarding')}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 py-3.5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20 active:scale-[.99]"
+      >
+        <UserPlus size={17} /> Criar conta grátis · 14 dias Pro
+      </button>
+    </AuthLayout>
   );
 }

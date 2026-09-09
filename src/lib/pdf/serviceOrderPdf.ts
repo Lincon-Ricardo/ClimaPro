@@ -2,14 +2,14 @@ import { formatBRL, formatDate, paymentLabel } from '../utils';
 import { STATUS_LABEL } from '../utils';
 import type { Company, Customer, Equipment, ServiceOrder, ChecklistItem } from '../../types';
 import {
-  createPdf, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter,
+  createPdf, ensurePdfFonts, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter,
   textHeight, drawSignature, HEADER_SPACE, FOOTER_SPACE, fitOneLine,
   measureLines, newBrandedPage, stampFooters,
 } from './theme';
 import { drawInfoBox } from './blocks';
-import { setPdfFont } from './fonts';
+import { setPdfFont } from './fontStyle';
 
-export function generateServiceOrderPdf(
+export async function generateServiceOrderPdf(
   o: ServiceOrder,
   customer: Customer | undefined,
   eq: Equipment | undefined,
@@ -18,6 +18,7 @@ export function generateServiceOrderPdf(
   opts?: { save?: boolean },
 ) {
   const ctx = createPdf(company);
+  await ensurePdfFonts(ctx.doc);
   const { doc, c, ML, MR, CW, PH } = ctx;
   const payLabel = o.paymentStatus === 'pago' ? 'Pago' : 'Pendente';
   const payMethod = o.paymentStatus === 'pago' && o.paymentMethod ? ` · ${paymentLabel(o.paymentMethod)}` : '';

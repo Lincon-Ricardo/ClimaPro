@@ -6,10 +6,10 @@ export function Page({ children, narrow }: { children: ReactNode; narrow?: boole
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+    <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-5 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
       <div className="min-w-0 flex-1">
-        <h1 className="break-words text-lg font-extrabold leading-tight text-neutral-800 dark:text-neutral-100 sm:text-xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 break-words text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">{subtitle}</p>}
+        <h1 className="font-display break-words text-[22px] font-extrabold leading-tight tracking-tight text-neutral-900 dark:text-white sm:text-[26px]">{title}</h1>
+        {subtitle && <p className="mt-1 break-words text-[13px] font-medium text-neutral-500 dark:text-neutral-400 sm:text-sm">{subtitle}</p>}
       </div>
       {action && <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:justify-end">{action}</div>}
     </div>

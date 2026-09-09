@@ -16,7 +16,11 @@ export default function EditarCliente() {
   const customer = useLiveQuery(() => db.customers.get(id!), [id]);
   const [busy, setBusy] = useState(false);
   const [zipLoading, setZipLoading] = useState(false);
-  const [form, setForm] = useState<any>(null);
+  const [form, setForm] = useState<{
+    name: string; phone: string; whatsapp: string; email: string; document: string;
+    street: string; number: string; complement: string; district: string;
+    city: string; zip: string; notes: string;
+  } | null>(null);
 
   useEffect(() => {
     if (customer) {
@@ -42,13 +46,13 @@ export default function EditarCliente() {
         toast('error', 'CEP não encontrado.');
         return;
       }
-      setForm((f: any) => ({
+      setForm((f) => (f ? {
         ...f,
-        street: data.logradouro || f.street,
-        district: data.bairro || f.district,
-        city: data.localidade || f.city,
+        street: (data.logradouro as string) || f.street,
+        district: (data.bairro as string) || f.district,
+        city: (data.localidade as string) || f.city,
         zip: digits,
-      }));
+      } : f));
     } catch {
       toast('error', 'Não foi possível buscar o CEP.');
     } finally {
@@ -58,26 +62,27 @@ export default function EditarCliente() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
-    if (!form.name?.trim()) {
+    if (busy || !form) return;
+    const f = form;
+    if (!f.name?.trim()) {
       toast('error', 'Informe o nome do cliente.');
       return;
     }
     setBusy(true);
     try {
       await db.customers.update(id!, {
-        name: form.name,
-        phone: form.phone || '',
-        whatsapp: form.whatsapp || form.phone || '',
-        email: form.email || '',
-        document: form.document || '',
-        street: form.street || '',
-        number: form.number || '',
-        complement: form.complement || '',
-        district: form.district || '',
-        city: form.city || '',
-        zip: form.zip || '',
-        notes: form.notes || '',
+        name: f.name,
+        phone: f.phone || '',
+        whatsapp: f.whatsapp || f.phone || '',
+        email: f.email || '',
+        document: f.document || '',
+        street: f.street || '',
+        number: f.number || '',
+        complement: f.complement || '',
+        district: f.district || '',
+        city: f.city || '',
+        zip: f.zip || '',
+        notes: f.notes || '',
       });
       toast('success', 'Cliente atualizado!');
       navigate(`/app/clientes/${id}`);

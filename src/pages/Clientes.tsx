@@ -1,6 +1,6 @@
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
-import { Users, MapPin, Plus, Trash2 } from 'lucide-react';
+import { Users, MapPin, Plus, Trash2, Upload } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -67,9 +67,14 @@ export default function Clientes() {
         title="Clientes"
         subtitle={`${total} clientes`}
         action={
-          <Button onClick={() => navigate('/app/clientes/novo')}>
-            <Plus size={18} /> Novo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/app/clientes/importar')}>
+              <Upload size={16} /> Importar
+            </Button>
+            <Button onClick={() => navigate('/app/clientes/novo')}>
+              <Plus size={18} /> Novo
+            </Button>
+          </div>
         }
       />
 

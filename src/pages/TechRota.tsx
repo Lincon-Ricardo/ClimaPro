@@ -5,15 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { useMyOrders } from '../hooks/useTechOrders';
 import { db } from '../lib/db';
 import {
-  Navigation, CheckCircle2, Clock, MapPin, Phone, MessageCircle,
-  AlertTriangle, Wrench, ChevronRight, Play, ExternalLink, Calendar,
+  Navigation, MapPin, MessageCircle,
+  Wrench, ChevronRight, Play, Calendar,
   Sparkles,
 } from 'lucide-react';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
-import { PageHeader, EmptyState } from '../components/PageHeader';
+import { EmptyState } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
-import { formatDate, formatBRL, telToWhats, todayISO } from '../lib/utils';
+import { telToWhats, todayISO } from '../lib/utils';
 import { useToast } from '../components/Toast';
 
 export default function TechRota() {
@@ -69,7 +67,7 @@ export default function TechRota() {
     window.open(url, '_blank');
   }
 
-  function notifyArrival(o: any) {
+  function notifyArrival(o: { customerId: string; osNumber: string }) {
     const c = getCustomer(o.customerId);
     const ph = c?.whatsapp || c?.phone;
     if (!ph) {
@@ -80,7 +78,7 @@ export default function TechRota() {
     window.open(`https://wa.me/${telToWhats(ph)}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  async function quickStart(o: any) {
+  async function quickStart(o: { id: string; osNumber: string }) {
     try {
       await db.serviceOrders.update(o.id, { status: 'em_andamento' });
       toast('success', `OS ${o.osNumber} iniciada! Bom trabalho.`);
@@ -93,47 +91,49 @@ export default function TechRota() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
       {/* Top Header Cockpit */}
-      <div className="rounded-2xl bg-gradient-to-r from-primary-800 to-primary-950 p-5 text-white shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-xs font-semibold text-primary-200">
+      <div className="auth-shell relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#071f4c] via-[#0b3d91] to-[#1e7fc0] p-5 text-white shadow-[0_24px_70px_-24px_rgba(11,61,145,.7)] sm:p-6">
+        <div className="auth-grid pointer-events-none absolute inset-0 opacity-60" />
+        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-400/25 blur-3xl" />
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-sky-100 backdrop-blur">
               <Sparkles size={12} /> Cockpit de Campo
             </span>
-            <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight">
+            <h1 className="font-display mt-2 break-words text-[26px] font-extrabold leading-tight tracking-tight sm:text-3xl">
               Olá, {user?.firstName || 'Técnico'}!
             </h1>
-            <p className="text-xs text-primary-200">
+            <p className="mt-1 break-words text-[13px] font-medium text-sky-100/90">
               {stats.pendentes === 0 && stats.total > 0
                 ? '🎉 Todas as ordens de hoje foram concluídas!'
                 : `${stats.pendentes} atendimento(s) pendente(s) hoje`}
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-black">{stats.concluidos}/{stats.total}</div>
-            <div className="text-[11px] uppercase tracking-wider text-primary-300">Concluídos</div>
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/20 backdrop-blur sm:flex-col sm:gap-0 sm:px-5">
+            <div className="font-display text-3xl font-black leading-none">{stats.concluidos}/{stats.total}</div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-sky-200">Concluídos</div>
           </div>
         </div>
 
         {/* Barra de Progresso do Dia */}
-        <div className="mt-4">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/15">
+        <div className="relative mt-4">
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/15">
             <div
-              className="h-full bg-emerald-400 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-300 transition-all duration-500"
               style={{ width: `${stats.total > 0 ? (stats.concluidos / stats.total) * 100 : 0}%` }}
             />
           </div>
         </div>
 
         {/* Seletor Rápido de Data */}
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs">
-          <div className="flex items-center gap-1.5 text-primary-200">
-            <Calendar size={14} /> Data da rota:
+        <div className="relative mt-4 flex flex-col gap-2 border-t border-white/15 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1.5 text-[13px] font-bold text-sky-100">
+            <Calendar size={15} /> Data da rota:
           </div>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold text-white outline-none focus:bg-white/20"
+            className="w-full rounded-2xl border border-white/25 bg-white/15 px-3.5 py-2.5 text-sm font-bold text-white outline-none backdrop-blur transition focus:border-sky-300 focus:bg-white/20 dark:[color-scheme:dark] sm:w-auto"
           />
         </div>
       </div>
@@ -157,82 +157,82 @@ export default function TechRota() {
             return (
               <div
                 key={o.id}
-                className={`overflow-hidden rounded-2xl border transition-all ${
+                className={`cp-card overflow-hidden !p-0 transition-all duration-200 ${
                   inProgress
-                    ? 'border-primary-500 bg-primary-50/40 ring-2 ring-primary-500/20 dark:border-primary-600 dark:bg-primary-950/20'
+                    ? '!border-primary-400 ring-2 ring-primary-500/30 dark:!border-sky-400/60 dark:ring-sky-400/25'
                     : isDone
-                    ? 'border-neutral-200 bg-white/60 opacity-80 dark:border-neutral-800 dark:bg-neutral-900/60'
-                    : 'border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-800'
+                    ? 'opacity-90'
+                    : 'hover:-translate-y-0.5'
                 }`}
               >
                 {/* Cabeçalho do Card */}
-                <div className="flex items-center justify-between border-b border-neutral-100 bg-neutral-50/60 px-4 py-2.5 dark:border-neutral-700/60 dark:bg-neutral-800/60">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-700 text-xs font-bold text-white">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/70 bg-neutral-50/80 px-3.5 py-2.5 sm:px-4 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-700 to-sky-500 text-xs font-black text-white shadow">
                       {idx + 1}
                     </span>
-                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">
+                    <span className="text-[13px] font-extrabold text-neutral-800 dark:text-white sm:text-sm">
                       {o.time ? `🕒 ${o.time}` : 'Horário a combinar'}
                     </span>
-                    <span className="text-xs text-neutral-400">· OS {o.osNumber}</span>
+                    <span className="text-[11px] font-semibold text-neutral-400">· OS {o.osNumber}</span>
                   </div>
                   <StatusBadge status={o.status} />
                 </div>
 
                 {/* Conteúdo Principal */}
-                <div className="p-4">
+                <div className="p-3.5 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-base font-bold text-neutral-900 dark:text-white">
+                    <div className="min-w-0">
+                      <h2 className="font-display break-words text-[17px] font-extrabold leading-tight text-neutral-900 dark:text-white">
                         {c?.name || 'Cliente'}
                       </h2>
-                      <p className="mt-0.5 text-sm font-medium text-primary-700 dark:text-primary-300">
+                      <p className="mt-0.5 break-words text-sm font-bold text-primary-700 dark:text-sky-300">
                         ❄️ {o.service}
                       </p>
                       {o.problem && (
-                        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                          <b>Problema relatado:</b> {o.problem}
+                        <p className="mt-1 break-words text-xs leading-relaxed text-neutral-500 dark:text-neutral-300">
+                          <b className="text-neutral-700 dark:text-neutral-100">Problema:</b> {o.problem}
                         </p>
                       )}
                       {eq && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
-                          <Wrench size={12} /> {eq.brand} {eq.model} · {eq.btus} BTU ({eq.installLocation || 'Geral'})
+                        <div className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-xl bg-neutral-100 px-2.5 py-1.5 text-[11px] font-bold text-neutral-700 dark:bg-white/10 dark:text-neutral-100">
+                          <Wrench size={12} className="shrink-0" /> <span className="truncate">{eq.brand} {eq.model} · {eq.btus} BTU ({eq.installLocation || 'Geral'})</span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Endereço */}
-                  <div className="mt-3 flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-                    <MapPin size={15} className="mt-0.5 shrink-0 text-danger" />
-                    <span>{fullAddress || 'Endereço não informado'}</span>
+                  <div className="mt-3 flex items-start gap-2 rounded-2xl bg-neutral-50 px-3 py-2.5 text-xs font-medium text-neutral-600 dark:bg-white/5 dark:text-neutral-200">
+                    <MapPin size={16} className="mt-0.5 shrink-0 text-red-500" />
+                    <span className="break-words">{fullAddress || 'Endereço não informado'}</span>
                   </div>
 
                   {/* Barra de Ações Rápidas de Campo (1 toque) */}
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-2.5">
                     {/* Waze / Maps */}
                     <button
                       type="button"
                       onClick={() => openWaze(fullAddress)}
-                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
+                      className="flex min-h-[60px] items-center justify-center gap-1.5 rounded-2xl border border-sky-300 bg-sky-50 px-2 text-[13px] font-extrabold text-sky-800 shadow-sm transition active:scale-[.97] hover:bg-sky-100 dark:border-sky-400/50 dark:bg-sky-500/20 dark:text-sky-100 dark:hover:bg-sky-500/30"
                     >
-                      <Navigation size={15} /> Waze
+                      <Navigation size={17} strokeWidth={2.5} /> Waze
                     </button>
                     <button
                       type="button"
                       onClick={() => openMaps(fullAddress)}
-                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-700/60 dark:text-neutral-200"
+                      className="flex min-h-[60px] items-center justify-center gap-1.5 rounded-2xl border border-neutral-300 bg-white px-2 text-[13px] font-extrabold text-neutral-700 shadow-sm transition active:scale-[.97] hover:bg-neutral-50 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
                     >
-                      <MapPin size={15} /> Maps
+                      <MapPin size={17} strokeWidth={2.5} /> Maps
                     </button>
 
                     {/* Aviso a Caminho */}
                     <button
                       type="button"
                       onClick={() => notifyArrival(o)}
-                      className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      className="flex min-h-[60px] items-center justify-center gap-1.5 rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-500 to-emerald-600 px-2 text-[13px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(16,185,129,.8)] transition active:scale-[.97] hover:brightness-110"
                     >
-                      <MessageCircle size={15} /> A caminho
+                      <MessageCircle size={17} strokeWidth={2.5} /> A caminho
                     </button>
 
                     {/* Abrir OS / Iniciar */}
@@ -240,18 +240,18 @@ export default function TechRota() {
                       <button
                         type="button"
                         onClick={() => quickStart(o)}
-                        className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl bg-primary-700 px-3 text-sm font-bold text-white shadow-sm transition hover:bg-primary-800"
+                        className="cp-btn-primary flex min-h-[60px] items-center justify-center gap-1.5 rounded-2xl px-2 text-[13px] font-extrabold text-white transition active:scale-[.97]"
                       >
-                        <Play size={14} /> Iniciar
+                        <Play size={15} strokeWidth={2.5} /> Iniciar
                       </button>
                     )}
                     {(isDone || inProgress) && (
                       <button
                         type="button"
                         onClick={() => navigate(`/app/servicos/${o.id}`)}
-                        className="flex min-h-[56px] items-center justify-center gap-1.5 rounded-xl bg-neutral-800 px-3 text-sm font-bold text-white transition hover:bg-neutral-900 dark:bg-neutral-700"
+                        className="flex min-h-[60px] items-center justify-center gap-1.5 rounded-2xl bg-neutral-900 px-2 text-[13px] font-extrabold text-white transition active:scale-[.97] hover:bg-black dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
                       >
-                        Ver detalhes <ChevronRight size={14} />
+                        Detalhes <ChevronRight size={15} strokeWidth={2.5} />
                       </button>
                     )}
                   </div>

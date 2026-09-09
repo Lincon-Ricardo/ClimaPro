@@ -40,7 +40,13 @@ Execute o `supabase/schema.sql` atualizado no SQL Editor do Supabase. Ele cria:
 Cadastre esta URL no painel do Asaas:
 
 ```text
-https://clima-pro-link-3d04.vercel.app/api/billing/webhook
+https://clima-pro-chi.vercel.app/api/billing/webhook
+```
+
+Diagnóstico público (sem segredos):
+
+```text
+https://clima-pro-chi.vercel.app/api/billing/diag
 ```
 
 Use o mesmo valor de `ASAAS_WEBHOOK_TOKEN` no campo de autenticação do webhook.

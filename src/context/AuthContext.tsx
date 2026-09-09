@@ -5,7 +5,6 @@ import type { User } from '../types';
 interface AuthCtx {
   user: User | null;
   loading: boolean;
-  seedReady: boolean;
   online: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
@@ -16,7 +15,7 @@ interface AuthCtx {
   ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
 }
 
-const Ctx = createContext<AuthCtx>(null as any);
+const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -130,8 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     const configured = await isSupabaseConfigured();
     if (!configured) return { ok: false, error: 'Backend não configurado.' };
-    let data: any;
-    let error: any;
+    let data: { user: { id: string; email?: string | null } | null; session: unknown } | undefined;
+    let error: { message: string } | null = null;
     try {
       const res = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -140,8 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       data = res.data;
       error = res.error;
-    } catch (e: any) {
-      return { ok: false, error: 'Falha na comunicação: ' + (e?.message || String(e)) };
+    } catch (e: unknown) {
+      return { ok: false, error: 'Falha na comunicação: ' + ((e as { message?: string } | null)?.message || String(e)) };
     }
     if (error) {
       return { ok: false, error: error.message || 'Não foi possível criar a conta.' };
@@ -165,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     setUser(newUser);
     // Busca perfil em background sem bloquear navegação
-    fetchProfile(data.user.id, data.user.email).then((u) => {
+    fetchProfile(data.user.id, data.user.email || undefined).then((u) => {
       if (u) setUser(u);
     });
     return { ok: true };
@@ -177,12 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user, loading, seedReady: !loading, online, login, logout, register }}>
+    <Ctx.Provider value={{ user, loading, online, login, logout, register }}>
       {children}
     </Ctx.Provider>
   );
 }
 
-export function useAuth() {
-  return useContext(Ctx);
+export function useAuth(): AuthCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useAuth deve ser usado dentro de AuthProvider');
+  return ctx;
 }

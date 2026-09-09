@@ -12,7 +12,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { PageHeader, EmptyState } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { formatBRL, formatDate, addMonths, todayISO, toISODate, telToWhats } from '../lib/utils';
+import { formatBRL, formatDate, addMonths, todayISO, telToWhats } from '../lib/utils';
 import { isReminderDue, reminderDueDate, daysOverdue } from '../lib/reminders';
 
 const FILTERS = [

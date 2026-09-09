@@ -1,9 +1,13 @@
 import { asaasRequest, getBillingPlan, type AsaasCustomer, type AsaasPayment, type AsaasSubscription } from '../_lib/asaas.js';
 import { getAdminClient, getBearerToken } from '../_lib/supabase.js';
+import { rateLimit, clientKey } from '../_lib/rateLimit.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Método não permitido.' });
+  if (!rateLimit(clientKey(request, ':checkout'), 10, 60_000)) {
+    return response.status(429).json({ error: 'Muitas tentativas. Aguarde 1 minuto.' });
+  }
 
   try {
     const token = getBearerToken(request);
@@ -36,8 +40,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
       .from('subscriptions')
       .select('asaas_customer_id, asaas_subscription_id, status, plan, billing_cycle')
       .eq('company_id', profile.company_id)
-      .maybeSingle();
-    const samePlan = current?.asaas_subscription_id && (current as any).plan === billing.planKey && (current as any).billing_cycle === billing.cycle && ['active', 'past_due'].includes(current.status);
+      .maybeSingle() as { data: { asaas_customer_id?: string | null; asaas_subscription_id?: string | null; status?: string | null; plan?: string | null; billing_cycle?: string | null } | null };
+    const samePlan = current?.asaas_subscription_id && current.plan === billing.planKey && current.billing_cycle === billing.cycle && ['active', 'past_due'].includes(current.status || '');
     if (samePlan) {
       return response.status(409).json({ error: 'Sua empresa já está neste plano. Para trocar, escolha outro plano ou ciclo.' });
     }
@@ -81,7 +85,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
             body: JSON.stringify(doc ? { ...base, cpfCnpj: doc } : base),
           });
           customerId = customer.id;
-        } catch (e: any) {
+        } catch (e: unknown) {
           customerId = await findExisting();
           if (!customerId) {
             if (doc) {
@@ -102,34 +106,65 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const method = String((body as any)?.method || 'card').toLowerCase();
+    const method = String((body as { method?: string })?.method || 'card').toLowerCase();
     const billingType = method === 'pix' ? 'PIX' : method === 'boleto' ? 'BOLETO' : 'CREDIT_CARD';
     const pixManual = billingType === 'PIX' && billing.cycle === 'monthly';
-    const subscription = await asaasRequest<AsaasSubscription>('/subscriptions', {
-      method: 'POST',
-      body: JSON.stringify({
-        customer: customerId,
-        billingType,
-        value: billing.value,
-        cycle: billing.asaasCycle,
-        nextDueDate,
-        description: `ClimaPro ${billing.label} - ${billing.cycle === 'yearly' ? 'anual' : 'mensal'}`,
-        externalReference: profile.company_id,
-      }),
-    });
+    let subscription: AsaasSubscription;
+    try {
+      subscription = await asaasRequest<AsaasSubscription>('/subscriptions', {
+        method: 'POST',
+        body: JSON.stringify({
+          customer: customerId,
+          billingType,
+          value: billing.value,
+          cycle: billing.asaasCycle,
+          nextDueDate,
+          description: `ClimaPro ${billing.label} - ${billing.cycle === 'yearly' ? 'anual' : 'mensal'}`,
+          externalReference: profile.company_id,
+        }),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (billingType === 'CREDIT_CARD' && /billingType|credit/i.test(msg)) {
+        subscription = await asaasRequest<AsaasSubscription>('/subscriptions', {
+          method: 'POST',
+          body: JSON.stringify({
+            customer: customerId,
+            billingType: 'UNDEFINED',
+            value: billing.value,
+            cycle: billing.asaasCycle,
+            nextDueDate,
+            description: `ClimaPro ${billing.label} - ${billing.cycle === 'yearly' ? 'anual' : 'mensal'}`,
+            externalReference: profile.company_id,
+          }),
+        });
+      } else {
+        throw e;
+      }
+    }
 
-    const payments = await asaasRequest<{ data?: AsaasPayment[] }>(`/subscriptions/${subscription.id}/payments`);
-    const payment = payments.data?.[0];
-    let checkoutUrl = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.paymentLink || null;
+    let checkoutUrl: string | null = null;
     let pixQr: string | null = null;
     let pixCode: string | null = null;
-    if (billingType === 'PIX' && (payment as any)?.id) {
+    let paymentId: string | null = null;
+    try {
+      const payments = await asaasRequest<{ data?: Array<AsaasPayment & { id?: string }> }>(`/subscriptions/${subscription.id}/payments`);
+      const payment = payments.data?.[0];
+      paymentId = payment?.id || null;
+      checkoutUrl = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.paymentLink || null;
+    } catch { /* assinatura criada; cobrança aparece em seguida no Asaas */ }
+    if (billingType === 'PIX' && paymentId) {
       try {
-        const qr = await asaasRequest<{ encodedImage?: string; payload?: string }>(`/payments/${(payment as any).id}/pixQrCode`, { method: 'GET' });
+        const qr = await asaasRequest<{ encodedImage?: string; payload?: string }>(`/payments/${paymentId}/pixQrCode`, { method: 'GET' });
         pixQr = qr.encodedImage ? `data:image/png;base64,${qr.encodedImage}` : null;
         pixCode = qr.payload || null;
-        if (!checkoutUrl) checkoutUrl = payment?.invoiceUrl || null;
       } catch { /* mantém checkoutUrl padrão */ }
+    }
+    if (!checkoutUrl && paymentId) {
+      try {
+        const payment = await asaasRequest<AsaasPayment>(`/payments/${paymentId}`, { method: 'GET' });
+        checkoutUrl = payment?.invoiceUrl || payment?.bankSlipUrl || payment?.paymentLink || null;
+      } catch { /* segue sem URL: front mostra mensagem */ }
     }
 
     await supabase.from('subscriptions').upsert({
@@ -143,8 +178,8 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }, { onConflict: 'company_id' });
 
     return response.status(200).json({ checkoutUrl, subscriptionId: subscription.id, pixQr, pixCode, billingType, pixManual, message: pixManual ? 'PIX válido para a 1ª parcela. As próximas são geradas todo mês no app — ative o lembrete.' : null });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[billing/checkout]', error);
-    return response.status(400).json({ error: error?.message || 'Não foi possível criar a assinatura.' });
+    return response.status(400).json({ error: error instanceof Error ? error.message : 'Não foi possível criar a assinatura.' });
   }
 }

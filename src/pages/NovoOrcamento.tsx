@@ -141,7 +141,7 @@ export default function NovoOrcamento() {
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" type="button" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button variant="secondary" type="button" disabled={busy} onClick={(e) => handleSave(e as any, 'rascunho')}>Salvar rascunho</Button>
+          <Button variant="secondary" type="button" disabled={busy} onClick={(e) => handleSave(e as unknown as React.FormEvent, 'rascunho')}>Salvar rascunho</Button>
           <Button type="submit" full disabled={busy}><Send size={16} /> Salvar e enviar</Button>
         </div>
       </form>

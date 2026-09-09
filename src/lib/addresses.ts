@@ -1,10 +1,12 @@
-export interface SavedAddress {
-  id: string;
-  label: string;
-  address: string;
-}
+import type { Customer, SavedAddress } from '../types';
 
-export function formatCustomerAddress(c: any): string {
+export type { SavedAddress };
+
+type CustomerWithAddresses = Pick<Customer, 'street' | 'number' | 'complement' | 'district' | 'city' | 'zip'> & {
+  savedAddresses?: unknown;
+};
+
+export function formatCustomerAddress(c: CustomerWithAddresses | null | undefined): string {
   if (!c) return '';
   return [c.street, c.number, c.complement, c.district, c.city, c.zip]
     .map((s) => String(s || '').trim())
@@ -12,31 +14,31 @@ export function formatCustomerAddress(c: any): string {
     .join(', ');
 }
 
-export function getSavedAddresses(customer: any): SavedAddress[] {
+export function getSavedAddresses(customer: CustomerWithAddresses | null | undefined): SavedAddress[] {
   if (!customer) return [];
   const list: SavedAddress[] = [];
   const main = formatCustomerAddress(customer);
   if (main) list.push({ id: 'main', label: 'Principal (cadastro)', address: main });
-  const saved = Array.isArray(customer.savedAddresses) ? customer.savedAddresses : [];
-  saved.forEach((s: any, i: number) => {
-    const addr = typeof s === 'string' ? s : s?.address;
+  const saved = Array.isArray(customer.savedAddresses) ? (customer.savedAddresses as unknown[]) : [];
+  saved.forEach((s: unknown, i: number) => {
+    const addr = typeof s === 'string' ? s : (s as SavedAddress | null)?.address;
     if (!addr || list.some((l) => l.address === addr)) return;
     list.push({
-      id: typeof s === 'string' ? `saved-${i}` : s.id || `saved-${i}`,
-      label: (typeof s === 'object' && s?.label) || `Endereço ${list.length + 1}`,
+      id: typeof s === 'string' ? `saved-${i}` : (s as SavedAddress).id || `saved-${i}`,
+      label: (typeof s === 'object' && (s as SavedAddress)?.label) || `Endereço ${list.length + 1}`,
       address: addr,
     });
   });
   return list;
 }
 
-export function mergeSavedAddress(customer: any, label: string, address: string): any[] {
-  const current = Array.isArray(customer?.savedAddresses) ? customer.savedAddresses : [];
-  const clean = current
-    .map((s: any) =>
-      typeof s === 'string' ? { id: `saved-${s}`, label: '', address: s } : s
+export function mergeSavedAddress(customer: CustomerWithAddresses | null | undefined, label: string, address: string): SavedAddress[] {
+  const current = Array.isArray(customer?.savedAddresses) ? (customer.savedAddresses as unknown[]) : [];
+  const clean: SavedAddress[] = current
+    .map((s: unknown): SavedAddress =>
+      typeof s === 'string' ? { id: `saved-${s}`, label: '', address: s } : (s as SavedAddress)
     )
-    .filter((s: any) => s?.address && s.address !== address);
+    .filter((s: SavedAddress) => s?.address && s.address !== address);
   clean.push({ id: `addr-${Date.now()}`, label: label.trim() || `Endereço ${clean.length + 2}`, address });
   return clean;
 }

@@ -732,6 +732,84 @@ end;
 $$;
 
 -- =============================================================
+-- TRAVAS DE PLANO NO SERVIDOR (ninguém burla pelo front/API direta)
+-- Start: 30 OS/mês + 1 técnico · Pro: 150 OS/mês + 5 técnicos · Master: ilimitado
+-- Trial ativo conta como Pro. Sem assinatura = libera (onboarding).
+-- =============================================================
+create or replace function plan_limits(p_company uuid)
+returns table (os_allowed numeric, tech_allowed numeric, locked boolean) language plpgsql stable security definer set search_path = public as $$
+declare
+  s subscriptions%rowtype;
+begin
+  select * into s from subscriptions where company_id = p_company;
+  if not found then
+    return query select 999999::numeric, 999999::numeric, false;
+    return;
+  end if;
+  if s.status = 'active' then
+    if s.plan = 'start' then return query select 30::numeric, 1::numeric, false;
+    elsif s.plan = 'pro' then return query select 150::numeric, 5::numeric, false;
+    else return query select 999999::numeric, 999999::numeric, false;
+    end if;
+    return;
+  end if;
+  if s.status = 'trialing' then
+    if s.trial_ends_at is null or s.trial_ends_at > now() then
+      return query select 150::numeric, 5::numeric, false;
+      return;
+    end if;
+  end if;
+  return query select 0::numeric, 0::numeric, true;
+end;
+$$;
+
+create or replace function check_os_limit()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  lim record;
+  used int;
+begin
+  select * into lim from plan_limits(new.company_id);
+  if lim.locked then
+    raise exception 'Assinatura vencida. Renove o plano para criar OS.';
+  end if;
+  select count(*) into used from service_orders
+    where company_id = new.company_id
+      and created_at >= date_trunc('month', now());
+  if used >= lim.os_allowed then
+    raise exception 'Limite do plano atingido (%) neste mês. Faça upgrade.', lim.os_allowed;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_os_limit on service_orders;
+create trigger trg_os_limit before insert on service_orders for each row execute procedure check_os_limit();
+
+create or replace function check_tech_limit()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  lim record;
+  total int;
+begin
+  select * into lim from plan_limits(new.company_id);
+  if lim.locked and TG_OP = 'INSERT' then
+    raise exception 'Assinatura vencida. Renove o plano para adicionar técnicos.';
+  end if;
+  if TG_OP = 'INSERT' then
+    select count(*) into total from profiles where company_id = new.company_id;
+    if total >= lim.tech_allowed + 1 then
+      raise exception 'Limite de técnicos do plano atingido. Faça upgrade.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_tech_limit on profiles;
+create trigger trg_tech_limit before insert on profiles for each row execute procedure check_tech_limit();
+
+-- =============================================================
 -- REALTIME: publication para postgres_changes (useLiveQuery)
 -- Ative no Dashboard > Database > Replication ou rode aqui.
 -- =============================================================

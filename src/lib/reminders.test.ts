@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isReminderDue, reminderDueDate, daysOverdue } from './reminders';
-import { addMonths } from './utils';
+import { isReminderDue, reminderDueDate } from './reminders';
 
 describe('reminders', () => {
   it('calcula vencimento e detecta devido', () => {

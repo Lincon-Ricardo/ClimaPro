@@ -5,6 +5,36 @@ import { Modal } from './Modal';
 import { normalizeTechReport, calculateSuperheat } from '../lib/fieldTools';
 import { useToast } from './Toast';
 
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((ev: SpeechResultEventLike) => void) | null;
+  onstart: (() => void) | null;
+  onerror: ((ev: SpeechErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+interface SpeechResultEventLike {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+}
+
+interface SpeechErrorEventLike {
+  error?: string;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
+  const w = window as unknown as Record<string, unknown>;
+  return (w.SpeechRecognition as SpeechRecognitionCtor)
+    || (w.webkitSpeechRecognition as SpeechRecognitionCtor)
+    || null;
+}
+
 // =========================================================
 // Laudo Tecnico por Voz
 // Usa Web Speech API (portugues) + normalizacao de termos
@@ -15,12 +45,12 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [draft, setDraft] = useState('');
-  const recRef = useRef<any>(null);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR = getSpeechRecognitionCtor();
     if (!SR) {
       setSupported(false);
       return;
@@ -31,7 +61,7 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
-    rec.onresult = (ev: any) => {
+    rec.onresult = (ev: SpeechResultEventLike) => {
       let transcript = '';
       for (let i = 0; i < ev.results.length; i++) {
         const r = ev.results[i];
@@ -40,7 +70,7 @@ export function VoiceReport({ onApply }: { onApply: (text: string) => void }) {
       setDraft(transcript.trim());
     };
     rec.onstart = () => setListening(true);
-    rec.onerror = (ev: any) => {
+    rec.onerror = (ev: SpeechErrorEventLike) => {
       if (ev?.error === 'no-speech' || ev?.error === 'aborted') return;
       shouldListenRef.current = false;
       setListening(false);

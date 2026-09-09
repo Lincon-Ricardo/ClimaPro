@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Plus, Check } from 'lucide-react';
 import { Input } from './Fields';
 import { getSavedAddresses } from '../lib/addresses';
+import type { Customer } from '../types';
 
 export function AddressPicker({
   customer,
   value,
   onChange,
 }: {
-  customer: any;
+  customer: Customer | null | undefined;
   value: string;
   onChange: (address: string, isNew: boolean, label: string) => void;
 }) {

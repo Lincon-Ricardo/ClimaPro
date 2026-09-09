@@ -5,6 +5,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { supabase } from '../lib/supabaseClient';
+import { errMsg } from '../lib/errors';
 
 export default function Expirado() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function Expirado() {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
       });
-      const body = await response.json().catch(() => ({}));
+      const body = (await response.json().catch(() => ({}))) as { error?: string; synced?: boolean; message?: string };
       if (!response.ok) throw new Error(body.error || 'Falha na sincronização.');
       if (body.synced) {
         const { track } = await import('../lib/analytics');
@@ -32,8 +33,8 @@ export default function Expirado() {
       } else {
         toast('info', body.message || 'Pagamento ainda pendente no Asaas.');
       }
-    } catch (error: any) {
-      toast('error', error?.message || 'Não foi possível sincronizar.');
+    } catch (error: unknown) {
+      toast('error', errMsg(error, 'Não foi possível sincronizar.'));
     } finally {
       setSyncing(false);
     }

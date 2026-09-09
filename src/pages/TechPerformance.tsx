@@ -1,16 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useAuth } from '../context/AuthContext';
 import { useMyOrders } from '../hooks/useTechOrders';
 import { db } from '../lib/db';
 import {
-  Trophy, TrendingUp, CheckCircle2, Calendar, DollarSign,
-  Star, Award, Target, ChevronRight, ShieldCheck, Flame,
+  Trophy, CheckCircle2, DollarSign,
+  ShieldCheck, Flame,
 } from 'lucide-react';
 import { Card } from '../components/Card';
-import { PageHeader } from '../components/PageHeader';
-import { formatBRL, formatDate, todayISO } from '../lib/utils';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { formatBRL, todayISO } from '../lib/utils';
+import { format } from 'date-fns';
 
 export default function TechPerformance() {
   const { user } = useAuth();
@@ -42,7 +41,7 @@ export default function TechPerformance() {
     const monthCommission = (monthValue * commissionRate) / 100;
 
     // Pontualidade / Checklist (gamificacao)
-    const checklistDoneCount = monthDone.filter((o) => (o.checklist || []).some((c: any) => c.done)).length;
+    const checklistDoneCount = monthDone.filter((o) => (o.checklist || []).some((c) => c.done)).length;
     const checklistRate = monthDone.length > 0 ? Math.round((checklistDoneCount / monthDone.length) * 100) : 100;
 
     // Nivel do Tecnico

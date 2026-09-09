@@ -49,6 +49,12 @@ export interface Company {
   commissionRate?: number;
 }
 
+export interface SavedAddress {
+  id: string;
+  label: string;
+  address: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -64,6 +70,7 @@ export interface Customer {
   zip: string;
   notes: string;
   createdAt: string;
+  savedAddresses?: SavedAddress[];
 }
 
 export interface Equipment {

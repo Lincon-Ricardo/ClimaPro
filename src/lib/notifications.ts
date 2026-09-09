@@ -1,5 +1,5 @@
 import { db } from './db';
-import type { Notification, ServiceOrder, Budget } from '../types';
+import type { Notification } from '../types';
 import { addMonths, formatDate, toISODate, todayISO } from './utils';
 
 let generating = false;

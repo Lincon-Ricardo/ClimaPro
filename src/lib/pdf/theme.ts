@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { loadPdfFonts, setPdfFont, PdfWeight } from './fonts';
+import { setPdfFont, type PdfWeight } from './fontStyle';
 import type { Company } from '../../types';
 import { formatPhone, onlyDigits } from '../../lib/utils';
 
@@ -64,9 +64,13 @@ export const FOOTER_SPACE = 27;
 
 export function createPdf(company?: Company | null): PdfContext {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  loadPdfFonts(doc);
   const AW = 210, PH = 297, ML = 14, MR = 196, CW = 182;
   return { doc, c: pdfColors(brandFromCompany(company)), AW, PH, MR, ML, CW };
+}
+
+export async function ensurePdfFonts(doc: jsPDF): Promise<void> {
+  const { loadPdfFonts } = await import('./fonts');
+  await loadPdfFonts(doc);
 }
 
 /** Cor fixa da marca (azul ClimaPro) — sem variação por nome da empresa */
@@ -105,12 +109,14 @@ export function roundedRect(doc: jsPDF, x: number, y: number, w: number, h: numb
 }
 
 // ── seções ────────────────────────────────────────────────────────
+type JsPdfWithCharSpace = jsPDF & { charSpace?: number };
+
 export function sectionLabel(doc: jsPDF, label: string, x: number, y: number, color: RGB) {
   setPdfFont(doc, 'semibold', 7.2);
   doc.setTextColor(color[0], color[1], color[2]);
-  (doc as any).charSpace = 0.6;
+  (doc as JsPdfWithCharSpace).charSpace = 0.6;
   doc.text(label.toUpperCase(), x, y);
-  (doc as any).charSpace = 0;
+  (doc as JsPdfWithCharSpace).charSpace = 0;
 }
 
 export function divider(doc: jsPDF, c: PdfColors, y: number, x1: number, x2: number) {
@@ -283,7 +289,7 @@ export function drawBrandHeader(
     doc.setDrawColor(c.brandLight[0], c.brandLight[1], c.brandLight[2]);
     doc.setLineWidth(0.3);
     doc.roundedRect(ML, logoY, logoSize, logoSize, 2, 2, 'FD');
-    try { doc.addImage(logo, imageFormat(logo), ML + 2, logoY + 2, logoSize - 4, logoSize - 4, undefined, 'FAST'); } catch {}
+    try { doc.addImage(logo, imageFormat(logo), ML + 2, logoY + 2, logoSize - 4, logoSize - 4, undefined, 'FAST'); } catch { /* logo opcional: segue sem imagem */ }
     bx = logoSize + 6;
   }
 
@@ -317,9 +323,9 @@ export function drawBrandHeader(
   // ── título do documento (direita) ─────────────────────────────
   setPdfFont(doc, 'semibold', 8);
   doc.setTextColor(200, 214, 236);
-  (doc as any).charSpace = 0.7;
+  (doc as JsPdfWithCharSpace).charSpace = 0.7;
   doc.text(fitOneLine(doc, (opts.docName || '').toUpperCase(), rightW), MR, 15, { align: 'right' });
-  (doc as any).charSpace = 0;
+  (doc as JsPdfWithCharSpace).charSpace = 0;
   setPdfFont(doc, 'bold', 15);
   doc.setTextColor(255, 255, 255);
   doc.text(fitOneLine(doc, opts.title, rightW), MR, 24, { align: 'right' });

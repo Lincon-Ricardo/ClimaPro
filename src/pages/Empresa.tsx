@@ -9,6 +9,7 @@ import { Input, Textarea } from '../components/Fields';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import { Loading } from '../components/Loading';
+import { errMsg } from '../lib/errors';
 import { Eraser, Upload, PenLine } from 'lucide-react';
 
 const emptyForm = {
@@ -47,7 +48,7 @@ export default function Empresa() {
           toast('info', 'Perfil de empresa criado. Preencha os dados e salve.');
           return;
         }
-        // eslint-disable-next-line no-empty
+         
       } catch {
         // empresa será criada no salvamento manual
       }
@@ -95,8 +96,8 @@ export default function Empresa() {
       }
       toast('success', 'Perfil atualizado!');
       navigate('/app/perfil');
-    } catch (err: any) {
-      toast('error', `Erro ao salvar: ${err?.message || 'tente novamente'}`);
+    } catch (err: unknown) {
+      toast('error', `Erro ao salvar: ${errMsg(err)}`);
     } finally {
       setSaving(false);
     }

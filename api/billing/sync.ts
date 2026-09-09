@@ -23,15 +23,21 @@ export default async function handler(request: VercelRequest, response: VercelRe
       .maybeSingle();
     const subId = current?.asaas_subscription_id as string | undefined;
     if (!subId) return response.status(404).json({ error: 'Nenhuma assinatura encontrada.' });
-    const payments = await asaasRequest<{ data?: { status?: string }[] }>(`/subscriptions/${subId}/payments`, { method: 'GET' });
-    const paid = (payments.data || []).some((p) => ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(String(p.status)));
-    if (!paid) return response.status(200).json({ ok: true, synced: false, message: 'Pagamento ainda pendente no Asaas.' });
-    await supabase
-      .from('subscriptions')
-      .update({ status: 'active', last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('company_id', profile.company_id);
-    return response.status(200).json({ ok: true, synced: true });
-  } catch (error: any) {
-    return response.status(400).json({ error: error?.message || 'Falha na sincronização.' });
+    const payments = await asaasRequest<{ data?: Array<{ status?: string; confirmedDate?: string; paymentDate?: string }> }>(`/subscriptions/${subId}/payments?limit=20&status=CONFIRMED,RECEIVED,RECEIVED_IN_CASH,OVERDUE`, { method: 'GET' });
+    const list = payments.data || [];
+    const paid = list.some((p) => ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(String(p.status)));
+    const overdue = !paid && list.some((p) => String(p.status) === 'OVERDUE');
+    const nextStatus = paid ? 'active' : overdue ? 'past_due' : null;
+    if (nextStatus) {
+      await supabase
+        .from('subscriptions')
+        .update({ status: nextStatus, last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('company_id', profile.company_id);
+    }
+    if (paid) return response.status(200).json({ ok: true, synced: true });
+    if (overdue) return response.status(200).json({ ok: true, synced: false, message: 'Pagamento vencido no Asaas. Gere uma nova cobrança.' });
+    return response.status(200).json({ ok: true, synced: false, message: 'Pagamento ainda pendente no Asaas.' });
+  } catch (error: unknown) {
+    return response.status(400).json({ error: error instanceof Error ? error.message : 'Falha na sincronização.' });
   }
 }

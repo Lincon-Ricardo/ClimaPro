@@ -24,9 +24,9 @@ const STATE_DOT: Record<string, string> = {
 };
 
 function FunnelBlock({ tick }: { tick: number }) {
-  const [stats, setStats] = useState({ signup: 0, firstOs: 0, checkout: 0, paid: 0, activation: 0, checkoutRate: 0, paidRate: 0, events: [] as any[] });
+  const [stats, setStats] = useState({ signup: 0, firstOs: 0, checkout: 0, paid: 0, activation: 0, checkoutRate: 0, paidRate: 0, events: [] as { event: string; at: string }[] });
   useEffect(() => {
-    import('../lib/analytics').then((m) => setStats(m.funnelStats() as any));
+    import('../lib/analytics').then((m) => setStats(m.funnelStats()));
   }, [tick]);
   const cells = [
     { label: 'Cadastros', value: stats.signup },

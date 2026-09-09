@@ -23,7 +23,7 @@ export default function Mais() {
 
   const isTech = user?.role === 'tech';
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
-  const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
+  const commissionOn = companies[0]?.commissionEnabled !== false;
   const visibleOrders = useMyOrders(orders);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';

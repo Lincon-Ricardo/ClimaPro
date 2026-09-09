@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { Loading } from '../components/Loading';
 import { formatBRL, formatDate, telToWhats } from '../lib/utils';
 import { fetchPublicBudget, decidePublicBudget, type PublicBudgetData } from '../lib/publicBudget';
+import { errMsg } from '../lib/errors';
 import type { BudgetItem } from '../types';
 
 const BUDGET_STATUS: Record<string, { label: string; dot: string }> = {
@@ -75,8 +76,8 @@ export default function ClienteOrcamento() {
       const status = await decidePublicBudget(id, d);
       setDecision(status);
       setData((prev) => (prev ? { ...prev, budget: { ...prev.budget, status } } : prev));
-    } catch (e: any) {
-      setError(e?.message || 'Não foi possível registrar sua decisão. Tente novamente.');
+    } catch (e: unknown) {
+      setError(errMsg(e, 'Não foi possível registrar sua decisão. Tente novamente.'));
     } finally {
       setBusy(false);
     }

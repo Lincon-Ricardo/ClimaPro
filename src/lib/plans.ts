@@ -74,6 +74,43 @@ export function getPlan(key: string): Plan {
   return PLANS.find((p) => p.key === key) || PLANS[1];
 }
 
+export type OsVolume = 'ate30' | 'ate150' | 'mais150';
+export type TechSize = 'sozinho' | 'equipe25' | 'mais5';
+export type MainGoal = 'organizar' | 'receber' | 'lucro';
+
+export interface QuizAnswers {
+  osVolume: OsVolume;
+  techSize: TechSize;
+  goal: MainGoal;
+}
+
+const QUIZ_STORAGE_KEY = 'climapro-quiz-plan';
+
+export function recommendPlan(a: QuizAnswers): PlanKey {
+  if (a.osVolume === 'mais150' || a.techSize === 'mais5') return 'master';
+  if (a.osVolume === 'ate150' || a.techSize === 'equipe25') return 'pro';
+  return 'start';
+}
+
+export function recommendPlanCopy(a: QuizAnswers): string {
+  if (a.goal === 'receber') return 'Cobrança via WhatsApp + link Asaas para receber mais rápido.';
+  if (a.goal === 'lucro') return 'Ranking + BI para saber quem dá lucro de verdade.';
+  return 'Agenda + OS organizada para não perder nenhum atendimento.';
+}
+
+export function saveRecommendedPlan(key: PlanKey) {
+  try { localStorage.setItem(QUIZ_STORAGE_KEY, key); } catch { /* noop */ }
+}
+
+export function getRecommendedPlan(): PlanKey | null {
+  try {
+    const v = localStorage.getItem(QUIZ_STORAGE_KEY);
+    return v === 'start' || v === 'pro' || v === 'master' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface Subscription {
   id: string;
   companyId: string;

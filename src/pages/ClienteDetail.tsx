@@ -42,7 +42,7 @@ export default function ClienteDetail() {
     setShowAddEq(true);
   }
 
-  function openEditEq(eq: any) {
+  function openEditEq(eq: { id: string; brand?: string; model?: string; type?: string; btus?: number; serial?: string; installLocation?: string; installDate?: string; warranty?: string; notes?: string }) {
     setEditingEqId(eq.id);
     setEqForm({
       brand: eq.brand || '', model: eq.model || '', type: eq.type || 'Split Higien Wall', btus: eq.btus || 9000,

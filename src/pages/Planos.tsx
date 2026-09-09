@@ -10,8 +10,11 @@ import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { formatBRL } from '../lib/utils';
 import { startCheckout, type CheckoutMethod } from '../lib/billing';
+import { errMsg } from '../lib/errors';
+import { getRecommendedPlan } from '../lib/plans';
+import type { ReactNode } from 'react';
 
-const PLAN_STYLE: Record<string, { icon: any; gradient: string; glow: string; accent: string }> = {
+const PLAN_STYLE: Record<string, { icon: ReactNode; gradient: string; glow: string; accent: string }> = {
   start: {
     icon: <Snowflake size={26} />,
     gradient: 'from-sky-500 to-cyan-400',
@@ -49,9 +52,70 @@ const FAQS: { q: string; a: string }[] = [
   { q: 'Preciso de cartão para testar?', a: 'Não. Os 14 dias grátis liberam o Pro completo sem pedir nenhum dado de pagamento.' },
   { q: 'Tem fidelidade ou multa?', a: 'Não. Assinatura mensal, cancele quando quiser e mantenha todos os seus dados e clientes.' },
   { q: 'Como pago?', a: 'Via Asaas: PIX (aprovação imediata), boleto ou cartão de crédito com cobrança recorrente.' },
+  { q: 'E se eu não gostar?', a: 'Você tem 7 dias de garantia após a primeira cobrança: devolvemos 100%, sem perguntas. Veja em /reembolso.' },
   { q: 'O que acontece se eu estourar o limite?', a: 'Avisamos antes e você pode fazer upgrade em 1 clique, sem perder nada. O excedente nunca é apagado.' },
   { q: 'Meus técnicos pagam algo?', a: 'Não. Só o dono assina. Técnicos entram de graça dentro do limite do plano.' },
+  { q: 'Meus dados estão seguros?', a: 'Sim. Banco criptografado, backup diário e você exporta tudo quando quiser. Seguimos a LGPD — veja em /privacidade.' },
 ];
+
+function PixModal({ pix, onClose }: { pix: { qr: string | null; code: string | null; url: string | null }; onClose: () => void }) {
+  const toast = useToast();
+  const [checking, setChecking] = useState(false);
+
+  async function checkPayment() {
+    setChecking(true);
+    try {
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Sessão expirou. Entre novamente.');
+      const response = await fetch('/api/billing/sync', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      });
+      const body = (await response.json().catch(() => ({}))) as { synced?: boolean; message?: string; error?: string };
+      if (!response.ok) throw new Error(body.error || 'Falha na verificação.');
+      if (body.synced) {
+        const { track } = await import('../lib/analytics');
+        track('checkout_paid');
+        toast('success', 'Pagamento confirmado! Acesso liberado.');
+        window.location.assign('/app');
+      } else {
+        toast('info', body.message || 'Ainda não identificamos o PIX. Aguarde 30s e tente de novo.');
+      }
+    } catch (e: unknown) {
+      toast('error', errMsg(e, 'Não foi possível verificar.'));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Pague com PIX</h3>
+        <p className="mt-1 text-xs text-neutral-500">PIX vale para a 1ª parcela — a recorrência mensal é no cartão. Escaneie e clique em Já paguei.</p>
+        {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-52 w-52 rounded-2xl border" />}
+        {pix.code && (
+          <button
+            type="button"
+            onClick={() => { navigator.clipboard?.writeText(pix.code || ''); toast('success', 'Código PIX copiado!'); }}
+            className="mt-3 w-full break-all rounded-xl bg-neutral-100 p-3 text-left text-[11px] font-mono text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200"
+          >
+            {pix.code}
+          </button>
+        )}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {pix.url && (
+            <Button variant="outline" onClick={() => window.open(pix.url || '', '_blank')}>Abrir fatura</Button>
+          )}
+          <Button disabled={checking} onClick={checkPayment}>{checking ? 'Verificando…' : 'Já paguei'}</Button>
+        </div>
+        <button type="button" onClick={onClose} className="mt-2 w-full py-1 text-xs text-neutral-400 hover:underline">Fechar</button>
+      </div>
+    </div>
+  );
+}
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
@@ -104,8 +168,8 @@ export default function Planos() {
       } else {
         toast('info', 'Assinatura criada. A primeira cobrança está sendo preparada pelo Asaas.');
       }
-    } catch (error: any) {
-      toast('error', error?.message || 'Não foi possível iniciar o pagamento.');
+    } catch (error: unknown) {
+      toast('error', errMsg(error, 'Não foi possível iniciar o pagamento.'));
     } finally {
       setBusy(null);
     }
@@ -183,11 +247,17 @@ export default function Planos() {
       </div>
 
       {/* ── CARDS ── */}
+      {getRecommendedPlan() && (
+        <div className="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-center text-xs font-bold text-primary-800 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-200">
+          🎯 Pela sua pesquisa, o ideal para você é o <b>{PLANS.find((x) => x.key === getRecommendedPlan())?.name}</b> — destacado abaixo.
+        </div>
+      )}
       <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3 md:gap-5">
         {PLANS.map((p) => {
           const st = PLAN_STYLE[p.key];
           const current = plan.key === p.key && !isTrial;
           const hl = p.highlight;
+          const recommended = getRecommendedPlan() === p.key;
           return (
             <div
               key={p.key}
@@ -198,7 +268,12 @@ export default function Planos() {
               }`}
             >
               <div className={hl ? 'flex h-full flex-col rounded-[22px] bg-neutral-950 p-5 text-white sm:p-6' : 'flex h-full flex-col'}>
-                {hl && (
+                {recommended && !current && (
+                  <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg">
+                    🎯 Ideal para você
+                  </span>
+                )}
+                {hl && !recommended && (
                   <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 animate-pulse items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow-lg">
                     <Crown size={12} /> Mais escolhido
                   </span>
@@ -291,37 +366,36 @@ export default function Planos() {
         </div>
       </div>
 
+      <Card className="border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex items-center gap-2 text-sm font-black text-emerald-800 dark:text-emerald-200">
+            <ShieldCheck size={18} /> Garantia incondicional de 7 dias
+          </div>
+          <p className="max-w-xl text-xs leading-relaxed text-emerald-700 dark:text-emerald-300">
+            Pagou e não gostou? Devolvemos 100% sem perguntas. Sem fidelidade, sem multa, cancele quando quiser e mantenha seus dados.
+            Pagamento seguro pelo Asaas · PIX, boleto ou cartão · Nota fiscal.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+            <span>✓ 14 dias grátis sem cartão</span>
+            <span>✓ Suporte em português</span>
+            <span>✓ Seus dados exportáveis</span>
+          </div>
+        </div>
+      </Card>
+
       <Card className="border-dashed">
         <p className="text-center text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
           💡 <b>Como funciona:</b> você testa 14 dias grátis no <b>Clima Ideal (Pro)</b>. Depois escolhe o plano ideal.
           O pagamento é feito pelo Asaas (PIX, boleto ou cartão) e liberamos seu acesso automaticamente.
+          Dúvidas legais: <a href="/termos" className="font-bold underline">Termos</a> · <a href="/privacidade" className="font-bold underline">Privacidade</a> · <a href="/reembolso" className="font-bold underline">Reembolso</a>
         </p>
       </Card>
 
       {pix && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPix(null)}>
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-black text-neutral-900 dark:text-white">Pague com PIX</h3>
-            <p className="mt-1 text-xs text-neutral-500">PIX vale para a 1ª parcela — a recorrência mensal é no cartão. Escaneie e clique em Já paguei.</p>
-            {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-52 w-52 rounded-2xl border" />}
-            {pix.code && (
-              <button
-                type="button"
-                onClick={() => { navigator.clipboard?.writeText(pix.code || ''); toast('success', 'Código PIX copiado!'); }}
-                className="mt-3 w-full break-all rounded-xl bg-neutral-100 p-3 text-left text-[11px] font-mono text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200"
-              >
-                {pix.code}
-              </button>
-            )}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {pix.url && (
-                <Button variant="outline" onClick={() => window.open(pix.url || '', '_blank')}>Abrir fatura</Button>
-              )}
-              <Button onClick={() => window.location.assign('/app/expirado')}>Já paguei</Button>
-            </div>
-            <button type="button" onClick={() => setPix(null)} className="mt-2 w-full py-1 text-xs text-neutral-400 hover:underline">Fechar</button>
-          </div>
-        </div>
+        <PixModal
+          pix={pix}
+          onClose={() => setPix(null)}
+        />
       )}
     </div>
   );

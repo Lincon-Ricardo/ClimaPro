@@ -13,6 +13,9 @@ import { useToast } from '../components/Toast';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useSubscription } from '../hooks/useSubscription';
+import { errMsg } from '../lib/errors';
+import { log } from '../lib/logger';
+import type { User } from '../types';
 
 const emptyForm = { name: '', email: '', password: '', role: 'tech' as 'tech' | 'admin' };
 
@@ -23,7 +26,7 @@ export default function Users() {
   const users = useLiveQuery(() => db.users.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
@@ -39,7 +42,7 @@ export default function Users() {
     setShowModal(true);
   }
 
-  function openEdit(u: any) {
+  function openEdit(u: User) {
     setEditing(u);
     setForm({ name: u.name || '', email: u.email || '', password: '', role: u.role === 'admin' ? 'admin' : 'tech' });
     setShowModal(true);
@@ -81,7 +84,6 @@ export default function Users() {
           ? 'Usuário atualizado! Para trocar a senha, use "Esqueci minha senha" no login.'
           : 'Usuário atualizado!');
       } else {
-        console.log('[Users] criando tecnico:', email);
         let existing = null;
         try {
           existing = await withTimeout(
@@ -89,8 +91,8 @@ export default function Users() {
             8000,
             'Verificação de e-mail'
           );
-        } catch (e: any) {
-          console.warn('[Users] verificação de duplicado falhou, seguindo:', e?.message);
+        } catch (e: unknown) {
+          log.warn('users.dupcheck', errMsg(e));
         }
         if (existing) {
           toast('error', 'Este e-mail já está cadastrado.');
@@ -101,7 +103,6 @@ export default function Users() {
           toast('error', 'Empresa não encontrada. Tente recarregar a página.');
           return;
         }
-        console.log('[Users] companyId:', companyId);
         const inviteToken = crypto.randomUUID();
         const { error: inviteError } = await supabase.from('company_invites').insert({
           token: inviteToken,
@@ -113,8 +114,8 @@ export default function Users() {
           return;
         }
         const isolated = createIsolatedClient();
-        let data: any;
-        let error: any;
+        let data: { user?: { id?: string } | null; session?: unknown } | null = null;
+        let error: { message: string } | null = null;
         try {
           const res = await withTimeout(
             isolated.auth.signUp({
@@ -127,13 +128,13 @@ export default function Users() {
           );
           data = res.data;
           error = res.error;
-        } catch (e: any) {
-          console.error('[Users] signUp falhou:', e);
-          toast('error', 'Falha ao cadastrar: ' + (e?.message || String(e)));
+        } catch (e: unknown) {
+          log.error('users.signup', errMsg(e));
+          toast('error', 'Falha ao cadastrar: ' + errMsg(e));
           return;
         }
         if (error) {
-          console.error('[Users] signUp erro:', error);
+          log.error('users.signup', error.message);
           const msg = (error.message || '').toLowerCase();
           if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('already been registered')) {
             toast('error', 'Este e-mail já tem login criado. Use outro e-mail ou apague o usuário em Supabase > Authentication > Users.');
@@ -142,9 +143,9 @@ export default function Users() {
           }
           return;
         }
-        const newId = data?.user?.id as string | undefined;
+        const newId = data?.user?.id;
         if (!newId) {
-          console.error('[Users] signUp sem user:', data);
+          log.error('users.signup', 'Supabase não retornou o usuário');
           toast('error', 'Supabase não retornou o usuário. Tente novamente.');
           return;
         }
@@ -156,8 +157,8 @@ export default function Users() {
           toast('success', 'Técnico cadastrado com sucesso!');
         }
       }
-    } catch (err: any) {
-      toast('error', `Erro ao salvar: ${err?.message || 'tente novamente'}`);
+    } catch (err: unknown) {
+      toast('error', `Erro ao salvar: ${errMsg(err)}`);
       return;
     } finally {
       setSaving(false);
@@ -188,8 +189,8 @@ export default function Users() {
       await db.users.delete(deleteUserId);
       toast('info', 'Usuário removido.');
       setDeleteUserId(null);
-    } catch (err: any) {
-      toast('error', `Erro ao remover: ${err?.message || 'tente novamente'}`);
+    } catch (err: unknown) {
+      toast('error', `Erro ao remover: ${errMsg(err)}`);
     }
   }
 

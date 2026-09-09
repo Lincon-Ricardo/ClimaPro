@@ -1,30 +1,36 @@
-import { jsPDF } from 'jspdf';
-import { PoppinsRegular } from './poppins_regular';
-import { PoppinsMedium } from './poppins_medium';
-import { PoppinsSemiBold } from './poppins_semibold';
-import { PoppinsBold } from './poppins_bold';
-
-export type PdfWeight = 'normal' | 'medium' | 'semibold' | 'bold';
+import type { jsPDF } from 'jspdf';
+import { PDF_FAMILY } from './fontStyle';
 
 const FILE = 'Poppins.ttf';
-const FAMILY = 'Poppins';
 
 function b64(dataUri: string) {
   return dataUri.split(',')[1];
 }
 
-export function loadPdfFonts(doc: jsPDF) {
-  doc.addFileToVFS(FILE, b64(PoppinsRegular));
-  doc.addFileToVFS(FILE + 'M', b64(PoppinsMedium));
-  doc.addFileToVFS(FILE + 'S', b64(PoppinsSemiBold));
-  doc.addFileToVFS(FILE + 'B', b64(PoppinsBold));
-  doc.addFont(FILE, FAMILY, 'normal');
-  doc.addFont(FILE + 'M', FAMILY, 'medium');
-  doc.addFont(FILE + 'S', FAMILY, 'semibold');
-  doc.addFont(FILE + 'B', FAMILY, 'bold');
+let loaded = false;
+
+export function isPdfFontsLoaded(): boolean {
+  return loaded;
 }
 
-export function setPdfFont(doc: jsPDF, weight: PdfWeight = 'normal', size: number) {
-  doc.setFont(FAMILY, weight);
-  doc.setFontSize(size);
+export async function loadPdfFonts(doc: jsPDF): Promise<void> {
+  if (loaded) return;
+  const [{ PoppinsRegular }, { PoppinsMedium }, { PoppinsSemiBold }, { PoppinsBold }] = await Promise.all([
+    import('./poppins_regular'),
+    import('./poppins_medium'),
+    import('./poppins_semibold'),
+    import('./poppins_bold'),
+  ]);
+  doc.addFileToVFS(FILE, b64(PoppinsRegular));
+  doc.addFileToVFS(`${FILE}M`, b64(PoppinsMedium));
+  doc.addFileToVFS(`${FILE}S`, b64(PoppinsSemiBold));
+  doc.addFileToVFS(`${FILE}B`, b64(PoppinsBold));
+  doc.addFont(FILE, PDF_FAMILY, 'normal');
+  doc.addFont(`${FILE}M`, PDF_FAMILY, 'medium');
+  doc.addFont(`${FILE}S`, PDF_FAMILY, 'semibold');
+  doc.addFont(`${FILE}B`, PDF_FAMILY, 'bold');
+  loaded = true;
 }
+
+export { setPdfFont } from './fontStyle';
+export type { PdfWeight } from './fontStyle';

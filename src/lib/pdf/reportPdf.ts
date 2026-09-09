@@ -14,8 +14,9 @@ export async function exportReportPdf(opts: {
   debtors: Debtor[];
 }) {
   const pdfTheme = await import('./theme');
-  const { createPdf, drawBrandHeader, drawBrandFooter, sectionLabel, divider, text, stampFooters, newBrandedPage } = pdfTheme;
+  const { createPdf, ensurePdfFonts, drawBrandHeader, drawBrandFooter, sectionLabel, divider, text, stampFooters, newBrandedPage } = pdfTheme;
   const ctx = createPdf(opts.company);
+  await ensurePdfFonts(ctx.doc);
   const { doc, c, ML, MR, CW, PH } = ctx;
   const headerArgs = {
     company: opts.company,

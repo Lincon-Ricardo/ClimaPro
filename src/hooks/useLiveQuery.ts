@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { subscribeData } from '../lib/tableBus';
 import { startRealtime } from '../lib/realtime';
-import { isSupabaseConfigured } from '../lib/supabaseClient';
+import { isSupabaseConfiguredSync } from '../lib/supabaseClient';
 
 export function useLiveQuery<T>(
   fn: () => Promise<T>,
@@ -19,8 +19,7 @@ export function useLiveQuery<T>(
     let active = true;
 
     async function run() {
-      const configured = await isSupabaseConfigured();
-      if (!configured) {
+      if (!isSupabaseConfiguredSync()) {
         if (active) setResult(undefined);
         return;
       }
@@ -28,6 +27,7 @@ export function useLiveQuery<T>(
         const v = await fnRef.current();
         if (active) setResult(v);
       } catch (error) {
+        if (active) setResult(undefined);
         console.error('[useLiveQuery] consulta falhou', error);
       }
     }
@@ -39,7 +39,7 @@ export function useLiveQuery<T>(
       active = false;
       unsubs.forEach((u) => u());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // deps intencionalmente dinâmico (query por período)
   }, deps);
 
   return result;

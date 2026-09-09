@@ -1,12 +1,13 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useSubscription } from './hooks/useSubscription';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
 
 function lazyRetry<T>(factory: () => Promise<T>, retries = 2): Promise<T> {
-  return factory().catch((err: any) => {
-    const msg = String(err?.message || '');
+  return factory().catch((err: unknown) => {
+    const msg = String((err as { message?: string } | null)?.message || '');
     if (retries > 0 && (msg.includes('Failed to fetch dynamically imported module') || msg.includes('Loading chunk'))) {
       return new Promise<T>((resolve, reject) => {
         setTimeout(() => lazyRetry(factory, retries - 1).then(resolve, reject), 800);
@@ -20,6 +21,10 @@ const Login = lazy(() => lazyRetry(() => import('./pages/Login')));
 const ForgotPassword = lazy(() => lazyRetry(() => import('./pages/ForgotPassword')));
 const ResetPassword = lazy(() => lazyRetry(() => import('./pages/ResetPassword')));
 const Onboarding = lazy(() => lazyRetry(() => import('./pages/Onboarding')));
+const TermosPage = lazy(() => lazyRetry(() => import('./pages/Legal').then((m) => ({ default: m.Termos }))));
+const PrivacidadePage = lazy(() => lazyRetry(() => import('./pages/Legal').then((m) => ({ default: m.Privacidade }))));
+const ReembolsoPage = lazy(() => lazyRetry(() => import('./pages/Legal').then((m) => ({ default: m.Reembolso }))));
+const ImportarClientes = lazy(() => lazyRetry(() => import('./pages/ImportarClientes')));
 const Dashboard = lazy(() => lazyRetry(() => import('./pages/Dashboard')));
 const Clientes = lazy(() => lazyRetry(() => import('./pages/Clientes')));
 const ClienteDetail = lazy(() => lazyRetry(() => import('./pages/ClienteDetail')));
@@ -80,14 +85,18 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const READ_ONLY_PATHS = ['/app', '/app/clientes', '/app/servicos', '/app/agenda', '/app/orcamentos', '/app/relatorios', '/app/financeiro'];
-
 function BillingGuard({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const { locked } = useSubscription();
+  if (loading) return <Loading />;
+  if (locked && user?.role === 'admin') {
+    return <Navigate to="/app/expirado" state={{ from: location.pathname }} replace />;
+  }
   return <>{children}</>;
 }
 
-export { BillingGuard, READ_ONLY_PATHS };
+export { BillingGuard };
 
 export default function App() {
   const { user } = useAuth();
@@ -110,17 +119,18 @@ export default function App() {
         <Route path="rota" element={<SuspenseWrap><TechRota /></SuspenseWrap>} />
         <Route path="desempenho" element={<SuspenseWrap><TechPerformance /></SuspenseWrap>} />
         <Route path="clientes" element={<SuspenseWrap><Clientes /></SuspenseWrap>} />
-        <Route path="clientes/novo" element={<SuspenseWrap><NovoCliente /></SuspenseWrap>} />
+        <Route path="clientes/importar" element={<SuspenseWrap><BillingGuard><AdminOnly><ImportarClientes /></AdminOnly></BillingGuard></SuspenseWrap>} />
+        <Route path="clientes/novo" element={<SuspenseWrap><BillingGuard><NovoCliente /></BillingGuard></SuspenseWrap>} />
         <Route path="clientes/:id" element={<SuspenseWrap><ClienteDetail /></SuspenseWrap>} />
-        <Route path="clientes/:id/editar" element={<SuspenseWrap><EditarCliente /></SuspenseWrap>} />
+        <Route path="clientes/:id/editar" element={<SuspenseWrap><BillingGuard><EditarCliente /></BillingGuard></SuspenseWrap>} />
         <Route path="equipamentos" element={<SuspenseWrap><Equipamentos /></SuspenseWrap>} />
         <Route path="agenda" element={<SuspenseWrap><Agenda /></SuspenseWrap>} />
         <Route path="orcamentos" element={<SuspenseWrap><AdminOnly><Orcamentos /></AdminOnly></SuspenseWrap>} />
-        <Route path="orcamentos/novo" element={<SuspenseWrap><AdminOnly><NovoOrcamento /></AdminOnly></SuspenseWrap>} />
+        <Route path="orcamentos/novo" element={<SuspenseWrap><AdminOnly><BillingGuard><NovoOrcamento /></BillingGuard></AdminOnly></SuspenseWrap>} />
         <Route path="orcamentos/:id" element={<SuspenseWrap><AdminOnly><OrcamentoDetail /></AdminOnly></SuspenseWrap>} />
         <Route path="servicos" element={<SuspenseWrap><Servicos /></SuspenseWrap>} />
         <Route path="servicos/:id" element={<SuspenseWrap><ServicoDetail /></SuspenseWrap>} />
-        <Route path="servicos/novo" element={<SuspenseWrap><NovaOS /></SuspenseWrap>} />
+        <Route path="servicos/novo" element={<SuspenseWrap><BillingGuard><NovaOS /></BillingGuard></SuspenseWrap>} />
         <Route path="financeiro" element={<SuspenseWrap><AdminOnly><Financeiro /></AdminOnly></SuspenseWrap>} />
         <Route path="relatorios" element={<SuspenseWrap><AdminOnly><Relatorios /></AdminOnly></SuspenseWrap>} />
         <Route path="perfil" element={<SuspenseWrap><AdminOnly><Perfil /></AdminOnly></SuspenseWrap>} />
@@ -138,6 +148,9 @@ export default function App() {
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
       </Route>
       <Route path="/orcamento/:id" element={<SuspenseWrap><ClienteOrcamento /></SuspenseWrap>} />
+      <Route path="/termos" element={<SuspenseWrap><TermosPage /></SuspenseWrap>} />
+      <Route path="/privacidade" element={<SuspenseWrap><PrivacidadePage /></SuspenseWrap>} />
+      <Route path="/reembolso" element={<SuspenseWrap><ReembolsoPage /></SuspenseWrap>} />
       <Route path="*" element={<Navigate to={user ? '/app' : '/login'} replace />} />
     </Routes>
   );

@@ -19,13 +19,44 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
 import {
   STATUS_LABEL, STATUS_STYLE, formatBRL, formatDate, telToWhats,
-  toggleChecklistItem, addMonths, todayISO, PAYMENT_METHODS, paymentLabel, normalizePaymentMethod,
+  addMonths, todayISO, PAYMENT_METHODS, paymentLabel, normalizePaymentMethod,
 } from '../lib/utils';
-import { generateServiceOrderPdf } from '../lib/pdf/serviceOrderPdf';
 import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { useServiceOrderActions } from '../hooks/useServiceOrderActions';
 import { VoiceReport, SuperheatCalc } from '../components/FieldTools';
-import type { ChecklistItem, ServiceOrder } from '../types';
+import { errMsg } from '../lib/errors';
+import { createCharge, chargeWhatsLink } from '../lib/charge';
+import type { ChecklistItem, ServiceOrder, User } from '../types';
+
+function ChargeButton({ orderId, customerId, value, osNumber }: { orderId: string; customerId: string; value: number; osNumber: string }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  async function handleCharge() {
+    if (busy || value <= 0) {
+      if (value <= 0) toast('error', 'Defina o valor da OS antes de cobrar.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await createCharge({ customerId, orderId, value, description: `OS ${osNumber} — ClimaPro`, dueInDays: 3 });
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data } = await supabase.from('customers').select('whatsapp, phone, name').eq('id', customerId).maybeSingle();
+      const msg = `Olá, ${data?.name || 'cliente'}! Segue a cobrança da OS ${osNumber} no valor de ${formatBRL(value)} (vence ${formatDate(res.dueDate)}).${res.payUrl ? `\nPague aqui: ${res.payUrl}` : ''}\nObrigado! ❄️`;
+      const link = chargeWhatsLink(data?.whatsapp || data?.phone, msg);
+      if (link) window.open(link, '_blank');
+      toast('success', res.payUrl ? 'Cobrança gerada! Link enviado ao WhatsApp.' : 'Cobrança gerada no Asaas!');
+    } catch (e: unknown) {
+      toast('error', errMsg(e, 'Não foi possível gerar a cobrança.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Button size="sm" variant="light" disabled={busy} onClick={handleCharge} className="shadow-lg" title="Gerar link Asaas e cobrar no WhatsApp">
+      <MessageCircle size={14} /> {busy ? 'Gerando…' : 'Cobrar'}
+    </Button>
+  );
+}
 
 const STEP_OPTIONS: { value: string; label: string }[] = [
   { value: 'solicitacao', label: 'Solicitação recebida' },
@@ -118,8 +149,8 @@ function PhotoUpload({
               urls.push(url);
             }
             onAdd(urls);
-          } catch (err: any) {
-            toast('error', err?.message || 'Não foi possível enviar a foto.');
+          } catch (err: unknown) {
+            toast('error', errMsg(err, 'Não foi possível enviar a foto.'));
           } finally {
             setUploading(false);
           }
@@ -252,9 +283,10 @@ export default function ServicoDetail() {
     }
   }
 
-  function generatePDF() {
+  async function generatePDF() {
     try {
-      const doc = generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
+      const { generateServiceOrderPdf } = await import('../lib/pdf/serviceOrderPdf');
+      const doc = await generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
       openPdf(doc, `OS-${o.osNumber}.pdf`, `OS ${o.osNumber} · ${customer?.name || 'Cliente'}`);
     } catch {
       toast('error', 'Não foi possível visualizar o PDF.');
@@ -282,7 +314,7 @@ export default function ServicoDetail() {
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
         action={
           <div className="flex flex-wrap gap-2">
-            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="secondary" size="sm" className="flex-1 sm:flex-none"><MessageCircle size={16} /> WhatsApp</Button>}
+            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="success" size="sm" className="flex-1 sm:flex-none"><MessageCircle size={17} strokeWidth={2.5} /> WhatsApp</Button>}
             <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1 sm:flex-none"><FileDown size={16} /> PDF</Button>
             {o.date ? (
               <>
@@ -351,12 +383,12 @@ export default function ServicoDetail() {
               className="w-full rounded-lg border border-sky-300 bg-white px-2.5 py-2 text-sm font-semibold text-neutral-800 outline-none focus:border-sky-500 dark:border-sky-800 dark:bg-neutral-900 dark:text-neutral-100 sm:w-64"
             >
               <option value="">⚠️ Sem técnico (atribuir)</option>
-              {team.map((u: any) => (
+              {team.map((u: User) => (
                 <option key={u.id} value={u.name}>
                   {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
                 </option>
               ))}
-              {o.technician && !team.some((u: any) => u.name === o.technician) && (
+              {o.technician && !team.some((u: User) => u.name === o.technician) && (
                 <option value={o.technician}>{o.technician} (antigo)</option>
               )}
             </select>
@@ -454,9 +486,12 @@ export default function ServicoDetail() {
                         </span>
                       )
                     ) : isAdmin ? (
-                      <Button size="sm" variant="light" onClick={() => setPayOpen(true)} className="shrink-0 shadow-lg">
-                        <Banknote size={16} /> Registrar
-                      </Button>
+                      <div className="flex shrink-0 gap-2">
+                        <Button size="sm" variant="light" onClick={() => setPayOpen(true)} className="shadow-lg">
+                          <Banknote size={16} /> Registrar
+                        </Button>
+                        <ChargeButton orderId={o.id} customerId={o.customerId} value={Number(o.value) || 0} osNumber={o.osNumber} />
+                      </div>
                     ) : (
                       <span className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-bold text-white/80">Somente dono altera</span>
                     )}

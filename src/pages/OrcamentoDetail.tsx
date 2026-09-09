@@ -16,7 +16,6 @@ import { useAuth } from '../context/AuthContext';
 import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { formatBRL, formatDate, telToWhats, budgetTotal, parseMoney, numberToBRLInput } from '../lib/utils';
 import { Loading } from '../components/Loading';
-import { generateBudgetPdf } from '../lib/pdf/budgetPdf';
 import type { Budget, BudgetItem } from '../types';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -130,21 +129,18 @@ export default function OrcamentoDetail() {
     toast(status === 'aprovado' ? 'success' : 'info', status === 'aprovado' ? 'Orçamento aprovado!' : 'Orçamento recusado.');
   }
 
-  function generatePDF(): jsPDF {
-    return generateBudgetPdf(b, customer, company);
-  }
-
-  function baixarPDF() {
-    visualizarPDF();
-  }
-
-  function visualizarPDF() {
+  async function visualizarPDF() {
     try {
-      const doc = generatePDF();
+      const { generateBudgetPdf } = await import('../lib/pdf/budgetPdf');
+      const doc: jsPDF = await generateBudgetPdf(b, customer, company);
       openPdf(doc, `orcamento-${b.number}.pdf`, `Orçamento ${b.number}`);
     } catch {
       toast('error', 'Não foi possível visualizar o PDF. Tente novamente.');
     }
+  }
+
+  function baixarPDF() {
+    visualizarPDF();
   }
 
   function shareWhatsApp() {

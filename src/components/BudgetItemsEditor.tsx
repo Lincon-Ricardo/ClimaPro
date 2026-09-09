@@ -87,6 +87,7 @@ export function BudgetItemsEditor({
 
   function handleInsert(m: Pick<Material, 'name' | 'unitValue'>) {
     addItem({ description: m.name, unitValue: m.unitValue });
+    setCatalogOpen(false);
   }
 
   return (

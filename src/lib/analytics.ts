@@ -16,7 +16,7 @@ function read(): FunnelEvent[] {
   }
 }
 
-export function track(event: string, extra?: { plan?: string; cycle?: string; method?: string }) {
+export function track(event: string, extra?: { plan?: string; cycle?: string; method?: string; osVolume?: string; techSize?: string; goal?: string }) {
   try {
     const list = read();
     list.push({ event, at: new Date().toISOString(), ...extra });

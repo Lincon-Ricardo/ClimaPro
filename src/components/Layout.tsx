@@ -1,6 +1,5 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useSubscription } from '../hooks/useSubscription';
 import {
   Home,
   CalendarDays,
@@ -27,11 +26,25 @@ import { useToast } from './Toast';
 import { BillingBanner } from './BillingBanner';
 import { useTheme } from '../context/ThemeContext';
 import { NavItem } from './NavItem';
+import type { LucideIcon } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { db } from '../lib/db';
 import { generateNotifications } from '../lib/notifications';
 
-const moreItems = [
+interface NavEntry {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+}
+
+const ADMIN_SIDEBAR_MAIN: NavEntry[] = [
+  { to: '/app', icon: Home, label: 'Início' },
+  { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
+  { to: '/app/clientes', icon: Users, label: 'Clientes' },
+  { to: '/app/orcamentos', icon: Wallet, label: 'Orçamentos' },
+];
+
+const ADMIN_MORE: NavEntry[] = [
   { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
   { to: '/app/financeiro', icon: TrendingUp, label: 'Financeiro' },
   { to: '/app/equipamentos', icon: Snowflake, label: 'Equipamentos' },
@@ -40,22 +53,27 @@ const moreItems = [
   { to: '/app/perfil', icon: Briefcase, label: 'Perfil da empresa' },
 ];
 
+const ADMIN_BOTTOM: NavEntry[] = [
+  ...ADMIN_SIDEBAR_MAIN,
+  { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
+];
+
 function Logo({ light }: { light?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-        <Snowflake size={22} className="text-white" />
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-blue-700 text-white shadow-[0_10px_24px_-8px_rgba(59,130,246,.8)] ring-1 ring-white/25">
+        <Snowflake size={22} strokeWidth={2.5} />
       </div>
       <div className="leading-tight">
-        <div className={`text-lg font-extrabold ${light ? 'text-white' : 'text-primary-800'}`}>ClimaPro</div>
-        <div className={`text-[10px] ${light ? 'text-primary-200' : 'text-neutral-400'}`}>Gestão em climatização</div>
+        <div className={`font-display text-[19px] font-extrabold tracking-tight ${light ? 'text-white' : 'text-primary-900 dark:text-white'}`}>ClimaPro</div>
+        <div className={`text-[10px] font-semibold uppercase tracking-[.14em] ${light ? 'text-sky-200/80' : 'text-neutral-400'}`}>Climatização</div>
       </div>
     </div>
   );
 }
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, online } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const { resolved, setTheme } = useTheme();
@@ -65,22 +83,14 @@ export function Layout() {
   ) ?? 0;
 
   const isTech = user?.role === 'tech';
-  const location = useLocation();
-  const { locked } = useSubscription();
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
-
-  useEffect(() => {
-    if (locked && user?.role === 'admin' && !location.pathname.startsWith('/app/expirado') && !location.pathname.startsWith('/app/planos') && !location.pathname.startsWith('/app/config')) {
-      navigate('/app/expirado');
-    }
-  }, [locked, location.pathname]);
-  const commissionOn = (companies[0] as any)?.commissionEnabled !== false;
+  const commissionOn = companies[0]?.commissionEnabled !== false;
 
   // Navegação do Técnico (Cockpit de Campo) — rótulo muda conforme regra da empresa
-  const perfItem = commissionOn
+  const perfItem: NavEntry = commissionOn
     ? { to: '/app/desempenho', icon: DollarSign, label: 'Comissão' }
     : { to: '/app/desempenho', icon: Trophy, label: 'Desempenho' };
-  const techBottomItems = [
+  const techBottomItems: NavEntry[] = [
     { to: '/app/rota', icon: Navigation, label: 'Minha Rota' },
     { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
     { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
@@ -88,18 +98,7 @@ export function Layout() {
     { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
   ];
 
-  // Navegação do Dono (Torre de Controle)
-  const adminBottomItems = [
-    { to: '/app', icon: Home, label: 'Início' },
-    { to: '/app/agenda', icon: CalendarDays, label: 'Agenda' },
-    { to: '/app/clientes', icon: Users, label: 'Clientes' },
-    { to: '/app/orcamentos', icon: Wallet, label: 'Orçamentos' },
-    { to: '/app/mais', icon: MoreHorizontal, label: 'Mais' },
-  ];
-
-  const currentBottomItems = isTech ? techBottomItems : adminBottomItems;
-
-  const techMoreItems = [
+  const techMoreItems: NavEntry[] = [
     { to: '/app/rota', icon: Navigation, label: 'Cockpit de Rota' },
     { to: '/app/desempenho', icon: commissionOn ? DollarSign : Trophy, label: commissionOn ? 'Minhas Comissões' : 'Meu Desempenho' },
     { to: '/app/servicos', icon: Wrench, label: 'Minhas OS' },
@@ -107,7 +106,8 @@ export function Layout() {
     { to: '/app/config', icon: Settings, label: 'Minha Conta' },
   ];
 
-  const currentMoreItems = isTech ? techMoreItems : moreItems;
+  const currentBottomItems: NavEntry[] = isTech ? techBottomItems : ADMIN_BOTTOM;
+  const currentMoreItems: NavEntry[] = isTech ? techMoreItems : ADMIN_MORE;
 
   useEffect(() => {
     generateNotifications();
@@ -120,19 +120,25 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
+    <div className="min-h-screen">
+      {!online && (
+        <div className="sticky top-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-center text-xs font-black text-white shadow-lg">
+          ⚠️ Sem internet — você pode ver, mas mudanças sincronizam ao voltar.
+        </div>
+      )}
       <div className="hidden md:flex">
-        <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col bg-primary-800 text-white xl:w-64">
-          <div className="px-5 py-6">
+        <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-hidden bg-gradient-to-b from-[#071f4c] via-[#0b3d91] to-[#0a2a63] text-white shadow-2xl xl:w-64">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
+          <div className="relative px-5 py-6">
             <Logo light />
           </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+          <nav className="relative flex-1 space-y-1 overflow-y-auto px-3">
             {isTech ? (
               <>
-                <NavItem to="/app/rota" icon={Navigation} label="Minha Rota" light />
-                <NavItem to="/app/servicos" icon={Wrench} label="Minhas OS" light />
-                <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
-                <NavItem to="/app/desempenho" icon={commissionOn ? DollarSign : Trophy} label={commissionOn ? 'Minhas Comissões' : 'Meu Desempenho'} light />
+                {techBottomItems.slice(0, 4).map((it) => (
+                  <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
+                ))}
                 <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
                   Ferramentas
                 </div>
@@ -142,14 +148,13 @@ export function Layout() {
               </>
             ) : (
               <>
-                <NavItem to="/app" icon={Home} label="Início" light />
-                <NavItem to="/app/agenda" icon={CalendarDays} label="Agenda" light />
-                <NavItem to="/app/clientes" icon={Users} label="Clientes" light />
-                <NavItem to="/app/orcamentos" icon={Wallet} label="Orçamentos" light />
+                {ADMIN_SIDEBAR_MAIN.map((it) => (
+                  <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
+                ))}
                 <div className="my-3 border-t border-white/15 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary-300">
                   Gestão
                 </div>
-                {moreItems.map((it) => (
+                {ADMIN_MORE.map((it) => (
                   <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} light />
                 ))}
               </>
@@ -163,10 +168,19 @@ export function Layout() {
               )}
             </div>
           </nav>
-          <div className="border-t border-white/15 p-4">
+          <div className="relative border-t border-white/15 p-4">
+            <div className="mb-3 flex items-center gap-3 rounded-2xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 text-sm font-black text-white">
+                {(user?.firstName || user?.name || 'U').charAt(0).toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-extrabold text-white">{user?.name || 'Usuário'}</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wider text-sky-200/70">{user?.role === 'admin' ? 'Dono' : 'Técnico'}</span>
+              </span>
+            </div>
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-primary-200 transition hover:bg-white/10 hover:text-white"
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-bold text-sky-100/80 transition hover:bg-white/10 hover:text-white active:scale-[.99]"
             >
               <LogOut size={18} /> Sair
             </button>
@@ -181,17 +195,17 @@ export function Layout() {
       </div>
 
       <div className="md:hidden">
-        <header className="sticky top-0 z-20 flex items-center justify-between bg-primary-800 px-4 py-3 text-white">
+        <header className="sticky top-0 z-20 flex items-center justify-between bg-gradient-to-r from-[#071f4c] via-[#0b3d91] to-[#123f86] px-4 py-3 text-white shadow-lg">
           <Logo light />
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/app/notificacoes')}
               aria-label="Notificações"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
+              className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur transition active:scale-95"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-700 px-1 text-[10px] font-black text-white shadow">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -199,14 +213,14 @@ export function Layout() {
             <button
               onClick={() => navigate('/app/busca')}
               aria-label="Buscar"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur transition active:scale-95"
             >
               <Search size={18} />
             </button>
             <button
               onClick={() => setTheme(resolved ? 'light' : 'dark')}
               aria-label="Alternar tema"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20 backdrop-blur transition active:scale-95"
             >
               {resolved ? <Sun size={18} /> : <Moon size={18} />}
             </button>
@@ -216,16 +230,14 @@ export function Layout() {
           {!isTech && <BillingBanner />}
           <Outlet />
         </main>
-        {!locked && (
-          <button
-            type="button"
-            aria-label="Nova OS"
-            onClick={() => navigate('/app/servicos/novo')}
-            className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-xl font-black text-white shadow-2xl transition hover:bg-primary-800 active:scale-95 md:bottom-8 md:right-8"
-          >
-            +
-          </button>
-        )}
+        <button
+          type="button"
+          aria-label="Nova OS"
+          onClick={() => navigate('/app/servicos/novo')}
+          className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-700 text-xl font-black text-white shadow-2xl transition hover:bg-primary-800 active:scale-95 md:bottom-8 md:right-8"
+        >
+          +
+        </button>
         <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-neutral-700 dark:bg-neutral-900">
           {currentBottomItems.map((it) => (
             <NavItem

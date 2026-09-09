@@ -3,16 +3,17 @@ import autoTable from 'jspdf-autotable';
 import { formatBRL, formatDate } from '../utils';
 import type { Budget, BudgetItem, Company, Customer } from '../../types';
 import {
-  createPdf, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter,
+  createPdf, ensurePdfFonts, text, sectionLabel, divider, drawBrandHeader, drawBrandFooter,
   textHeight, statusBadge, drawSignature, HEADER_SPACE, FOOTER_SPACE,
   fitOneLine, measureLines, newBrandedPage, stampFooters,
 } from './theme';
 import { drawInfoBox } from './blocks';
-import { setPdfFont } from './fonts';
+import { setPdfFont } from './fontStyle';
 
-export function generateBudgetPdf(budget: Budget, customer: Customer | undefined, company: Company | null | undefined): jsPDF {
+export async function generateBudgetPdf(budget: Budget, customer: Customer | undefined, company: Company | null | undefined): Promise<jsPDF> {
   const b = budget;
   const ctx = createPdf(company);
+  await ensurePdfFonts(ctx.doc);
   const { doc, c, ML, MR, CW, PH } = ctx;
   const sLabel: Record<string, string> = { rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', recusado: 'Recusado' };
   const subtitle = `${b.serviceType || 'Serviço'} · Cliente: ${customer?.name || '-'}`;

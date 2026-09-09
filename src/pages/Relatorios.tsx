@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import {
-  FileText, TrendingUp, CheckCircle2, Users, Filter, Calendar,
+  FileText, TrendingUp, CheckCircle2, Users, Filter,
   FileDown, Trophy, Target, Wallet, Flame, AlertTriangle, Clock,
-  BadgeDollarSign, UserRound, Quote, Wrench, ChevronRight, Star,
+  BadgeDollarSign, UserRound, Quote, Wrench, Star,
 } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card, StatCard } from '../components/Card';
@@ -17,7 +17,7 @@ import {
   serviceMix as buildMix, topDebtors as buildDebtors, staleBudgets as buildStale,
 } from '../lib/reports';
 import type { RangeKey } from '../lib/reports';
-import { exportReportPdf } from '../lib/pdf/reportPdf';
+import { errMsg } from '../lib/errors';
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: 'hoje', label: 'Hoje' },
@@ -79,10 +79,11 @@ export default function Relatorios() {
   async function exportPDF() {
     setGenerating(true);
     try {
+      const { exportReportPdf } = await import('../lib/pdf/reportPdf');
       const doc = await exportReportPdf({ company, label, from, to, techFilter, kpi, techRanking, serviceMix, debtors });
       openPdf(doc, `Relatorio-ClimaPro-${label.replace(/\s+/g, '-')}.pdf`, `Relatório · ${label}`);
-    } catch (e: any) {
-      toast('error', 'Não foi possível gerar o PDF: ' + (e?.message || 'erro'));
+    } catch (e: unknown) {
+      toast('error', 'Não foi possível gerar o PDF: ' + errMsg(e, 'erro'));
     } finally {
       setGenerating(false);
     }

@@ -2,9 +2,9 @@ import { getAdminClient } from '../_lib/supabase.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 function statusFromEvent(event: string): string | null {
-  if (['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'SUBSCRIPTION_ACTIVATED'].includes(event)) return 'active';
-  if (['PAYMENT_OVERDUE', 'PAYMENT_DUNNING_RECEIVED'].includes(event)) return 'past_due';
-  if (['SUBSCRIPTION_INACTIVATED', 'SUBSCRIPTION_DELETED'].includes(event)) return 'canceled';
+  if (['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'PAYMENT_RECEIVED_IN_CASH', 'SUBSCRIPTION_ACTIVATED'].includes(event)) return 'active';
+  if (['PAYMENT_OVERDUE', 'PAYMENT_DUNNING_RECEIVED', 'PAYMENT_DUNNING_REQUESTED'].includes(event)) return 'past_due';
+  if (['SUBSCRIPTION_INACTIVATED', 'SUBSCRIPTION_DELETED', 'SUBSCRIPTION_EXPIRED'].includes(event)) return 'canceled';
   return null;
 }
 
@@ -13,7 +13,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
   const h = request.headers as Record<string, string | string[] | undefined>;
   const pick = (v: string | string[] | undefined) => Array.isArray(v) ? v[0] : v;
-  const receivedToken = pick(h['asaas-access-token']) || pick(h['x-asaas-token']) || pick(h['webhook-token']) || (request.query as any)?.token;
+  const receivedToken = pick(h['asaas-access-token']) || pick(h['x-asaas-token']) || pick(h['webhook-token']) || (request.query as { token?: string })?.token;
   if (!expected || !receivedToken || receivedToken !== expected) return response.status(401).json({ error: 'Não autorizado.' });
 
   try {
@@ -43,7 +43,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     await supabase.from('billing_events').update({ status: 'processed', processed_at: new Date().toISOString() }).eq('event_id', eventId);
     return response.status(200).json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[billing/webhook]', error);
     return response.status(500).json({ error: 'Erro ao processar webhook.' });
   }

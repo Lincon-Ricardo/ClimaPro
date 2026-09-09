@@ -35,7 +35,7 @@ export default function NovaOS() {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const team = useLiveQuery(() => db.users.toArray(), []) || [];
 
-  const preselect = (location.state as any)?.customerId || '';
+  const preselect = (location.state as { customerId?: string } | null)?.customerId || '';
 
   const [form, setForm] = useState({
     customerId: preselect,
@@ -153,7 +153,7 @@ export default function NovaOS() {
           }} placeholder="0,00" />
           <Select label="Técnico responsável" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} disabled={!isAdmin}>
             <option value="">⚠️ Sem técnico (atribuir depois)</option>
-            {team.map((u: any) => (
+            {team.map((u) => (
               <option key={u.id} value={u.name}>
                 {u.role === 'admin' ? '👑 ' : '🔧 '}{u.name}
               </option>
