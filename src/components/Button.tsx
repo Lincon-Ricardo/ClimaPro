@@ -6,11 +6,11 @@ type Size = 'sm' | 'md' | 'lg';
 const variants: Record<Variant, string> = {
   primary:
     'cp-btn-primary text-white font-bold tracking-tight',
-  secondary: 'bg-primary-50 text-primary-800 hover:bg-primary-100 border border-primary-200 dark:bg-primary-950/60 dark:text-primary-100 dark:hover:bg-primary-900/60 dark:border-primary-700/60 shadow-sm',
+  secondary: 'bg-primary-50 text-primary-800 hover:bg-primary-100 border border-primary-200 dark:bg-primary-900 dark:text-primary-50 dark:hover:bg-primary-800 dark:border-primary-700 shadow-sm',
   ghost: 'bg-transparent text-neutral-600 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-white/10',
   danger: 'bg-gradient-to-br from-red-500 to-red-700 text-white hover:brightness-110 shadow-[0_12px_28px_-12px_rgba(220,38,38,.7)] font-bold',
   success: 'bg-gradient-to-br from-emerald-500 to-emerald-700 text-white hover:brightness-110 shadow-[0_12px_28px_-12px_rgba(22,163,74,.7)] font-bold',
-  outline: 'bg-white text-neutral-700 border border-neutral-300 hover:border-primary-300 hover:bg-neutral-50 dark:bg-white/5 dark:text-neutral-100 dark:border-white/15 dark:hover:bg-white/10 shadow-sm',
+  outline: 'bg-white text-neutral-700 border border-neutral-300 hover:border-primary-300 hover:bg-neutral-50 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-600 dark:hover:bg-neutral-800 shadow-sm',
   light: 'bg-white text-primary-900 hover:bg-primary-50 active:bg-primary-100 shadow-[0_14px_30px_-12px_rgba(0,0,0,.45)] font-bold dark:bg-primary-900 dark:text-primary-50 dark:hover:bg-primary-800 dark:active:bg-primary-950',
 };
 
