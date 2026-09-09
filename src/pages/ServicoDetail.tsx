@@ -313,13 +313,71 @@ export default function ServicoDetail() {
         title={`OS Nº ${o.osNumber}`}
         subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
         action={
-          <div className="flex flex-wrap gap-2">
-            {waLink && <Button as="a" href={waLink} target="_blank" rel="noreferrer" variant="success" size="sm" className="flex-1 sm:flex-none"><MessageCircle size={17} strokeWidth={2.5} /> WhatsApp</Button>}
-            <Button variant="outline" size="sm" onClick={generatePDF} className="flex-1 sm:flex-none"><FileDown size={16} /> PDF</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {waLink && (
+              <Button
+                as="a"
+                href={waLink}
+                target="_blank"
+                rel="noreferrer"
+                variant="success"
+                size="sm"
+                className="hidden sm:inline-flex"
+              >
+                <MessageCircle size={17} strokeWidth={2.5} /> WhatsApp
+              </Button>
+            )}
+            {waLink && (
+              <Button
+                as="a"
+                href={waLink}
+                target="_blank"
+                rel="noreferrer"
+                variant="success"
+                size="sm"
+                className="inline-flex sm:hidden"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle size={17} strokeWidth={2.5} />
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generatePDF}
+              className="hidden sm:inline-flex"
+            >
+              <FileDown size={16} /> PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generatePDF}
+              className="inline-flex sm:hidden"
+              aria-label="Gerar PDF"
+            >
+              <FileDown size={16} />
+            </Button>
             {o.date ? (
               <>
-                <Button variant="secondary" size="sm" onClick={() => navigate(`/app/agenda?date=${o.date}`)} title="Ver esta OS na Agenda" className="flex-1 sm:flex-none">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/app/agenda?date=${o.date}`)}
+                  title="Ver esta OS na Agenda"
+                  className="hidden sm:inline-flex"
+                >
                   <CalendarDays size={16} className="stroke-current" /> Na agenda
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/app/agenda?date=${o.date}`)}
+                  title="Ver esta OS na Agenda"
+                  className="inline-flex sm:hidden"
+                  aria-label="Ver na agenda"
+                >
+                  <CalendarDays size={16} className="stroke-current" />
                 </Button>
                 <Button
                   variant="outline"
@@ -331,6 +389,21 @@ export default function ServicoDetail() {
                   }}
                   title="Mudar data/hora"
                   aria-label="Reagendar"
+                  className="hidden sm:inline-flex"
+                >
+                  <Clock size={16} className="stroke-current" /> Reagendar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAgendaDate(o.date);
+                    setAgendaTime(o.time || '09:00');
+                    setAgendaOpen(true);
+                  }}
+                  title="Mudar data/hora"
+                  aria-label="Reagendar"
+                  className="inline-flex sm:hidden"
                 >
                   <Clock size={16} className="stroke-current" />
                 </Button>
@@ -345,12 +418,31 @@ export default function ServicoDetail() {
                   setAgendaOpen(true);
                 }}
                 title="Escolher data e colocar na agenda"
-                className="flex-1 sm:flex-none"
+                className="hidden sm:inline-flex"
               >
                 <CalendarDays size={16} className="stroke-current" /> Agendar
               </Button>
             )}
-            <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} aria-label="Excluir serviço" title="Excluir serviço"><Trash2 size={16} /></Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Excluir serviço"
+              title="Excluir serviço"
+              className="hidden sm:inline-flex"
+            >
+              <Trash2 size={16} /> Excluir
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Excluir serviço"
+              title="Excluir serviço"
+              className="inline-flex sm:hidden"
+            >
+              <Trash2 size={16} />
+            </Button>
           </div>
         }
       />
