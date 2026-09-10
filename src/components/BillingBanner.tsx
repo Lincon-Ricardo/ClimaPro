@@ -1,10 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, AlertTriangle, XCircle, ArrowRight } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
+import { useAuth } from '../context/AuthContext';
 
 export function BillingBanner() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { active, expired, isTrial, trialLeft, trialNotStarted, osBlocked, osThisMonth, osAllowed } = useSubscription();
+
+  // Perfil liberado: sem mensagem de teste / cobrança
+  if (user?.email === 'dns_wil@yahoo.com.br') return null;
 
   if (expired || !active) {
     return (
