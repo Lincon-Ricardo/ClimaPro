@@ -90,6 +90,8 @@ function BillingGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { locked } = useSubscription();
   if (loading) return <Loading />;
+  // Perfil exempto: dns_wil@yahoo.com.br — liberação permanente
+  if (user?.email === 'dns_wil@yahoo.com.br') return <>{children}</>;
   if (locked && user?.role === 'admin') {
     return <Navigate to="/app/expirado" state={{ from: location.pathname }} replace />;
   }
