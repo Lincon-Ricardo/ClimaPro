@@ -147,7 +147,7 @@ export default function App() {
         <Route path="planos" element={<SuspenseWrap><AdminOnly><Planos /></AdminOnly></SuspenseWrap>} />
         <Route path="expirado" element={<SuspenseWrap><Expirado /></SuspenseWrap>} />
         <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
-        <Route path="gastos" element={<SuspenseWrap><AdminOnly><Gastos /></AdminOnly></SuspenseWrap>} />
+        <Route path="gastos" element={<SuspenseWrap><BillingGuard><Gastos /></BillingGuard></SuspenseWrap>} />
         <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
       </Route>
