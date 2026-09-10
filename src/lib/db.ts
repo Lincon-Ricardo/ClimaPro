@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { emitDataChanged } from './tableBus';
-import type { Customer, Equipment, Budget, ServiceOrder, Company, Notification, Payment, Appointment, Material, User } from '../types';
+import type { Customer, Equipment, Budget, ServiceOrder, Company, Notification, Payment, Appointment, Material, User, Expense } from '../types';
 
 type DbRow = Record<string, unknown>;
 type EntityMap = {
@@ -76,6 +76,18 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
   materials: {
     unitValue: 'unit_value',
     createdAt: 'created_at',
+  },
+  expenses: {
+    companyId: 'company_id',
+    category: 'category',
+    description: 'description',
+    value: 'value',
+    date: 'date',
+    paymentMethod: 'payment_method',
+    paymentStatus: 'payment_status',
+    notes: 'notes',
+    createdAt: 'created_at',
+    createdBy: 'created_by',
   },
   subscriptions: {
     companyId: 'company_id',
@@ -346,6 +358,7 @@ export const db = {
   users: makeTable<EntityMap['profiles']>('profiles'),
   appointments: makeTable<Appointment>('appointments'),
   materials: makeTable<Material>('materials'),
+  expenses: makeTable<Expense>('expenses'),
   subscriptions: makeTable<DbRow>('subscriptions'),
 };
 

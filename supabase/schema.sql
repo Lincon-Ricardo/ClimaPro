@@ -822,3 +822,20 @@ alter publication supabase_realtime add table customers, service_orders, budgets
 
 -- Força o PostgREST a recarregar o cache do schema (evita "table not in schema cache")
 notify pgrst, 'reload schema';
+-- ── GASTOS (despesas / controle de gasto) ──
+create table if not exists expenses (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies on delete cascade,
+  category text not null default 'outros' check (category in ('material','ferramenta','combustivel','transporte','marketing','escritorio','manutencao','outros')),
+  description text not null default '',
+  value numeric not null default 0,
+  date date not null default current_date,
+  payment_method text default '',
+  payment_status text not null default 'pago' check (payment_status in ('pendente','pago')),
+  notes text default '',
+  created_at timestamptz default now(),
+  created_by text default ''
+);
+alter table expenses enable row level security;
+create policy tx_expenses_select on expenses for select using (auth.uid()::text = created_by or company_id in (select company_id from profiles where id = auth.uid()));
+create policy tx_expenses_insert on expenses for insert with check (auth.uid()::text = created_by or company_id in (select company_id from profiles where id = auth.uid()));

@@ -45,6 +45,7 @@ const Notificacoes = lazy(() => lazyRetry(() => import('./pages/Notificacoes')))
 const CalculadoraBtu = lazy(() => lazyRetry(() => import('./pages/CalculadoraBtu')));
 const Diagnostico = lazy(() => lazyRetry(() => import('./pages/Diagnostico')));
 const Administrativo = lazy(() => lazyRetry(() => import('./pages/Administrativo')));
+const Gastos = lazy(() => lazyRetry(() => import('./pages/Gastos')));
 const Users = lazy(() => lazyRetry(() => import('./pages/Users')));
 const TechRota = lazy(() => lazyRetry(() => import('./pages/TechRota')));
 const TechPerformance = lazy(() => lazyRetry(() => import('./pages/TechPerformance')));
@@ -146,6 +147,7 @@ export default function App() {
         <Route path="planos" element={<SuspenseWrap><AdminOnly><Planos /></AdminOnly></SuspenseWrap>} />
         <Route path="expirado" element={<SuspenseWrap><Expirado /></SuspenseWrap>} />
         <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
+<Route path="gastos" element={<SuspenseWrap><AdminOnly><Gastos /></AdminOnly></SuspenseWrap>} />
         <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
       </Route>

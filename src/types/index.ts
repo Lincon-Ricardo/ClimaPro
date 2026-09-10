@@ -193,3 +193,27 @@ export interface Notification {
   createdAt: string;
   companyId?: string;
 }
+
+export type ExpenseCategory =
+  | 'material'
+  | 'ferramenta'
+  | 'combustivel'
+  | 'transporte'
+  | 'marketing'
+  | 'escritorio'
+  | 'manutencao'
+  | 'outros';
+
+export interface Expense {
+  id: string;
+  companyId: string;
+  category: ExpenseCategory;
+  description: string;
+  value: number;
+  date: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+}
