@@ -47,6 +47,7 @@ const ADMIN_SIDEBAR_MAIN: NavEntry[] = [
 const ADMIN_MORE: NavEntry[] = [
   { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
   { to: '/app/financeiro', icon: TrendingUp, label: 'Financeiro' },
+  { to: '/app/gastos', icon: Wallet, label: 'Gastos' },
   { to: '/app/equipamentos', icon: Snowflake, label: 'Equipamentos' },
   { to: '/app/relatorios', icon: FileText, label: 'Relatórios' },
   { to: '/app/config', icon: Settings, label: 'Configurações' },
