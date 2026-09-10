@@ -52,7 +52,7 @@ export function StatCard({
       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${iconCls}`}>{icon}</div>
       <div className="min-w-0 flex-1">
         <div className={`font-display break-words text-[17px] font-extrabold leading-tight sm:text-xl ${valueCls}`}>{value}</div>
-        <div className={`mt-0.5 truncate text-[11px] font-semibold leading-snug sm:whitespace-normal sm:text-xs ${onClick ? 'text-primary-600 dark:text-primary-300' : 'text-neutral-500 dark:text-neutral-400'}`}>{label}</div>
+        <div className={`mt-0.5 truncate text-[11px] font-semibold leading-snug sm:whitespace-normal sm:text-xs ${onClick ? 'text-primary-600 dark:text-primary-300' : 'text-neutral-500 dark:text-neutral-300'}`}>{label}</div>
       </div>
     </div>
   );

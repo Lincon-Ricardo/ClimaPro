@@ -99,7 +99,8 @@ body {
 }
 
 .dark .cp-card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 22px 55px -28px rgba(56, 130, 246, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 22px 55px -28px rgba(56, 130, 246, 0.55);
+  border-color: rgba(148, 184, 255, 0.18);
 }
 
 .cp-field {
@@ -110,14 +111,14 @@ body {
 
 .dark .cp-field {
   background: #0a1226;
-  border-color: rgba(148, 184, 255, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-color: rgba(148, 184, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px rgba(148, 184, 255, 0.12);
 }
 
-.cp-field:focus-within,
-.cp-field:focus {
+.dark .cp-field:focus-within,
+.dark .cp-field:focus {
   border-color: #3ba7e8;
-  box-shadow: 0 0 0 4px rgba(59, 167, 232, 0.18);
+  box-shadow: 0 0 0 4px rgba(59, 167, 232, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   outline: none;
 }
 
