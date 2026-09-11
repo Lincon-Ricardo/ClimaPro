@@ -852,7 +852,13 @@ do $$ begin
     create publication supabase_realtime;
   end if;
 end $$;
-alter publication supabase_realtime add table customers, service_orders, budgets, equipment, companies, notifications, payments, profiles, appointments, materials;
+do $$ declare t text; begin
+  for t in select unnest(array['customers','service_orders','budgets','equipment','companies','notifications','payments','profiles','appointments','materials']) loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end $$;
 
 -- Força o PostgREST a recarregar o cache do schema (evita "table not in schema cache")
 notify pgrst, 'reload schema';
@@ -888,11 +894,9 @@ create trigger trg_set_company_expenses before insert on expenses for each row e
 create index if not exists idx_expenses_company on expenses (company_id, date desc);
 create index if not exists idx_expenses_category on expenses (company_id, category);
 do $$ begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    begin
-      alter publication supabase_realtime add table expenses;
-    exception when duplicate_object then null;
-    end;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'expenses') then
+    alter publication supabase_realtime add table expenses;
   end if;
 end $$;
 
@@ -935,11 +939,9 @@ create index if not exists idx_losses_status on losses (company_id, status);
 create index if not exists idx_losses_order on losses (service_order_id);
 create index if not exists idx_losses_tech on losses (company_id, technician);
 do $$ begin
-  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    begin
-      alter publication supabase_realtime add table losses;
-    exception when duplicate_object then null;
-    end;
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'losses') then
+    alter publication supabase_realtime add table losses;
   end if;
 end $$;
 notify pgrst, 'reload schema';
