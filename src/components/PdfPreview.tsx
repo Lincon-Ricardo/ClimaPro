@@ -13,25 +13,43 @@ export function usePdfPreview() {
   const [preview, setPreview] = useState<PdfPreviewState | null>(null);
 
   useEffect(() => {
+    const url = preview?.url;
     return () => {
-      if (preview) URL.revokeObjectURL(preview.url);
+      if (url) setTimeout(() => URL.revokeObjectURL(url), 500);
     };
   }, [preview]);
 
-  function openPdf(doc: { output: (kind: 'blob') => Blob; save: (name: string) => void }, filename: string, title: string) {
-    if (preview) URL.revokeObjectURL(preview.url);
-    const blob = doc.output('blob');
-    const url = URL.createObjectURL(blob);
+  function openPdf(doc: { output: (kind: 'blob' | 'bloburi' | 'datauristring') => Blob | string; save: (name: string) => void }, filename: string, title: string) {
+    try {
+      if (preview?.url) URL.revokeObjectURL(preview.url);
+    } catch { /* noop */ }
+    let url = '';
+    try {
+      const blob = doc.output('blob') as Blob;
+      url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+    } catch {
+      try {
+        url = String(doc.output('bloburi'));
+      } catch {
+        url = String(doc.output('datauristring'));
+      }
+    }
+    if (!url) throw new Error('PDF vazio');
     setPreview({ url, filename, title, build: () => doc });
   }
 
   function close() {
-    if (preview) URL.revokeObjectURL(preview.url);
+    const url = preview?.url;
     setPreview(null);
+    if (url) setTimeout(() => { try { URL.revokeObjectURL(url); } catch { /* noop */ } }, 500);
   }
 
   function download() {
-    preview?.build().save(preview.filename);
+    try {
+      preview?.build().save(preview.filename);
+    } catch {
+      if (preview?.url) window.open(preview.url, '_blank');
+    }
   }
 
   return { preview, openPdf, close, download };

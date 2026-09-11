@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import {
-  MessageCircle, FileDown, Check, X, Pencil, Wrench, Camera, StickyNote,
-  CheckCircle2, Clock, Trash2, Loader2, Wallet, CreditCard, Banknote,
+  MessageCircle, Check, X, Pencil, Wrench, Camera, StickyNote,
+  CheckCircle2, Clock, Loader2, Wallet, CreditCard, Banknote,
   Repeat, CalendarClock, MapPin, Phone, CalendarDays,
 } from 'lucide-react';
 import { useLiveQuery } from '../hooks/useLiveQuery';
@@ -13,7 +13,7 @@ import { uploadServicePhoto, deleteServicePhoto, getSignedPhotoUrl } from '../li
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
-import { PageHeader } from '../components/PageHeader';
+import { OsHeader } from '../components/OsHeader';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Select, Textarea } from '../components/Fields';
@@ -284,13 +284,42 @@ export default function ServicoDetail() {
     }
   }
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  async function buildPdfDoc() {
+    const { generateServiceOrderPdf } = await import('../lib/pdf/serviceOrderPdf');
+    return generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
+  }
+
   async function generatePDF() {
+    if (pdfBusy) return;
+    setPdfBusy(true);
     try {
-      const { generateServiceOrderPdf } = await import('../lib/pdf/serviceOrderPdf');
-      const doc = await generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
-      openPdf(doc, `OS-${o.osNumber}.pdf`, `OS ${o.osNumber} · ${customer?.name || 'Cliente'}`);
+      const doc = await buildPdfDoc();
+      try {
+        openPdf(doc, `OS-${o.osNumber}.pdf`, `OS ${o.osNumber} · ${customer?.name || 'Cliente'}`);
+      } catch {
+        doc.save(`OS-${o.osNumber}.pdf`);
+        toast('info', 'Prévia bloqueada neste navegador — baixei o PDF.');
+      }
     } catch {
-      toast('error', 'Não foi possível visualizar o PDF.');
+      toast('error', 'Não foi possível gerar o PDF.');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  async function downloadPDF() {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const doc = await buildPdfDoc();
+      doc.save(`OS-${o.osNumber}.pdf`);
+      toast('success', 'PDF baixado!');
+    } catch {
+      toast('error', 'Não foi possível baixar o PDF.');
+    } finally {
+      setPdfBusy(false);
     }
   }
   async function handleDelete() {
@@ -308,144 +337,47 @@ export default function ServicoDetail() {
   const phone = customer?.whatsapp || customer?.phone;
   const waLink = phone ? `https://wa.me/${telToWhats(phone)}` : null;
 
+  const statusBadgeClass =
+    o.status === 'concluido'
+      ? 'bg-emerald-400/25 text-emerald-50 ring-1 ring-emerald-300/50'
+      : o.status === 'cancelado'
+        ? 'bg-red-400/25 text-red-50 ring-1 ring-red-300/50'
+        : o.status === 'em_andamento' || o.status === 'agendado'
+          ? 'bg-sky-400/25 text-sky-50 ring-1 ring-sky-300/50'
+          : 'bg-white/15 text-white ring-1 ring-white/20';
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-2xl lg:max-w-4xl">
-      <PageHeader
-        title={`OS Nº ${o.osNumber}`}
-        subtitle={`${customer?.name || 'Cliente'} · ${formatDate(o.date)}`}
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            {waLink && (
-              <Button
-                as="a"
-                href={waLink}
-                target="_blank"
-                rel="noreferrer"
-                variant="success"
-                size="sm"
-                className="hidden sm:inline-flex"
-              >
-                <MessageCircle size={17} strokeWidth={2.5} /> WhatsApp
-              </Button>
-            )}
-            {waLink && (
-              <Button
-                as="a"
-                href={waLink}
-                target="_blank"
-                rel="noreferrer"
-                variant="success"
-                size="sm"
-                className="inline-flex sm:hidden"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle size={17} strokeWidth={2.5} />
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generatePDF}
-              className="hidden sm:inline-flex"
-            >
-              <FileDown size={16} /> PDF
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generatePDF}
-              className="inline-flex sm:hidden"
-              aria-label="Gerar PDF"
-            >
-              <FileDown size={16} />
-            </Button>
-            {o.date ? (
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate(`/app/agenda?date=${o.date}`)}
-                  title="Ver esta OS na Agenda"
-                  className="hidden sm:inline-flex"
-                >
-                  <CalendarDays size={16} className="stroke-current" /> Na agenda
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => navigate(`/app/agenda?date=${o.date}`)}
-                  title="Ver esta OS na Agenda"
-                  className="inline-flex sm:hidden"
-                  aria-label="Ver na agenda"
-                >
-                  <CalendarDays size={16} className="stroke-current" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setAgendaDate(o.date);
-                    setAgendaTime(o.time || '09:00');
-                    setAgendaOpen(true);
-                  }}
-                  title="Mudar data/hora"
-                  aria-label="Reagendar"
-                  className="hidden sm:inline-flex"
-                >
-                  <Clock size={16} className="stroke-current" /> Reagendar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setAgendaDate(o.date);
-                    setAgendaTime(o.time || '09:00');
-                    setAgendaOpen(true);
-                  }}
-                  title="Mudar data/hora"
-                  aria-label="Reagendar"
-                  className="inline-flex sm:hidden"
-                >
-                  <Clock size={16} className="stroke-current" />
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setAgendaDate(todayISO());
-                  setAgendaTime(o.time || '09:00');
-                  setAgendaOpen(true);
-                }}
-                title="Escolher data e colocar na agenda"
-                className="hidden sm:inline-flex"
-              >
-                <CalendarDays size={16} className="stroke-current" /> Agendar
-              </Button>
-            )}
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setConfirmDelete(true)}
-              aria-label="Excluir serviço"
-              title="Excluir serviço"
-              className="hidden sm:inline-flex"
-            >
-              <Trash2 size={16} /> Excluir
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setConfirmDelete(true)}
-              aria-label="Excluir serviço"
-              title="Excluir serviço"
-              className="inline-flex sm:hidden"
-            >
-              <Trash2 size={16} />
-            </Button>
-          </div>
-        }
+    <div className="mx-auto w-full min-w-0 max-w-2xl space-y-3 lg:max-w-4xl">
+      <OsHeader
+        osNumber={o.osNumber}
+        customerName={customer?.name || 'Cliente'}
+        dateLabel={formatDate(o.date)}
+        time={o.time}
+        technician={o.technician}
+        statusLabel={STATUS_LABEL[o.status as keyof typeof STATUS_LABEL] || o.status}
+        statusClass={statusBadgeClass}
+        valueLabel={formatBRL(Number(o.value) || 0)}
+        isPaid={o.paymentStatus === 'pago'}
+        waHref={waLink}
+        pdfBusy={pdfBusy}
+        onPdf={generatePDF}
+        onPdfDownload={downloadPDF}
+        agendaLabel={o.date ? 'Na agenda' : 'Agendar'}
+        onAgenda={() => {
+          if (o.date) navigate(`/app/agenda?date=${o.date}`);
+          else {
+            setAgendaDate(todayISO());
+            setAgendaTime(o.time || '09:00');
+            setAgendaOpen(true);
+          }
+        }}
+        onReschedule={() => {
+          setAgendaDate(o.date || todayISO());
+          setAgendaTime(o.time || '09:00');
+          setAgendaOpen(true);
+        }}
+        onDelete={() => setConfirmDelete(true)}
+        onBack={() => navigate('/app/servicos')}
       />
 
       <Card className="mb-3">
