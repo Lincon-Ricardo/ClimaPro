@@ -92,3 +92,45 @@ export function downloadCsvExample() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+function escCsv(v: unknown): string {
+  const s = String(v ?? '');
+  return /[",;\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export interface ExportCustomer {
+  name?: string; phone?: string; whatsapp?: string; email?: string; document?: string;
+  street?: string; number?: string; complement?: string; district?: string;
+  city?: string; zip?: string; notes?: string;
+}
+
+export const EXPORT_HEADERS = ['nome', 'telefone', 'whatsapp', 'email', 'documento', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'cep', 'observacoes'] as const;
+
+export function customersToCsv(rows: ExportCustomer[], delimiter = ';'): string {
+  const head = EXPORT_HEADERS.join(delimiter);
+  const lines = rows.map((c) =>
+    [
+      c.name, c.phone, c.whatsapp, c.email, c.document,
+      c.street, c.number, c.complement, c.district, c.city, c.zip, c.notes,
+    ].map(escCsv).join(delimiter),
+  );
+  return ['\uFEFF' + head, ...lines].join('\r\n');
+}
+
+export function downloadCustomersCsv(rows: ExportCustomer[], filename = 'clientes-climapro.csv') {
+  const blob = new Blob([customersToCsv(rows)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+export function exportProgressName(total: number): string {
+  const d = new Date();
+  const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `clientes-climapro-${total}-${stamp}.csv`;
+}

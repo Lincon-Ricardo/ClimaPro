@@ -24,11 +24,17 @@ export default function Empresa() {
   const toast = useToast();
   const { user } = useAuth();
   const companiesRaw = useLiveQuery(() => db.companies.toArray(), []);
+  const lightCompany = (companiesRaw || [])[0];
+  const fullCompany = useLiveQuery(
+    () => (lightCompany?.id ? db.companies.get(lightCompany.id) : Promise.resolve(undefined)),
+    [lightCompany?.id],
+    'companies',
+  );
+  const companies = fullCompany ? [fullCompany] : companiesRaw || [];
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (companiesRaw !== undefined) setLoaded(true);
   }, [companiesRaw]);
-  const companies = companiesRaw || [];
   const company = companies[0];
   const sigRef = useRef<SignatureCanvas>(null);
   const [sigMode, setSigMode] = useState<'draw' | 'upload' | null>(null);

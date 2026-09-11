@@ -18,10 +18,14 @@ async function pushNotification(notif: Notification): Promise<void> {
 
 export async function generateNotifications(): Promise<void> {
   if (generating) return;
+  try {
+    const last = Number(localStorage.getItem('climapro-notif-last') || 0);
+    if (Date.now() - last < 6 * 3600 * 1000) return;
+  } catch { /* noop */ }
   generating = true;
   try {
-    const orders = await db.serviceOrders.toArray();
-    const budgets = await db.budgets.toArray();
+    const orders = await db.serviceOrders.list({ pageSize: 200, columns: 'id,os_number,service,time,date,status,payment_status,reminder_months' }).then((r) => r.rows);
+    const budgets = await db.budgets.list({ pageSize: 100, columns: 'id,number,service_type,status' }).then((r) => r.rows);
 
     // Serviço agendado para amanhã
     const tomorrow = tomorrowISO();
@@ -81,6 +85,7 @@ export async function generateNotifications(): Promise<void> {
         createdAt: new Date().toISOString().slice(0, 10),
       });
     }
+    try { localStorage.setItem('climapro-notif-last', String(Date.now())); } catch { /* noop */ }
   } finally {
     generating = false;
   }

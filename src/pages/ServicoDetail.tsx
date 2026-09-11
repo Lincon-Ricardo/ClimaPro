@@ -287,7 +287,9 @@ export default function ServicoDetail() {
 
   async function buildPdfDoc() {
     const { generateServiceOrderPdf } = await import('../lib/pdf/serviceOrderPdf');
-    return generateServiceOrderPdf(o, customer, eq, company, user?.firstName);
+    const { getCompanyFull } = await import('../lib/db');
+    const fullCompany = (await getCompanyFull()) || company;
+    return generateServiceOrderPdf(o, customer, eq, fullCompany, user?.firstName);
   }
 
   async function generatePDF() {

@@ -1,6 +1,6 @@
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
-import { Users, MapPin, Plus, Trash2, Upload } from 'lucide-react';
+import { Users, MapPin, Plus, Trash2, Upload, Download } from 'lucide-react';
 import { db } from '../lib/db';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -18,8 +18,8 @@ export default function Clientes() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
-  const orders = useLiveQuery(() => db.serviceOrders.toArray(), []) || [];
-  const budgets = useLiveQuery(() => db.budgets.toArray(), []) || [];
+  const orders = useLiveQuery(() => db.serviceOrders.list({ pageSize: 200, columns: 'id,customer_id,status,date,value' }).then((r) => r.rows), [], 'service_orders') || [];
+  const budgets = useLiveQuery(() => db.budgets.list({ pageSize: 200, columns: 'id,customer_id,status' }).then((r) => r.rows), [], 'budgets') || [];
   const { rows: customers, loading, loadingMore, hasMore, loadMore, total } = usePagedList(
     (p) => db.customers.list({ ...p, pageSize: 24, orIlike: { columns: ['name', 'phone', 'city'], term: debounced } }),
     { orIlike: { columns: ['name', 'phone', 'city'], term: debounced } },
@@ -43,6 +43,52 @@ export default function Clientes() {
   const toast = useToast();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportPct, setExportPct] = useState(0);
+
+  async function handleExport() {
+    if (exporting) return;
+    setExporting(true);
+    setExportPct(0);
+    try {
+      const { db: dbRef, EXPORT_CUSTOMER_COLUMNS } = await import('../lib/db');
+      const { downloadCustomersCsv, exportProgressName } = await import('../lib/csv');
+      const pageSize = 500;
+      let page = 0;
+      let totalExp = 0;
+      const all: { name?: string; phone?: string; whatsapp?: string; email?: string; document?: string; street?: string; number?: string; complement?: string; district?: string; city?: string; zip?: string; notes?: string }[] = [];
+      for (;;) {
+        const r = await dbRef.customers.list({
+          page, pageSize,
+          columns: EXPORT_CUSTOMER_COLUMNS,
+          ...(debounced ? { orIlike: { columns: ['name', 'phone', 'city'], term: debounced } } : {}),
+        });
+        totalExp = r.total;
+        all.push(...r.rows.map((c) => ({
+          name: c.name, phone: c.phone, whatsapp: c.whatsapp, email: c.email,
+          document: c.document, street: c.street, number: c.number,
+          complement: c.complement, district: c.district, city: c.city,
+          zip: c.zip, notes: c.notes,
+        })));
+        setExportPct(totalExp ? Math.round((all.length / totalExp) * 100) : 100);
+        if (!r.hasMore) break;
+        page += 1;
+        if (page > 40) break;
+      }
+      if (!all.length) {
+        toast('info', 'Nada para exportar com o filtro atual.');
+        return;
+      }
+      downloadCustomersCsv(all, exportProgressName(all.length));
+      const kb = Math.max(1, Math.round(new Blob([JSON.stringify(all)]).size / 1024));
+      toast('success', `${all.length} contato(s) exportados em CSV leve (~${kb} KB, só texto).`);
+    } catch {
+      toast('error', 'Não foi possível exportar.');
+    } finally {
+      setExporting(false);
+      setExportPct(0);
+    }
+  }
 
   const { user } = useAuth();
   async function confirmDelete() {
@@ -67,7 +113,10 @@ export default function Clientes() {
         title="Clientes"
         subtitle={`${total} clientes`}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={exporting}>
+              <Download size={16} /> {exporting ? `Exportando ${exportPct}%…` : 'Exportar CSV leve'}
+            </Button>
             <Button variant="outline" onClick={() => navigate('/app/clientes/importar')}>
               <Upload size={16} /> Importar
             </Button>

@@ -41,6 +41,7 @@ export default function ImportarClientes() {
     setImporting(true);
     let ok = 0;
     const problems: string[] = [];
+    const batch: Record<string, unknown>[] = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const result = parseFormData(customerSchema, {
@@ -54,27 +55,39 @@ export default function ImportarClientes() {
         problems.push(`Linha ${i + 2} (${r.name}): dados inválidos.`);
         continue;
       }
+      batch.push({
+        id: crypto.randomUUID(),
+        name: r.name.trim(),
+        phone: r.phone || '',
+        whatsapp: r.whatsapp || r.phone || '',
+        email: r.email || '',
+        document: r.document || '',
+        street: r.street || '',
+        number: r.number || '',
+        complement: r.complement || '',
+        district: r.district || '',
+        city: r.city || '',
+        zip: r.zip || '',
+        notes: r.notes || '',
+        createdAt: new Date().toISOString().slice(0, 10),
+      });
+      if (batch.length >= 100) {
+        try {
+          await db.customers.bulkAdd(batch.splice(0, batch.length));
+          ok += 100;
+          setDone(ok);
+        } catch (e: unknown) {
+          problems.push(`Lote ${Math.ceil(ok / 100) + 1}: ${errMsg(e)}`);
+        }
+      }
+    }
+    if (batch.length > 0) {
       try {
-        await db.customers.add({
-          id: crypto.randomUUID(),
-          name: r.name.trim(),
-          phone: r.phone || '',
-          whatsapp: r.whatsapp || r.phone || '',
-          email: r.email || '',
-          document: r.document || '',
-          street: r.street || '',
-          number: r.number || '',
-          complement: r.complement || '',
-          district: r.district || '',
-          city: r.city || '',
-          zip: r.zip || '',
-          notes: r.notes || '',
-          createdAt: new Date().toISOString().slice(0, 10),
-        });
-        ok++;
+        await db.customers.bulkAdd(batch);
+        ok += batch.length;
         setDone(ok);
       } catch (e: unknown) {
-        problems.push(`Linha ${i + 2} (${r.name}): ${errMsg(e)}`);
+        problems.push(`Lote final: ${errMsg(e)}`);
       }
     }
     setErrors(problems);

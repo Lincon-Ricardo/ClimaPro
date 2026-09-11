@@ -148,6 +148,7 @@ export interface RowSet<T> {
 export interface ListParams {
   page?: number;
   pageSize?: number;
+  columns?: string;
   order?: { column: string; ascending?: boolean };
   ilike?: { column: string; term: string };
   orIlike?: { columns: string[]; term: string };
@@ -171,10 +172,41 @@ const TABLES_WITH_CREATED_AT = new Set([
   'expenses', 'losses',
 ]);
 
+const LIGHT_COLUMNS: Record<string, string> = {
+  customers: 'id,company_id,name,phone,whatsapp,email,document,street,number,complement,district,city,zip,notes,created_at,updated_at,saved_addresses',
+  equipment: 'id,company_id,customer_id,brand,model,type,btus,serial,install_location,install_date,warranty,notes',
+  budgets: 'id,company_id,number,customer_id,equipment_id,service_type,description,items,labor,displacement,discount,total,status,validity,notes,created_at,approved_at',
+  service_orders: 'id,company_id,os_number,budget_id,customer_id,equipment_id,problem,service,value,date,time,address,technician,status,checklist,payment_method,payment_status,signature_date,reminder_months,created_at',
+  companies: 'id,name,cnpj,phone,whatsapp,email,address,instagram,site,pix,payment_condition,execution_term,warranty,default_validity,commission_enabled,commission_rate,created_at',
+  notifications: 'id,company_id,title,message,type,read,created_at',
+  payments: 'id,company_id,service_order_id,customer_id,value,method,status,paid_at,created_at',
+  appointments: 'id,company_id,service_order_id,customer_id,date,time,title,service_type,address,value,status,notes',
+  materials: 'id,company_id,name,unit_value,created_at',
+  expenses: 'id,company_id,category,description,value,date,payment_method,payment_status,notes,created_at,created_by',
+  losses: 'id,company_id,kind,description,value,date,service_order_id,customer_id,technician,status,decision_notes,asaas_payment_id,created_by,created_at',
+  profiles: 'id,name,first_name,email,role,company_id,created_at',
+};
+
+export const EXPORT_CUSTOMER_COLUMNS = 'name,phone,whatsapp,email,document,street,number,complement,district,city,zip,notes';
+
+export async function getBrandCompany<T>(): Promise<T | undefined> {
+  const cols = 'id,name,cnpj,phone,whatsapp,email,address,instagram,site,pix,payment_condition,execution_term,warranty,default_validity,commission_enabled,commission_rate,created_at';
+  const { data, error } = await supabase.from('companies').select(cols).limit(1).maybeSingle();
+  if (error || !data) return undefined;
+  return fromDB('companies', data as DbRow) as unknown as T;
+}
+
+export async function getCompanyFull(): Promise<(Company & { logo?: string; signature?: string }) | undefined> {
+  const { data, error } = await supabase.from('companies').select('*').limit(1).maybeSingle();
+  if (error || !data) return undefined;
+  return fromDB('companies', data as DbRow) as unknown as Company & { logo?: string; signature?: string };
+}
+
 async function fetchPaged(table: string, build?: (q: unknown) => unknown): Promise<DbRow[]> {
   const out: DbRow[] = [];
+  const cols = LIGHT_COLUMNS[table] || '*';
   for (let page = 0; ; page++) {
-    let q: unknown = supabase.from(table).select('*');
+    let q: unknown = supabase.from(table).select(cols);
     if (TABLES_WITH_CREATED_AT.has(table)) {
       q = (q as { order: (col: string, opts: unknown) => unknown }).order('created_at', { ascending: false, nullsFirst: false });
     }
@@ -266,11 +298,11 @@ function makeTable<T>(table: string): Table<T> {
     count: () => queryRows<T>(table).count(),
     get: (key: string) => queryRows<T>(table).get(key),
     list: async (params: ListParams = {}) => {
-      const { page = 0, pageSize = 25, order, ilike, orIlike, eq, in: inFilter, gte, lte } = params;
+      const { page = 0, pageSize = 25, columns, order, ilike, orIlike, eq, in: inFilter, gte, lte } = params;
       const from = page * pageSize;
       const to = from + pageSize - 1;
       const colOf = (camel: string, fallback: string) => FIELD_MAP[table]?.[camel] || fallback;
-      let q = supabase.from(table).select('*', { count: 'exact' }) as unknown as QueryLike;
+      let q = supabase.from(table).select(columns || LIGHT_COLUMNS[table] || '*', { count: 'exact' }) as unknown as QueryLike;
       if (eq) for (const [k, v] of Object.entries(eq)) q = q.eq(colOf(k, k), v);
       if (inFilter) for (const [k, v] of Object.entries(inFilter)) q = q.in(colOf(k, k), v);
       if (gte) for (const [k, v] of Object.entries(gte)) q = q.gte(colOf(k, k), v);

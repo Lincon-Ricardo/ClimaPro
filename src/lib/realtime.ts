@@ -3,12 +3,27 @@ import { emitDataChanged } from './tableBus';
 
 let channel: ReturnType<typeof supabase.channel> | null = null;
 let started = false;
+let lastStart = 0;
 
 const TABLES = [
   'customers', 'service_orders', 'budgets', 'equipment', 'companies',
   'notifications', 'payments', 'profiles', 'appointments', 'materials',
   'subscriptions', 'expenses', 'losses',
 ] as const;
+
+const mergeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function emitDebounced(table: string, waitMs = 1200) {
+  const t = mergeTimers.get(table);
+  if (t) clearTimeout(t);
+  mergeTimers.set(
+    table,
+    setTimeout(() => {
+      mergeTimers.delete(table);
+      emitDataChanged(table);
+    }, waitMs),
+  );
+}
 
 export type RealtimeStatus = 'off' | 'connecting' | 'on' | 'error';
 
@@ -32,13 +47,16 @@ export function subscribeRealtimeStatus(fn: (s: RealtimeStatus) => void): () => 
 
 export function startRealtime(): void {
   if (started || typeof window === 'undefined') return;
+  const now = Date.now();
+  if (now - lastStart < 5000) return;
+  lastStart = now;
   started = true;
   setStatus('connecting');
   try {
     const builder = supabase.channel('rt-app');
     TABLES.forEach((table) => {
       builder.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        emitDataChanged(table);
+        emitDebounced(table);
       });
     });
     channel = builder.subscribe((st) => {

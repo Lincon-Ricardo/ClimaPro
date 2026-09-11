@@ -12,18 +12,26 @@ import { PageHeader } from '../components/PageHeader';
 export default function Perfil() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const companies = useLiveQuery(() => db.companies.toArray(), [], 'companies') || [];
   const company = companies[0];
+  const fullCompany = useLiveQuery(
+    () => (company?.id ? db.companies.get(company.id) : Promise.resolve(undefined)),
+    [company?.id],
+    'companies',
+  );
+  const logoSet = !!(fullCompany as { logo?: string } | undefined)?.logo || !!(company as { logo?: string } | undefined)?.logo;
+  const sigSet = !!(fullCompany as { signature?: string } | undefined)?.signature || !!(company as { signature?: string } | undefined)?.signature;
+  const displayCompany = (fullCompany as typeof company | undefined) || company;
 
-  const infos = company
+  const infos = displayCompany
     ? [
-        { icon: <Building2 size={16} />, label: 'CNPJ/CPF', value: company.cnpj },
-        { icon: <Phone size={16} />, label: 'Telefone', value: company.phone },
-        { icon: <Mail size={16} />, label: 'E-mail', value: company.email },
-        { icon: <MapPin size={16} />, label: 'Endereço', value: company.address },
-        { icon: <Globe size={16} />, label: 'Site', value: company.site },
-        { icon: <Instagram size={16} />, label: 'Instagram', value: company.instagram },
-        { icon: <Banknote size={16} />, label: 'PIX', value: company.pix },
+        { icon: <Building2 size={16} />, label: 'CNPJ/CPF', value: displayCompany.cnpj },
+        { icon: <Phone size={16} />, label: 'Telefone', value: displayCompany.phone },
+        { icon: <Mail size={16} />, label: 'E-mail', value: displayCompany.email },
+        { icon: <MapPin size={16} />, label: 'Endereço', value: displayCompany.address },
+        { icon: <Globe size={16} />, label: 'Site', value: displayCompany.site },
+        { icon: <Instagram size={16} />, label: 'Instagram', value: displayCompany.instagram },
+        { icon: <Banknote size={16} />, label: 'PIX', value: displayCompany.pix },
       ].filter((i) => i.value)
     : [];
 
@@ -33,14 +41,14 @@ export default function Perfil() {
 
       <div className="rounded-3xl bg-gradient-to-r from-primary-800 to-primary-600 p-6 text-white">
         <div className="flex items-center gap-4">
-          {company?.logo ? (
-            <img src={company.logo} alt="Logo" className="h-16 w-16 rounded-2xl bg-white/10 p-1 object-contain" />
+          {displayCompany?.logo ? (
+            <img src={displayCompany.logo} alt="Logo" className="h-16 w-16 rounded-2xl bg-white/10 p-1 object-contain" />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10"><Briefcase size={30} /></div>
           )}
           <div className="min-w-0">
-            <div className="truncate text-lg font-extrabold">{company?.name || user?.name || 'Minha empresa'}</div>
-            <div className="text-sm text-primary-100">{company?.cnpj ? `CNPJ: ${company.cnpj}` : user?.email}</div>
+            <div className="truncate text-lg font-extrabold">{displayCompany?.name || user?.name || 'Minha empresa'}</div>
+            <div className="text-sm text-primary-100">{displayCompany?.cnpj ? `CNPJ: ${displayCompany.cnpj}` : user?.email}</div>
           </div>
         </div>
         <Button variant="light" className="mt-4" onClick={() => navigate('/app/empresa')}>
@@ -50,7 +58,7 @@ export default function Perfil() {
 
       <Card className="mt-4">
         <h2 className="mb-3 text-base font-bold text-neutral-800 dark:text-neutral-100">Dados da empresa</h2>
-        {infos.length === 0 && !(company?.name || company?.email) ? (
+        {infos.length === 0 && !(displayCompany?.name || displayCompany?.email) ? (
           <p className="text-sm text-neutral-400 dark:text-neutral-500">
             Nenhum dado cadastrado ainda. Clique em <b>Editar perfil</b> para preencher.
           </p>
@@ -61,7 +69,7 @@ export default function Perfil() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400"><Building2 size={16} /></span>
                 <div>
                   <div className="text-xs text-neutral-400 dark:text-neutral-500">Empresa</div>
-                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{company?.name || '—'}</div>
+                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{displayCompany?.name || '—'}</div>
                 </div>
               </div>
             )}
@@ -80,14 +88,14 @@ export default function Perfil() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400"><ImageIcon size={16} /></span>
                 <div>
                   <div className="text-xs text-neutral-400 dark:text-neutral-500">Logo</div>
-                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{company?.logo ? 'Configurada' : '—'}</div>
+                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{logoSet ? 'Configurada' : '—'}</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 dark:bg-neutral-700/60 dark:text-neutral-400"><PenLine size={16} /></span>
                 <div>
                   <div className="text-xs text-neutral-400 dark:text-neutral-500">Assinatura</div>
-                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{company?.signature ? 'Configurada' : '—'}</div>
+                  <div className="font-medium text-neutral-800 dark:text-neutral-100">{sigSet ? 'Configurada' : '—'}</div>
                 </div>
               </div>
             </div>

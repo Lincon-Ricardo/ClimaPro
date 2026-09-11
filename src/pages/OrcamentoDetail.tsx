@@ -70,8 +70,7 @@ export default function OrcamentoDetail() {
     }
   }
   const customer = customers.find((c) => c.id === b.customerId);
-  const whatsappLink = () => {
-    if (!customer) return undefined;
+  const whatsappLink = () => {    if (!customer) return undefined;
     const base = (() => {
       const msg = [`Olá, ${customer.name}!`, `Orçamento ${b.number} no valor de ${formatBRL(b.total)}`].join('\n');
       return encodeURIComponent(msg);
@@ -79,7 +78,6 @@ export default function OrcamentoDetail() {
     const num = telToWhats(customer.whatsapp || customer.phone);
     return num ? `https://wa.me/${num}?text=${base}` : undefined;
   };
-  const company = companies[0];
 
   function startEdit() {
     setDraft({ ...b, items: b.items.map((i: BudgetItem) => ({ ...i })) });
@@ -132,7 +130,9 @@ export default function OrcamentoDetail() {
   async function visualizarPDF() {
     try {
       const { generateBudgetPdf } = await import('../lib/pdf/budgetPdf');
-      const doc: jsPDF = await generateBudgetPdf(b, customer, company);
+      const { getCompanyFull } = await import('../lib/db');
+      const fullCompany = (await getCompanyFull()) || companies[0];
+      const doc: jsPDF = await generateBudgetPdf(b, customer, fullCompany);
       openPdf(doc, `orcamento-${b.number}.pdf`, `Orçamento ${b.number}`);
     } catch {
       toast('error', 'Não foi possível visualizar o PDF. Tente novamente.');
