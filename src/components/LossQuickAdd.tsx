@@ -13,7 +13,7 @@ import { Card } from './Card';
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import type { Loss, LossKind } from '../types';
 
-export function LossQuickAdd({ orderId, customerId }: { orderId: string; customerId: string }) {
+export function LossQuickAdd({ orderId, customerId, companyId }: { orderId: string; customerId: string; companyId?: string }) {
   const { user } = useAuth();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -21,6 +21,8 @@ export function LossQuickAdd({ orderId, customerId }: { orderId: string; custome
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const companies = useLiveQuery(() => db.companies.toArray(), [], 'companies') || [];
+  const resolvedCompanyId = companyId || user?.companyId || companies[0]?.id || '';
   const losses = (useLiveQuery(
     () => db.losses.list({ pageSize: 100, eq: { serviceOrderId: orderId } }).then((r) => r.rows),
     [orderId],
@@ -33,11 +35,15 @@ export function LossQuickAdd({ orderId, customerId }: { orderId: string; custome
     if (!description.trim()) { toast('error', 'Descreva a perda.'); return; }
     const val = Number(String(value).replace(/\./g, '').replace(',', '.'));
     if (!val || val <= 0) { toast('error', 'Informe um valor maior que zero.'); return; }
+    if (!resolvedCompanyId) {
+      toast('error', 'Empresa não identificada. Recarregue a OS.');
+      return;
+    }
     setBusy(true);
     try {
       await db.losses.add({
         id: crypto.randomUUID(),
-        companyId: user?.companyId || '',
+        companyId: resolvedCompanyId,
         kind,
         description: description.trim(),
         value: Math.round(val * 100) / 100,

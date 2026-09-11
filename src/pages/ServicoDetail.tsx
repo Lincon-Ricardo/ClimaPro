@@ -620,7 +620,7 @@ export default function ServicoDetail() {
         </Card>
       </div>
 
-      <LossQuickAdd orderId={o.id} customerId={o.customerId} />
+      <LossQuickAdd orderId={o.id} customerId={o.customerId} companyId={o.companyId || user?.companyId || companies[0]?.id} />
 
       <Card className="mt-3">
         <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">
