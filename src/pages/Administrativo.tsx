@@ -43,6 +43,8 @@ export default function Administrativo() {
   const budgets = useLiveQuery(() => db.budgets.list({ pageSize: 1000, order: { column: 'createdAt' } }).then((r) => r.rows), []) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
+  const losses = useLiveQuery(() => db.losses.list({ pageSize: 500 }).then((r) => r.rows), [], 'losses') || [];
+  const expenses = useLiveQuery(() => db.expenses.list({ pageSize: 1000 }).then((r) => r.rows), [], 'expenses') || [];
 
   const company = companies[0];
   const today = todayISO();
@@ -69,6 +71,10 @@ export default function Administrativo() {
   const data = useMemo(() => calcAdminData(orders, budgets, monthKey, today), [orders, budgets, monthKey, today]);
   const funnel = useMemo(() => calcFunnel(orders, budgets), [orders, budgets]);
   const team = useMemo(() => calcTeam(orders, today), [orders, today]);
+  const expenseMonth = useMemo(() => expenses.filter((e) => (e.date || '').startsWith(monthKey)).reduce((s, e) => s + (Number(e.value) || 0), 0), [expenses, monthKey]);
+  const lossMonth = useMemo(() => losses.filter((l) => (l.date || '').startsWith(monthKey) && l.status !== 'cancelada').reduce((s, l) => s + (Number(l.value) || 0), 0), [losses, monthKey]);
+  const recoveredMonth = useMemo(() => losses.filter((l) => (l.date || '').startsWith(monthKey) && l.status === 'recuperada').reduce((s, l) => s + (Number(l.value) || 0), 0), [losses, monthKey]);
+  const netReal = data.revenueMonth - expenseMonth - lossMonth + recoveredMonth;
 
   const alerts = useMemo(() => {
     const list: Array<{ level: 'crit' | 'warn' | 'info'; title: string; desc: string; action: string; to: string }> = [];
@@ -117,8 +123,28 @@ export default function Administrativo() {
         to: '/app/agenda',
       });
     }
+    const openLoss = losses.filter((l) => l.status === 'aberta');
+    const openLossVal = openLoss.reduce((s, l) => s + (Number(l.value) || 0), 0);
+    if (openLoss.length > 0) {
+      list.push({
+        level: openLossVal >= 500 ? 'crit' : 'warn',
+        title: `🩸 ${formatBRL(openLossVal)} em perdas abertas`,
+        desc: `${openLoss.length} perda(s) sem destino. Cada uma decidida vira lucro de volta.`,
+        action: 'Decidir perdas',
+        to: '/app/perdas',
+      });
+    }
+    if (expenseMonth > 0) {
+      list.push({
+        level: 'info',
+        title: `${formatBRL(expenseMonth)} em gastos no mês`,
+        desc: 'Despesas operacionais que já abatem o lucro real no Financeiro.',
+        action: 'Ver gastos',
+        to: '/app/gastos',
+      });
+    }
     return list;
-  }, [data]);
+  }, [data, losses, expenseMonth]);
 
   const metaPct = meta > 0 ? Math.min(100, Math.round((data.revenueMonth / meta) * 100)) : 0;
 
@@ -252,6 +278,23 @@ export default function Administrativo() {
         <StatCard icon={<CalendarCheck size={20} />} label="Atendimentos hoje" value={String(data.todayList.length)} color="text-sky-600" />
         <StatCard icon={<Flame size={20} />} label="OS atrasadas" value={String(data.overdue.length)} color="text-danger" />
         <StatCard icon={<TrendingUp size={20} />} label="Ticket médio" value={formatBRL(data.ticket)} />
+      </div>
+
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 via-red-950 to-neutral-900 p-4 text-white shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-bold">🧾 Lucro real do mês — receita menos tudo</div>
+          <div className="flex gap-2 text-[11px] font-bold">
+            <button type="button" onClick={() => navigate('/app/gastos')} className="rounded-full bg-white/10 px-3 py-1.5 hover:bg-white/20">Gastos →</button>
+            <button type="button" onClick={() => navigate('/app/perdas')} className="rounded-full bg-white/10 px-3 py-1.5 hover:bg-white/20">Perdas →</button>
+          </div>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+          <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Receita</div><div className="font-black">{formatBRL(data.revenueMonth)}</div></div>
+          <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Gastos</div><div className="font-black text-amber-200">- {formatBRL(expenseMonth)}</div></div>
+          <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Perdas</div><div className="font-black text-red-300">- {formatBRL(lossMonth)}</div></div>
+          <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Recuperado</div><div className="font-black text-emerald-300">+ {formatBRL(recoveredMonth)}</div></div>
+          <div className="rounded-2xl bg-emerald-500/20 p-2.5 ring-1 ring-emerald-300/40"><div className="text-[10px] uppercase text-emerald-200">Lucro real</div><div className="font-black text-emerald-300">{formatBRL(netReal)}</div></div>
+        </div>
       </div>
 
       {/* ── Funil operacional ── */}

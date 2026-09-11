@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { useSubscription } from './hooks/useSubscription';
 import { Layout } from './components/Layout';
 import { Loading } from './components/Loading';
+import { isLifetimeSub, isVitalicioUser } from './lib/lifetime';
 
 function lazyRetry<T>(factory: () => Promise<T>, retries = 2): Promise<T> {
   return factory().catch((err: unknown) => {
@@ -46,6 +47,7 @@ const CalculadoraBtu = lazy(() => lazyRetry(() => import('./pages/CalculadoraBtu
 const Diagnostico = lazy(() => lazyRetry(() => import('./pages/Diagnostico')));
 const Administrativo = lazy(() => lazyRetry(() => import('./pages/Administrativo')));
 const Gastos = lazy(() => lazyRetry(() => import('./pages/Gastos')));
+const Perdas = lazy(() => lazyRetry(() => import('./pages/Perdas')));
 const Users = lazy(() => lazyRetry(() => import('./pages/Users')));
 const TechRota = lazy(() => lazyRetry(() => import('./pages/TechRota')));
 const TechPerformance = lazy(() => lazyRetry(() => import('./pages/TechPerformance')));
@@ -89,10 +91,9 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 function BillingGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const { locked } = useSubscription();
+  const { locked, sub } = useSubscription();
   if (loading) return <Loading />;
-  // Perfil exempto: dns_wil@yahoo.com.br — liberação permanente
-  if (user?.email === 'dns_wil@yahoo.com.br') return <>{children}</>;
+  if (isVitalicioUser(user) || isLifetimeSub(sub)) return <>{children}</>;
   if (locked && user?.role === 'admin') {
     return <Navigate to="/app/expirado" state={{ from: location.pathname }} replace />;
   }
@@ -147,7 +148,8 @@ export default function App() {
         <Route path="planos" element={<SuspenseWrap><AdminOnly><Planos /></AdminOnly></SuspenseWrap>} />
         <Route path="expirado" element={<SuspenseWrap><Expirado /></SuspenseWrap>} />
         <Route path="administrativo" element={<SuspenseWrap><AdminOnly><Administrativo /></AdminOnly></SuspenseWrap>} />
-        <Route path="gastos" element={<SuspenseWrap><BillingGuard><Gastos /></BillingGuard></SuspenseWrap>} />
+        <Route path="gastos" element={<SuspenseWrap><AdminOnly><BillingGuard><Gastos /></BillingGuard></AdminOnly></SuspenseWrap>} />
+        <Route path="perdas" element={<SuspenseWrap><AdminOnly><Perdas /></AdminOnly></SuspenseWrap>} />
         <Route path="users" element={<SuspenseWrap><AdminOnly><Users /></AdminOnly></SuspenseWrap>} />
         <Route path="empresa" element={<SuspenseWrap><AdminOnly><Empresa /></AdminOnly></SuspenseWrap>} />
       </Route>

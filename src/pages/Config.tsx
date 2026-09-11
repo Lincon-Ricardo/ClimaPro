@@ -38,6 +38,7 @@ export default function Config() {
       db.appointments.clear(),
       db.notifications.clear(),
       db.materials.clear(),
+      db.losses.clear(),
     ]);
     toast('info', 'Dados apagados.');
     window.location.reload();

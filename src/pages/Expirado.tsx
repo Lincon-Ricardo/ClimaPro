@@ -76,9 +76,9 @@ export default function Expirado() {
         <Button
           full
           variant="outline"
-          onClick={() => window.open('https://wa.me/5511999999999?text=' + encodeURIComponent('Olá! Meu teste do ClimaPro terminou e quero continuar. Pode me ajudar? ❄️'), '_blank')}
+          onClick={() => navigate('/app/planos')}
         >
-          <MessageCircle size={16} /> Falar com vendas
+          <MessageCircle size={16} /> Ver oferta Pioneiro Vitalício
         </Button>
         <button
           type="button"

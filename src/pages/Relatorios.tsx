@@ -57,6 +57,7 @@ export default function Relatorios() {
     [],
   ) || [];
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
+  const losses = useLiveQuery(() => db.losses.list({ pageSize: 1000, gte: { date: from }, lte: { date: to } }).then((r) => r.rows), [from, to], 'losses') || [];
 
   const periodOrdersRaw = useMemo(() => filterOrdersByPeriod(orders, from, to), [orders, from, to]);
   const periodOrders = useMemo(() => {
@@ -73,6 +74,8 @@ export default function Relatorios() {
   const maxServiceRevenue = Math.max(1, ...serviceMix.map((s) => s.revenue));
   const debtors = useMemo(() => buildDebtors(orders, customers), [orders, customers]);
   const staleBudgets = useMemo(() => buildStale(periodBudgets), [periodBudgets]);
+  const lossTotal = useMemo(() => losses.filter((l) => l.status !== 'cancelada').reduce((s, l) => s + (Number(l.value) || 0), 0), [losses]);
+  const lossOpen = useMemo(() => losses.filter((l) => l.status === 'aberta').reduce((s, l) => s + (Number(l.value) || 0), 0), [losses]);
 
   const custName = (id: string) => customers.find((c) => c.id === id)?.name || 'Cliente';
 
@@ -147,6 +150,17 @@ export default function Relatorios() {
         <StatCard icon={<Quote size={20} />} label="Pipeline em aberto" value={formatBRL(kpi.pipelineValue)} color="text-amber-600" />
         <StatCard icon={<Clock size={20} />} label="A receber (concluído)" value={formatBRL(kpi.pending)} color="text-orange-600" />
         <StatCard icon={<AlertTriangle size={20} />} label="Cancelamento" value={`${kpi.cancelRate.toFixed(1)}%`} color="text-red-500" />
+        <StatCard icon={<TrendingUp size={20} />} label="Perdas (vazamento)" value={formatBRL(lossTotal)} color="text-red-600" onClick={() => { window.location.href = '/app/perdas'; }} />
+      </div>
+      {lossOpen > 0 && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-bold text-red-700 dark:text-red-200">🩸 {formatBRL(lossOpen)} em perdas abertas — decididas viram lucro de volta.</span>
+            <Button size="sm" variant="danger" as="a" href="/app/perdas">Decidir agora</Button>
+          </div>
+        </Card>
+      )}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={<Users size={20} />} label="Recorrência" value={`${kpi.recurring}/${kpi.totalCusts}`} color="text-teal-600" />
       </div>
 

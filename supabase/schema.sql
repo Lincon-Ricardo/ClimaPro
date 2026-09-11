@@ -605,13 +605,13 @@ create policy "fotos delete empresa" on storage.objects
 
 -- =============================================================
 -- ASSINATURAS (monetização SaaS via Asaas)
--- Planos: start R$49 / pro R$99 / master R$199 + trial 14 dias
+-- Planos: start R$47 / pro R$97 / master R$197 + trial 14 dias + lifetime pioneiro
 -- =============================================================
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references companies on delete cascade unique,
-  plan text not null default 'trial' check (plan in ('trial','start','pro','master')),
-  status text not null default 'trialing' check (status in ('trialing','active','past_due','canceled','expired')),
+  plan text not null default 'trial' check (plan in ('trial','start','pro','master','lifetime')),
+  status text not null default 'trialing' check (status in ('trialing','active','past_due','canceled','expired','lifetime')),
   trial_ends_at timestamptz default (now() + interval '14 days'),
   current_period_end timestamptz,
   asaas_customer_id text default '',
@@ -619,6 +619,10 @@ create table if not exists subscriptions (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+alter table subscriptions drop constraint if exists subscriptions_plan_check;
+alter table subscriptions add constraint subscriptions_plan_check check (plan in ('trial','start','pro','master','lifetime'));
+alter table subscriptions drop constraint if exists subscriptions_status_check;
+alter table subscriptions add constraint subscriptions_status_check check (status in ('trialing','active','past_due','canceled','expired','lifetime'));
 
 alter table subscriptions add column if not exists billing_cycle text default 'monthly';
 alter table subscriptions add column if not exists cancel_at_period_end boolean default false;
@@ -736,6 +740,32 @@ $$;
 -- Start: 30 OS/mês + 1 técnico · Pro: 150 OS/mês + 5 técnicos · Master: ilimitado
 -- Trial ativo conta como Pro. Sem assinatura = libera (onboarding).
 -- =============================================================
+-- Trava vitalícia: plano lifetime nunca pode ser rebaixado/cancelado por API.
+create or replace function protect_lifetime()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if old.plan = 'lifetime' or old.status = 'lifetime' then
+    if new.plan is distinct from old.plan or new.status is distinct from old.status then
+      raise exception 'Plano vitalício não pode ser alterado.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists trg_protect_lifetime on subscriptions;
+create trigger trg_protect_lifetime before update on subscriptions for each row execute procedure protect_lifetime();
+
+-- Garante o vitalício do pioneiro raiz (UID nunca muda de plano).
+-- Rode este arquivo inteiro no SQL Editor do Supabase.
+do $$ declare v_company uuid; begin
+  select company_id into v_company from profiles where id = '030f83c9-dd5b-46bd-ac2a-aef1bd75e00c';
+  if v_company is not null then
+    insert into subscriptions (company_id, plan, status, trial_ends_at)
+    values (v_company, 'lifetime', 'lifetime', null)
+    on conflict (company_id) do update set plan = 'lifetime', status = 'lifetime', trial_ends_at = null, updated_at = now();
+  end if;
+end $$;
+
 create or replace function plan_limits(p_company uuid)
 returns table (os_allowed numeric, tech_allowed numeric, locked boolean) language plpgsql stable security definer set search_path = public as $$
 declare
@@ -743,6 +773,10 @@ declare
 begin
   select * into s from subscriptions where company_id = p_company;
   if not found then
+    return query select 999999::numeric, 999999::numeric, false;
+    return;
+  end if;
+  if s.plan = 'lifetime' or s.status = 'lifetime' then
     return query select 999999::numeric, 999999::numeric, false;
     return;
   end if;
@@ -837,5 +871,75 @@ create table if not exists expenses (
   created_by text default ''
 );
 alter table expenses enable row level security;
-create policy tx_expenses_select on expenses for select using (auth.uid()::text = created_by or company_id in (select company_id from profiles where id = auth.uid()));
-create policy tx_expenses_insert on expenses for insert with check (auth.uid()::text = created_by or company_id in (select company_id from profiles where id = auth.uid()));
+drop policy if exists tx_expenses_select on expenses;
+drop policy if exists tx_expenses_insert on expenses;
+drop policy if exists "gastos select" on expenses;
+create policy "gastos select" on expenses for select using (company_id = auth_company_id());
+drop policy if exists "gastos insert" on expenses;
+create policy "gastos insert" on expenses for insert with check (company_id = auth_company_id());
+drop policy if exists "gastos update" on expenses;
+create policy "gastos update" on expenses for update using (
+  company_id = auth_company_id() and (is_company_admin() or created_by = auth.uid()::text)
+) with check (company_id = auth_company_id());
+drop policy if exists "gastos delete" on expenses;
+create policy "gastos delete" on expenses for delete using (company_id = auth_company_id() and is_company_admin());
+drop trigger if exists trg_set_company_expenses on expenses;
+create trigger trg_set_company_expenses before insert on expenses for each row execute procedure set_company_id();
+create index if not exists idx_expenses_company on expenses (company_id, date desc);
+create index if not exists idx_expenses_category on expenses (company_id, category);
+do $$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    begin
+      alter publication supabase_realtime add table expenses;
+    exception when duplicate_object then null;
+    end;
+  end if;
+end $$;
+
+-- =============================================================
+-- PERDAS EM VALORES (DRE administrativa: gasto previsto x perda evitável)
+-- Técnico registra na OS dele; dono decide destino e recupera via Asaas.
+-- status: aberta -> absorvida | descontada | cobrada | recuperada | cancelada
+-- =============================================================
+create table if not exists losses (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies on delete cascade,
+  kind text not null default 'outro' check (kind in ('retrabalho','desconto','cancelamento','peca_quebrada','deslocamento','inadimplencia','outro')),
+  description text not null default '',
+  value numeric not null default 0 check (value >= 0),
+  date date not null default current_date,
+  service_order_id uuid default null references service_orders on delete set null,
+  customer_id uuid default null references customers on delete set null,
+  technician text default '',
+  status text not null default 'aberta' check (status in ('aberta','absorvida','descontada','cobrada','recuperada','cancelada')),
+  decision_notes text default '',
+  asaas_payment_id text default '',
+  created_by text default '',
+  created_at timestamptz default now()
+);
+alter table losses enable row level security;
+drop policy if exists "perdas select" on losses;
+create policy "perdas select" on losses for select using (company_id = auth_company_id());
+drop policy if exists "perdas insert" on losses;
+create policy "perdas insert" on losses for insert with check (company_id = auth_company_id());
+drop policy if exists "perdas update" on losses;
+create policy "perdas update" on losses for update using (
+  company_id = auth_company_id() and (is_company_admin() or created_by = auth.uid()::text)
+) with check (company_id = auth_company_id());
+drop policy if exists "perdas delete" on losses;
+create policy "perdas delete" on losses for delete using (company_id = auth_company_id() and is_company_admin());
+drop trigger if exists trg_set_company_losses on losses;
+create trigger trg_set_company_losses before insert on losses for each row execute procedure set_company_id();
+create index if not exists idx_losses_company on losses (company_id, date desc);
+create index if not exists idx_losses_status on losses (company_id, status);
+create index if not exists idx_losses_order on losses (service_order_id);
+create index if not exists idx_losses_tech on losses (company_id, technician);
+do $$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    begin
+      alter publication supabase_realtime add table losses;
+    exception when duplicate_object then null;
+    end;
+  end if;
+end $$;
+notify pgrst, 'reload schema';

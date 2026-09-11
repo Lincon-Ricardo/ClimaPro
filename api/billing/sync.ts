@@ -18,15 +18,28 @@ export default async function handler(request: VercelRequest, response: VercelRe
     if (!profile || profile.role !== 'admin') return response.status(403).json({ error: 'Somente administradores.' });
     const { data: current } = await supabase
       .from('subscriptions')
-      .select('asaas_subscription_id')
+      .select('asaas_subscription_id, plan, status')
       .eq('company_id', profile.company_id)
       .maybeSingle();
+    if (current?.plan === 'lifetime' && current?.status === 'lifetime') {
+      return response.status(200).json({ ok: true, synced: true, lifetime: true });
+    }
     const subId = current?.asaas_subscription_id as string | undefined;
     if (!subId) return response.status(404).json({ error: 'Nenhuma assinatura encontrada.' });
-    const payments = await asaasRequest<{ data?: Array<{ status?: string; confirmedDate?: string; paymentDate?: string }> }>(`/subscriptions/${subId}/payments?limit=20&status=CONFIRMED,RECEIVED,RECEIVED_IN_CASH,OVERDUE`, { method: 'GET' });
+    const lifetimePending = current?.plan === 'lifetime';
+    const payments = lifetimePending
+      ? await asaasRequest<{ status?: string }>(`/payments/${subId}`, { method: 'GET' }).then((p) => ({ data: [p] })).catch(() => ({ data: [] }))
+      : await asaasRequest<{ data?: Array<{ status?: string; confirmedDate?: string; paymentDate?: string }> }>(`/subscriptions/${subId}/payments?limit=20&status=CONFIRMED,RECEIVED,RECEIVED_IN_CASH,OVERDUE`, { method: 'GET' });
     const list = payments.data || [];
     const paid = list.some((p) => ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(String(p.status)));
     const overdue = !paid && list.some((p) => String(p.status) === 'OVERDUE');
+    if (lifetimePending && paid) {
+      await supabase
+        .from('subscriptions')
+        .update({ status: 'lifetime', last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('company_id', profile.company_id);
+      return response.status(200).json({ ok: true, synced: true, lifetime: true });
+    }
     const nextStatus = paid ? 'active' : overdue ? 'past_due' : null;
     if (nextStatus) {
       await supabase

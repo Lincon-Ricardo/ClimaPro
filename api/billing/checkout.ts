@@ -41,6 +41,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
       .select('asaas_customer_id, asaas_subscription_id, status, plan, billing_cycle')
       .eq('company_id', profile.company_id)
       .maybeSingle() as { data: { asaas_customer_id?: string | null; asaas_subscription_id?: string | null; status?: string | null; plan?: string | null; billing_cycle?: string | null } | null };
+    if (current?.plan === 'lifetime' || current?.status === 'lifetime') {
+      return response.status(409).json({ error: 'Você já é Pioneiro Vitalício. Nenhuma cobrança nova é necessária.' });
+    }
     const samePlan = current?.asaas_subscription_id && current.plan === billing.planKey && current.billing_cycle === billing.cycle && ['active', 'past_due'].includes(current.status || '');
     if (samePlan) {
       return response.status(409).json({ error: 'Sua empresa já está neste plano. Para trocar, escolha outro plano ou ciclo.' });
@@ -108,6 +111,51 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const method = String((body as { method?: string })?.method || 'card').toLowerCase();
     const billingType = method === 'pix' ? 'PIX' : method === 'boleto' ? 'BOLETO' : 'CREDIT_CARD';
+    const lifetime = (billing as { lifetime?: boolean }).lifetime === true;
+    if (lifetime) {
+      const payment = await asaasRequest<{ id: string; invoiceUrl?: string; bankSlipUrl?: string; paymentLink?: string; pixQrCode?: string }>(
+        '/payments',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            customer: customerId,
+            billingType,
+            value: billing.value,
+            dueDate: nextDueDate,
+            description: `ClimaPro ${billing.label} - pagamento único vitalício`,
+            externalReference: `${profile.company_id}:lifetime`,
+          }),
+        },
+      );
+      let qr: string | null = null;
+      let code: string | null = null;
+      const checkoutUrl = payment.invoiceUrl || payment.bankSlipUrl || payment.paymentLink || null;
+      if (billingType === 'PIX') {
+        try {
+          const pix = await asaasRequest<{ encodedImage?: string; payload?: string }>(`/payments/${payment.id}/pixQrCode`, { method: 'GET' });
+          qr = pix.encodedImage ? `data:image/png;base64,${pix.encodedImage}` : null;
+          code = pix.payload || null;
+        } catch { /* segue sem QR */ }
+      }
+      await supabase.from('subscriptions').upsert({
+        company_id: profile.company_id,
+        plan: 'lifetime',
+        status: 'past_due',
+        asaas_customer_id: customerId,
+        asaas_subscription_id: payment.id,
+        billing_cycle: 'lifetime',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'company_id' });
+      return response.status(200).json({
+        checkoutUrl,
+        subscriptionId: payment.id,
+        pixQr: qr,
+        pixCode: code,
+        billingType,
+        lifetime: true,
+        message: 'Pagamento único: após confirmar, seu acesso vira vitalício. Clique em Já paguei.',
+      });
+    }
     const pixManual = billingType === 'PIX' && billing.cycle === 'monthly';
     let subscription: AsaasSubscription;
     try {

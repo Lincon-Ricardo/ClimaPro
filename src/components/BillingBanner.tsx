@@ -2,14 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, AlertTriangle, XCircle, ArrowRight } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { useAuth } from '../context/AuthContext';
+import { isLifetimeSub, isVitalicioUser } from '../lib/lifetime';
 
 export function BillingBanner() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { active, expired, isTrial, trialLeft, trialNotStarted, osBlocked, osThisMonth, osAllowed } = useSubscription();
+  const { active, expired, isTrial, trialLeft, trialNotStarted, osBlocked, osThisMonth, osAllowed, sub } = useSubscription();
 
-  // Perfil liberado: sem mensagem de teste / cobrança
-  if (user?.email === 'dns_wil@yahoo.com.br') return null;
+  if (isVitalicioUser(user) || isLifetimeSub(sub)) return null;
 
   if (expired || !active) {
     return (

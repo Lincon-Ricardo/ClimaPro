@@ -7,7 +7,7 @@ let started = false;
 const TABLES = [
   'customers', 'service_orders', 'budgets', 'equipment', 'companies',
   'notifications', 'payments', 'profiles', 'appointments', 'materials',
-  'subscriptions',
+  'subscriptions', 'expenses', 'losses',
 ] as const;
 
 export type RealtimeStatus = 'off' | 'connecting' | 'on' | 'error';

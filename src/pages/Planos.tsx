@@ -4,7 +4,9 @@ import {
   X, ChevronDown, Flame, BadgePercent, Headset,
 } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
-import { PLANS, formatLimit, trialDaysLeft } from '../lib/plans';
+import { PLANS, formatLimit, trialDaysLeft, LIFETIME_PLAN } from '../lib/plans';
+import { isLifetimeSub, isVitalicioUser, LIFETIME_LABEL, LIFETIME_PRICE } from '../lib/lifetime';
+import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
@@ -136,7 +138,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 export default function Planos() {
   const toast = useToast();
+  const { user } = useAuth();
   const { sub, plan, isTrial } = useSubscription();
+  const lifetime = isLifetimeSub(sub) || isVitalicioUser(user);
   const [busy, setBusy] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
   const [method, setMethod] = useState<CheckoutMethod>('card');
@@ -149,7 +153,28 @@ export default function Planos() {
     return annual ? p * 0.8 : p;
   }
 
+  async function handleLifetime() {
+    setBusy('lifetime');
+    try {
+      const { track } = await import('../lib/analytics');
+      track('checkout_start', { plan: 'lifetime', cycle: 'lifetime', method });
+      const result = await startCheckout('lifetime', 'lifetime', method);
+      if (result.pixQr || result.pixCode) {
+        setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl });
+        toast('success', result.message || 'QR Code vitalício gerado! Pague e clique em Já paguei.');
+        return;
+      }
+      if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
+      else toast('info', 'Cobrança vitalícia criada. Conclua no Asaas e clique em Já paguei.');
+    } catch (error: unknown) {
+      toast('error', errMsg(error, 'Não foi possível iniciar o pagamento.'));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function handleSubscribe(planKey: string) {
+    if (lifetime) { toast('info', 'Você já é Pioneiro Vitalício. Nada a pagar. 👑'); return; }
     setBusy(planKey);
     try {
       const { track } = await import('../lib/analytics');
@@ -246,6 +271,51 @@ export default function Planos() {
         </div>
       </div>
 
+      {lifetime ? (
+        <div className="overflow-hidden rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-6 text-center shadow-xl dark:border-amber-500/40 dark:from-amber-950/40 dark:via-neutral-900 dark:to-amber-950/20">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow">
+            <Crown size={13} /> {LIFETIME_LABEL}
+          </span>
+          <h2 className="mt-2 text-2xl font-black text-neutral-900 dark:text-white">Acesso para sempre. Sem mensalidade. 👑</h2>
+          <p className="mx-auto mt-1 max-w-xl text-xs text-neutral-500 dark:text-neutral-300">
+            Sua empresa está blindada: OS e técnicos ilimitados, sem cobrança recorrente, sem tela de expirado.
+          </p>
+        </div>
+      ) : (
+        <div className="relative overflow-hidden rounded-3xl border border-amber-300/60 bg-gradient-to-br from-neutral-950 via-amber-950/60 to-neutral-950 p-6 text-center text-white shadow-2xl sm:p-7">
+          <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-amber-400/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -right-12 h-60 w-60 rounded-full bg-orange-500/20 blur-3xl" />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow-lg">
+              <Crown size={13} /> Oferta fundadora · {LIFETIME_LABEL}
+            </span>
+            <h2 className="mx-auto mt-3 max-w-2xl text-2xl font-black leading-tight sm:text-3xl">
+              Pague uma vez. Use para sempre. 👑
+            </h2>
+            <p className="mx-auto mt-2 max-w-xl text-xs text-amber-100/90 sm:text-sm">
+              {LIFETIME_PLAN.tagline} · {LIFETIME_PLAN.features[0]} · {LIFETIME_PLAN.features[3]}.
+              O Master custa {formatBRL(197)}/mês — o vitalício se paga em 4 meses.
+            </p>
+            <div className="mt-3 flex items-end justify-center gap-2">
+              <span className="pb-1.5 text-sm text-neutral-400 line-through">{formatBRL(197 * 12)}/ano no Master</span>
+              <span className="bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">{formatBRL(LIFETIME_PRICE)}</span>
+              <span className="pb-2 text-xs text-amber-200">pagamento único</span>
+            </div>
+            <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <Button
+                size="lg"
+                disabled={busy === 'lifetime'}
+                onClick={handleLifetime}
+                className="!bg-gradient-to-r !from-amber-400 !to-orange-500 !text-neutral-900 font-black shadow-xl shadow-orange-500/30 hover:brightness-110"
+              >
+                <Crown size={18} /> {busy === 'lifetime' ? 'Gerando...' : 'Quero ser Pioneiro Vitalício'}
+              </Button>
+              <span className="text-[11px] font-bold text-amber-200/80">PIX, boleto ou cartão · liberação automática via Asaas</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── CARDS ── */}
       {getRecommendedPlan() && (
         <div className="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-center text-xs font-bold text-primary-800 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-200">
@@ -314,10 +384,10 @@ export default function Planos() {
                   full
                   variant={hl ? 'light' : 'outline'}
                   className={`mt-5 font-black ${hl ? 'shadow-lg shadow-primary-500/30' : ''}`}
-                  disabled={busy === p.key || current}
+                  disabled={busy === p.key || current || lifetime}
                   onClick={() => handleSubscribe(p.key)}
                 >
-                  {current ? '✓ Seu plano atual' : busy === p.key ? 'Abrindo...' : p.cta}
+                  {lifetime ? '👑 Incluso no vitalício' : current ? '✓ Seu plano atual' : busy === p.key ? 'Abrindo...' : p.cta}
                 </Button>
               </div>
             </div>

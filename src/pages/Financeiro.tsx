@@ -32,6 +32,8 @@ export default function Financeiro() {
   const orders = useLiveQuery(() => db.serviceOrders.list({ pageSize: 1000, gte: { date: from }, lte: { date: to } }).then((r) => r.rows), [from, to]) || [];
   const allOrders = useLiveQuery(() => db.serviceOrders.list({ pageSize: 1000 }).then((r) => r.rows), []) || [];
   const payments = useLiveQuery(() => db.payments.list({ pageSize: 500, gte: { paidAt: from }, lte: { paidAt: to } }).then((r) => r.rows), [from, to]) || [];
+  const losses = useLiveQuery(() => db.losses.list({ pageSize: 1000, gte: { date: from }, lte: { date: to } }).then((r) => r.rows), [from, to], 'losses') || [];
+  const monthExpenses = useLiveQuery(() => db.expenses.list({ pageSize: 1000, gte: { date: from }, lte: { date: to } }).then((r) => r.rows), [from, to], 'expenses') || [];
 
   const periodOrders = orders.filter((o) => o.status !== 'cancelado');
   const revenue = periodOrders.reduce((s, o) => s + (Number(o.value) || 0), 0);
@@ -47,6 +49,10 @@ export default function Financeiro() {
     .reduce((s, o) => s + (Number(o.value) || 0), 0);
   const doneCount = periodOrders.filter((o) => o.status === 'concluido').length;
   const pendingCount = periodOrders.filter((o) => o.status !== 'concluido').length;
+  const lossTotal = losses.filter((l) => l.status !== 'cancelada').reduce((s, l) => s + (Number(l.value) || 0), 0);
+  const lossRecovered = losses.filter((l) => l.status === 'recuperada').reduce((s, l) => s + (Number(l.value) || 0), 0);
+  const expenseTotal = monthExpenses.reduce((s, e) => s + (Number(e.value) || 0), 0);
+  const netReal = revenue - expenseTotal - lossTotal + lossRecovered;
 
   const byService = useMemo(() => {
     const map = new Map<string, number>();
@@ -93,11 +99,25 @@ export default function Financeiro() {
 
       {loading ? <Loading /> : (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div id="dre" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={<TrendingUp size={20} />} label="Faturamento" value={formatBRL(revenue)} />
             <StatCard icon={<CheckCircle2 size={20} />} color="text-success" bg="bg-green-50 dark:bg-green-900/30" label="Recebido" value={formatBRL(paid)} />
             <StatCard icon={<Clock size={20} />} color="text-warning" bg="bg-orange-50 dark:bg-orange-900/30" label="A receber" value={formatBRL(toReceive)} />
             <StatCard icon={<Wallet size={20} />} label="Serviços" value={`${doneCount} concluídos`} />
+          </div>
+
+          <div className="mt-3 overflow-hidden rounded-3xl bg-gradient-to-br from-neutral-900 via-red-950 to-neutral-900 p-4 text-white shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-bold">🧾 DRE do período — lucro real</div>
+              <a href="/app/perdas" className="text-xs font-bold text-red-200 hover:text-white hover:underline">Abrir Perdas →</a>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+              <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Receita</div><div className="font-black">{formatBRL(revenue)}</div></div>
+              <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Gastos</div><div className="font-black">- {formatBRL(expenseTotal)}</div></div>
+              <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Perdas</div><div className="font-black text-red-300">- {formatBRL(lossTotal)}</div></div>
+              <div className="rounded-2xl bg-white/10 p-2.5"><div className="text-[10px] uppercase text-white/60">Recuperado</div><div className="font-black text-emerald-300">+ {formatBRL(lossRecovered)}</div></div>
+              <div className="rounded-2xl bg-emerald-500/20 p-2.5 ring-1 ring-emerald-300/40"><div className="text-[10px] uppercase text-emerald-200">Lucro real</div><div className="font-black text-emerald-300">{formatBRL(netReal)}</div></div>
+            </div>
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">

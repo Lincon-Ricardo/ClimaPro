@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { emitDataChanged } from './tableBus';
-import type { Customer, Equipment, Budget, ServiceOrder, Company, Notification, Payment, Appointment, Material, User, Expense } from '../types';
+import type { Customer, Equipment, Budget, ServiceOrder, Company, Notification, Payment, Appointment, Material, User, Expense, Loss } from '../types';
 
 type DbRow = Record<string, unknown>;
 type EntityMap = {
@@ -89,6 +89,15 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
     createdAt: 'created_at',
     createdBy: 'created_by',
   },
+  losses: {
+    companyId: 'company_id',
+    serviceOrderId: 'service_order_id',
+    customerId: 'customer_id',
+    decisionNotes: 'decision_notes',
+    asaasPaymentId: 'asaas_payment_id',
+    createdBy: 'created_by',
+    createdAt: 'created_at',
+  },
   subscriptions: {
     companyId: 'company_id',
     trialEndsAt: 'trial_ends_at',
@@ -159,6 +168,7 @@ const PAGE_SIZE = 1000;
 
 const TABLES_WITH_CREATED_AT = new Set([
   'companies', 'customers', 'budgets', 'service_orders', 'payments', 'notifications', 'materials', 'profiles',
+  'expenses', 'losses',
 ]);
 
 async function fetchPaged(table: string, build?: (q: unknown) => unknown): Promise<DbRow[]> {
@@ -359,6 +369,7 @@ export const db = {
   appointments: makeTable<Appointment>('appointments'),
   materials: makeTable<Material>('materials'),
   expenses: makeTable<Expense>('expenses'),
+  losses: makeTable<Loss>('losses'),
   subscriptions: makeTable<DbRow>('subscriptions'),
 };
 

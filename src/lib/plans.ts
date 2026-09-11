@@ -1,5 +1,5 @@
-export type PlanKey = 'trial' | 'start' | 'pro' | 'master';
-export type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
+export type PlanKey = 'trial' | 'start' | 'pro' | 'master' | 'lifetime';
+export type SubStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired' | 'lifetime';
 
 export interface Plan {
   key: PlanKey;
@@ -71,6 +71,7 @@ export const PLANS: Plan[] = [
 ];
 
 export function getPlan(key: string): Plan {
+  if (key === 'lifetime') return LIFETIME_PLAN;
   return PLANS.find((p) => p.key === key) || PLANS[1];
 }
 
@@ -147,6 +148,7 @@ export function trialStartedAt(sub: Subscription | null): number {
 
 export function isSubscriptionActive(sub: Subscription | null): boolean {
   if (!sub) return true;
+  if (sub.status === 'lifetime' || sub.plan === 'lifetime') return true;
   if (sub.status === 'active') return true;
   if (sub.status === 'trialing') return trialDaysLeft(sub) > 0;
   return false;
@@ -154,6 +156,7 @@ export function isSubscriptionActive(sub: Subscription | null): boolean {
 
 export function isExpired(sub: Subscription | null): boolean {
   if (!sub) return false;
+  if (sub.status === 'lifetime' || sub.plan === 'lifetime') return false;
   if (sub.status === 'active') return false;
   if (sub.status === 'trialing') return trialDaysLeft(sub) <= 0;
   return ['past_due', 'canceled', 'expired'].includes(sub.status);
@@ -163,8 +166,27 @@ export function readOnly(sub: Subscription | null): boolean {
   return isExpired(sub);
 }
 
+export const LIFETIME_PLAN: Plan = {
+  key: 'lifetime',
+  name: 'Pioneiro Vitalício',
+  tagline: 'Pagou uma vez, usa para sempre',
+  price: 697,
+  osPerMonth: Number.POSITIVE_INFINITY,
+  technicians: Number.POSITIVE_INFINITY,
+  highlight: true,
+  cta: 'Garantir vitalício',
+  features: [
+    'OS ilimitadas para sempre',
+    'Técnicos ilimitados',
+    'Tudo do Master incluso',
+    'Sem mensalidade, sem pegadinha',
+    'Selo Pioneiro no app',
+  ],
+};
+
 export function effectivePlan(sub: Subscription | null): Plan {
   if (!sub) return getPlan('pro');
+  if (sub.status === 'lifetime' || sub.plan === 'lifetime') return LIFETIME_PLAN;
   if (sub.status === 'trialing') return getPlan('pro');
   return getPlan(sub.plan === 'trial' ? 'start' : sub.plan);
 }

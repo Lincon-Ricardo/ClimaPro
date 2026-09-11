@@ -1,7 +1,7 @@
 import { useLiveQuery } from '../hooks/useLiveQuery';
 import { useNavigate } from 'react-router-dom';
 import {
-  Wrench, TrendingUp, Snowflake, FileText, Briefcase, Settings,
+  Wrench, TrendingUp, TrendingDown, Wallet, Snowflake, FileText, Briefcase, Settings,
   Users, Bell, MessageCircle, Building2, Calculator, Stethoscope, LayoutDashboard,
   DollarSign, Trophy, Crown,
 } from 'lucide-react';
@@ -51,6 +51,8 @@ export default function Mais() {
     : [
         { to: '/app/servicos', icon: <Wrench size={20} />, label: 'Serviços', sub: `${orders.length} ordens de serviço` },
         { to: '/app/financeiro', icon: <TrendingUp size={20} />, label: 'Financeiro', sub: 'Receitas e valores' },
+        { to: '/app/gastos', icon: <Wallet size={20} />, label: 'Gastos', sub: 'Despesas e controle' },
+        { to: '/app/perdas', icon: <TrendingDown size={20} />, label: 'Perdas em valores', sub: 'Onde o lucro vaza' },
         { to: '/app/equipamentos', icon: <Snowflake size={20} />, label: 'Equipamentos', sub: 'Cadastro de aparelhos' },
         { to: '/app/relatorios', icon: <FileText size={20} />, label: 'Relatórios', sub: 'Indicadores do negócio' },
         { to: '/app/notificacoes', icon: <Bell size={20} />, label: 'Notificações', sub: `${unread} não lida(s)` },

@@ -20,7 +20,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
     const payload = request.body || {};
     const eventId = String(payload.id || `${payload.event}-${payload.payment?.id || payload.subscription?.id || Date.now()}`);
     const event = String(payload.event || '');
-    const subscriptionId = payload.payment?.subscription || payload.subscription?.id;
+    const paymentId = payload.payment?.id as string | undefined;
+    const subscriptionId = (payload.payment?.subscription || payload.subscription?.id || paymentId) as string | undefined;
+    const externalRef = String(payload.payment?.externalReference || payload.subscription?.externalReference || '');
     const status = statusFromEvent(event);
     const supabase = getAdminClient();
 
@@ -34,7 +36,19 @@ export default async function handler(request: VercelRequest, response: VercelRe
     if (eventError?.code === '23505') return response.status(200).json({ ok: true, duplicate: true });
     if (eventError) throw eventError;
 
-    if (status && subscriptionId) {
+    const isLifetimeRef = externalRef.endsWith(':lifetime');
+    const lifetimeCompany = isLifetimeRef ? externalRef.split(':')[0] : null;
+    if (isLifetimeRef && status === 'active' && lifetimeCompany) {
+      await supabase
+        .from('subscriptions')
+        .update({ plan: 'lifetime', status: 'lifetime', last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('company_id', lifetimeCompany);
+    } else if (isLifetimeRef && paymentId) {
+      await supabase
+        .from('subscriptions')
+        .update({ last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('asaas_subscription_id', paymentId);
+    } else if (status && subscriptionId) {
       await supabase
         .from('subscriptions')
         .update({ status, last_webhook_at: new Date().toISOString(), updated_at: new Date().toISOString() })

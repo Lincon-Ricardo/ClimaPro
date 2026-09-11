@@ -24,6 +24,7 @@ import {
 import { PdfPreviewModal, usePdfPreview } from '../components/PdfPreview';
 import { useServiceOrderActions } from '../hooks/useServiceOrderActions';
 import { VoiceReport, SuperheatCalc } from '../components/FieldTools';
+import { LossQuickAdd } from '../components/LossQuickAdd';
 import { errMsg } from '../lib/errors';
 import { createCharge, chargeWhatsLink } from '../lib/charge';
 import type { ChecklistItem, ServiceOrder, User } from '../types';
@@ -687,6 +688,8 @@ export default function ServicoDetail() {
           })()}
         </Card>
       </div>
+
+      <LossQuickAdd orderId={o.id} customerId={o.customerId} />
 
       <Card className="mt-3">
         <div className="mb-3 flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-100">

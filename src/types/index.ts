@@ -217,3 +217,37 @@ export interface Expense {
   createdAt: string;
   createdBy: string;
 }
+
+export type LossKind =
+  | 'retrabalho'
+  | 'desconto'
+  | 'cancelamento'
+  | 'peca_quebrada'
+  | 'deslocamento'
+  | 'inadimplencia'
+  | 'outro';
+
+export type LossStatus =
+  | 'aberta'
+  | 'absorvida'
+  | 'descontada'
+  | 'cobrada'
+  | 'recuperada'
+  | 'cancelada';
+
+export interface Loss {
+  id: string;
+  companyId: string;
+  kind: LossKind;
+  description: string;
+  value: number;
+  date: string;
+  serviceOrderId?: string;
+  customerId?: string;
+  technician?: string;
+  status: LossStatus;
+  decisionNotes?: string;
+  asaasPaymentId?: string;
+  createdBy: string;
+  createdAt: string;
+}

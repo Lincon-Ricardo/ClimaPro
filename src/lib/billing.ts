@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 
-export type BillingCycle = 'monthly' | 'yearly';
+export type BillingCycle = 'monthly' | 'yearly' | 'lifetime';
 
 export type CheckoutMethod = 'pix' | 'card' | 'boleto';
 
@@ -17,7 +17,7 @@ export async function startCheckout(planKey: string, cycle: BillingCycle, method
     },
     body: JSON.stringify({ planKey, cycle, method }),
   });
-  const body = (await response.json().catch(() => ({}))) as { error?: string; checkoutUrl?: string | null; subscriptionId?: string; pixQr?: string | null; pixCode?: string | null; billingType?: string; pixManual?: boolean; message?: string | null };
+  const body = (await response.json().catch(() => ({}))) as { error?: string; checkoutUrl?: string | null; subscriptionId?: string; pixQr?: string | null; pixCode?: string | null; billingType?: string; pixManual?: boolean; lifetime?: boolean; message?: string | null };
   if (!response.ok) {
     if (response.status === 409) throw new Error(body.error || 'Sua empresa já está neste plano.');
     throw new Error(body.error || 'Não foi possível iniciar o pagamento.');
@@ -29,6 +29,7 @@ export async function startCheckout(planKey: string, cycle: BillingCycle, method
     pixCode: body.pixCode || null,
     billingType: body.billingType || '',
     pixManual: body.pixManual,
+    lifetime: body.lifetime === true,
     message: body.message || null,
   };
 }

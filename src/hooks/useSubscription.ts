@@ -20,8 +20,8 @@ function toSubscription(row: Record<string, unknown> | null | undefined): Subscr
   if (!row || typeof row !== 'object') return null;
   const plan = row.plan;
   const status = row.status;
-  if (plan !== 'trial' && plan !== 'start' && plan !== 'pro' && plan !== 'master') return null;
-  if (status !== 'trialing' && status !== 'active' && status !== 'past_due' && status !== 'canceled' && status !== 'expired') return null;
+  if (plan !== 'trial' && plan !== 'start' && plan !== 'pro' && plan !== 'master' && plan !== 'lifetime') return null;
+  if (status !== 'trialing' && status !== 'active' && status !== 'past_due' && status !== 'canceled' && status !== 'expired' && status !== 'lifetime') return null;
   return {
     id: String(row.id || ''),
     companyId: String(row.companyId || ''),

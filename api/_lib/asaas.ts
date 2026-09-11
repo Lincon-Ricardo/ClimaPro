@@ -47,18 +47,36 @@ export const BILLING_PLANS = {
   master: { monthly: 197, yearly: 1891.2, label: 'Tempestade Polar' },
 } as const;
 
-export type BillingPlanKey = keyof typeof BILLING_PLANS;
-export type BillingCycle = 'monthly' | 'yearly';
+export const LIFETIME_VALUE = 697;
+export const LIFETIME_LABEL = 'Pioneiro Vitalício';
+
+export type BillingPlanKey = keyof typeof BILLING_PLANS | 'lifetime';
+export type BillingCycle = 'monthly' | 'yearly' | 'lifetime';
+
+export function isLifetimePlan(planKey: unknown, cycle: unknown): boolean {
+  return planKey === 'lifetime' || cycle === 'lifetime';
+}
 
 export function getBillingPlan(planKey: unknown, cycle: unknown) {
+  if (isLifetimePlan(planKey, cycle)) {
+    return {
+      planKey: 'lifetime' as BillingPlanKey,
+      cycle: 'lifetime' as BillingCycle,
+      value: LIFETIME_VALUE,
+      asaasCycle: 'MONTHLY' as const,
+      label: LIFETIME_LABEL,
+      lifetime: true,
+    };
+  }
   if (typeof planKey !== 'string' || !(planKey in BILLING_PLANS)) throw new Error('Plano inválido.');
   if (cycle !== 'monthly' && cycle !== 'yearly') throw new Error('Ciclo inválido.');
-  const plan = BILLING_PLANS[planKey as BillingPlanKey];
+  const plan = BILLING_PLANS[planKey as keyof typeof BILLING_PLANS];
   return {
     planKey: planKey as BillingPlanKey,
     cycle: cycle as BillingCycle,
     value: plan[cycle as BillingCycle],
-    asaasCycle: cycle === 'yearly' ? 'YEARLY' : 'MONTHLY',
+    asaasCycle: cycle === 'yearly' ? ('YEARLY' as const) : ('MONTHLY' as const),
     label: plan.label,
+    lifetime: false,
   };
 }

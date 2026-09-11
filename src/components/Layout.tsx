@@ -20,10 +20,13 @@ import {
   Navigation,
   Trophy,
   DollarSign,
+  TrendingDown,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import { BillingBanner } from './BillingBanner';
+import { useSubscription } from '../hooks/useSubscription';
+import { isLifetimeSub, isVitalicioUser } from '../lib/lifetime';
 import { useTheme } from '../context/ThemeContext';
 import { NavItem } from './NavItem';
 import type { LucideIcon } from 'lucide-react';
@@ -48,6 +51,7 @@ const ADMIN_MORE: NavEntry[] = [
   { to: '/app/servicos', icon: Wrench, label: 'Serviços' },
   { to: '/app/financeiro', icon: TrendingUp, label: 'Financeiro' },
   { to: '/app/gastos', icon: Wallet, label: 'Gastos' },
+  { to: '/app/perdas', icon: TrendingDown, label: 'Perdas' },
   { to: '/app/equipamentos', icon: Snowflake, label: 'Equipamentos' },
   { to: '/app/relatorios', icon: FileText, label: 'Relatórios' },
   { to: '/app/config', icon: Settings, label: 'Configurações' },
@@ -86,6 +90,8 @@ export function Layout() {
   const isTech = user?.role === 'tech';
   const companies = useLiveQuery(() => db.companies.toArray(), []) || [];
   const commissionOn = companies[0]?.commissionEnabled !== false;
+  const { sub } = useSubscription();
+  const lifetime = isLifetimeSub(sub) || isVitalicioUser(user);
 
   // Navegação do Técnico (Cockpit de Campo) — rótulo muda conforme regra da empresa
   const perfItem: NavEntry = commissionOn
@@ -176,7 +182,9 @@ export function Layout() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-extrabold text-white">{user?.name || 'Usuário'}</span>
-                <span className="block text-[11px] font-semibold uppercase tracking-wider text-sky-200/70">{user?.role === 'admin' ? 'Dono' : 'Técnico'}</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-wider text-sky-200/70">
+                  {lifetime ? '👑 Pioneiro Vitalício' : user?.role === 'admin' ? 'Dono' : 'Técnico'}
+                </span>
               </span>
             </div>
             <button
