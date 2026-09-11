@@ -16,7 +16,7 @@ export function NavItem({ to, icon: Icon, label, light = false, mobile = false }
         to={to}
         end={to === '/app'}
         className={({ isActive }) =>
-          `flex min-w-0 flex-1 flex-col items-center gap-1 py-2 text-[11px] font-bold transition-all duration-200 ${
+          `flex min-w-0 flex-1 basis-0 flex-col items-center gap-1 px-0.5 py-2 text-[10px] font-bold transition-all duration-200 xs:text-[11px] ${
             isActive
               ? 'text-primary-700 dark:text-sky-300'
               : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-200'
@@ -26,7 +26,7 @@ export function NavItem({ to, icon: Icon, label, light = false, mobile = false }
         {({ isActive }) => (
           <>
             <span
-              className={`flex h-8 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
+              className={`flex h-8 w-11 max-w-full items-center justify-center rounded-2xl transition-all duration-200 xs:w-12 ${
                 isActive
                   ? 'bg-gradient-to-br from-primary-700 to-sky-500 text-white shadow-[0_8px_20px_-8px_rgba(11,61,145,.8)]'
                   : ''
@@ -34,7 +34,7 @@ export function NavItem({ to, icon: Icon, label, light = false, mobile = false }
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
             </span>
-            {label}
+            <span className="w-full truncate px-0.5 text-center">{label}</span>
           </>
         )}
       </NavLink>

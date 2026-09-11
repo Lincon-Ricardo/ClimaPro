@@ -69,6 +69,7 @@ img {
 }
 
 body {
+  overflow-x: clip;
   font-family: 'Inter', system-ui, sans-serif;
   background:
     radial-gradient(1200px 500px at 10% -10%, rgba(59, 167, 232, 0.16), transparent 60%),

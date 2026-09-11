@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   Check, Sparkles, Snowflake, Wind, Tornado, Crown, Zap, ShieldCheck,
-  X, ChevronDown, Flame, BadgePercent, Headset,
+  X, ChevronDown, Flame, BadgePercent, Headset, Infinity as InfinityIcon,
+  Users, Timer, Gem, BadgeCheck, Star,
 } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
-import { PLANS, formatLimit, trialDaysLeft, LIFETIME_PLAN } from '../lib/plans';
+import { PLANS, formatLimit, trialDaysLeft } from '../lib/plans';
 import { isLifetimeSub, isVitalicioUser, LIFETIME_LABEL, LIFETIME_PRICE } from '../lib/lifetime';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/Card';
@@ -60,7 +61,7 @@ const FAQS: { q: string; a: string }[] = [
   { q: 'Meus dados estão seguros?', a: 'Sim. Banco criptografado, backup diário e você exporta tudo quando quiser. Seguimos a LGPD — veja em /privacidade.' },
 ];
 
-function PixModal({ pix, onClose }: { pix: { qr: string | null; code: string | null; url: string | null }; onClose: () => void }) {
+function PixModal({ pix, onClose, lifetime = false }: { pix: { qr: string | null; code: string | null; url: string | null }; onClose: () => void; lifetime?: boolean }) {
   const toast = useToast();
   const [checking, setChecking] = useState(false);
 
@@ -93,11 +94,15 @@ function PixModal({ pix, onClose }: { pix: { qr: string | null; code: string | n
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Pague com PIX</h3>
-        <p className="mt-1 text-xs text-neutral-500">PIX vale para a 1ª parcela — a recorrência mensal é no cartão. Escaneie e clique em Já paguei.</p>
-        {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-52 w-52 rounded-2xl border" />}
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/70 p-3 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-3xl bg-white p-5 text-center sm:p-6 dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-black text-neutral-900 dark:text-white">{lifetime ? 'Pioneiro Vitalício · PIX único' : 'Pague com PIX'}</h3>
+        <p className="mt-1 text-xs text-neutral-500">
+          {lifetime
+            ? 'Pagamento único: após confirmar, seu acesso vira vitalício. Escaneie e clique em Já paguei.'
+            : 'PIX vale para a 1ª parcela — a recorrência mensal é no cartão. Escaneie e clique em Já paguei.'}
+        </p>
+        {pix.qr && <img src={pix.qr} alt="QR Code PIX" className="mx-auto mt-4 h-44 w-44 max-w-full rounded-2xl border xs:h-52 xs:w-52" />}
         {pix.code && (
           <button
             type="button"
@@ -107,13 +112,13 @@ function PixModal({ pix, onClose }: { pix: { qr: string | null; code: string | n
             {pix.code}
           </button>
         )}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className={`mt-4 grid gap-2 ${pix.url ? 'grid-cols-1 xs:grid-cols-2' : 'grid-cols-1'}`}>
           {pix.url && (
             <Button variant="outline" onClick={() => window.open(pix.url || '', '_blank')}>Abrir fatura</Button>
           )}
           <Button disabled={checking} onClick={checkPayment}>{checking ? 'Verificando…' : 'Já paguei'}</Button>
         </div>
-        <button type="button" onClick={onClose} className="mt-2 w-full py-1 text-xs text-neutral-400 hover:underline">Fechar</button>
+        <button type="button" onClick={onClose} className="mt-2 w-full py-2 text-xs text-neutral-400 hover:underline">Fechar</button>
       </div>
     </div>
   );
@@ -144,7 +149,7 @@ export default function Planos() {
   const [busy, setBusy] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
   const [method, setMethod] = useState<CheckoutMethod>('card');
-  const [pix, setPix] = useState<{ qr: string | null; code: string | null; url: string | null } | null>(null);
+  const [pix, setPix] = useState<{ qr: string | null; code: string | null; url: string | null; lifetime?: boolean } | null>(null);
 
   const left = sub ? trialDaysLeft(sub) : 0;
   const trialPct = Math.max(0, Math.min(100, ((14 - left) / 14) * 100));
@@ -160,7 +165,7 @@ export default function Planos() {
       track('checkout_start', { plan: 'lifetime', cycle: 'lifetime', method });
       const result = await startCheckout('lifetime', 'lifetime', method);
       if (result.pixQr || result.pixCode) {
-        setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl });
+        setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl, lifetime: true });
         toast('success', result.message || 'QR Code vitalício gerado! Pague e clique em Já paguei.');
         return;
       }
@@ -201,9 +206,9 @@ export default function Planos() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-4">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 pb-4">
       {/* ── HERO ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-neutral-950 p-6 text-center text-white shadow-2xl sm:p-8">
+      <div className="relative overflow-hidden rounded-3xl bg-neutral-950 p-4 text-center text-white shadow-2xl xs:p-6 sm:p-8">
         <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-primary-600/40 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-sky-500/30 blur-3xl" />
         <div className="pointer-events-none absolute left-1/2 top-0 h-40 w-[80%] -translate-x-1/2 rounded-full bg-violet-600/20 blur-3xl" />
@@ -233,18 +238,18 @@ export default function Planos() {
           )}
 
           {/* Toggle mensal/anual */}
-          <div className="mt-5 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
+          <div className="mx-auto mt-5 flex w-fit max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
             <button
               type="button"
               onClick={() => setAnnual(false)}
-              className={`rounded-full px-5 py-2 text-xs font-black transition ${!annual ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
+              className={`rounded-full px-4 py-2 text-xs font-black transition sm:px-5 ${!annual ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
             >
               Mensal
             </button>
             <button
               type="button"
               onClick={() => setAnnual(true)}
-              className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-black transition ${annual ? 'bg-emerald-400 text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
+              className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-black transition sm:px-5 ${annual ? 'bg-emerald-400 text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
             >
               Anual <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${annual ? 'bg-neutral-900 text-emerald-300' : 'bg-emerald-500/20 text-emerald-300'}`}>-20%</span>
             </button>
@@ -256,13 +261,13 @@ export default function Planos() {
             <span className="flex items-center gap-1"><Headset size={13} className="text-sky-300" /> Suporte em português</span>
           </div>
 
-          <div className="mt-4 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
+          <div className="mx-auto mt-4 flex w-fit max-w-full flex-wrap items-center justify-center gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-sm">
             {(['card', 'pix', 'boleto'] as CheckoutMethod[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMethod(m)}
-                className={`rounded-full px-5 py-2 text-xs font-black uppercase transition ${method === m ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
+                className={`rounded-full px-3 py-2 text-[11px] font-black uppercase transition xs:px-4 xs:text-xs sm:px-5 ${method === m ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
               >
                 {m === 'pix' ? 'PIX' : m === 'card' ? 'Cartão ★' : 'Boleto'}
               </button>
@@ -272,48 +277,105 @@ export default function Planos() {
       </div>
 
       {lifetime ? (
-        <div className="overflow-hidden rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-amber-50 p-6 text-center shadow-xl dark:border-amber-500/40 dark:from-amber-950/40 dark:via-neutral-900 dark:to-amber-950/20">
+        <div className="relative overflow-hidden rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-amber-100 p-6 text-center shadow-xl sm:p-8 dark:border-amber-500/40 dark:from-amber-950/50 dark:via-neutral-900 dark:to-amber-950/30">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/30 blur-3xl" />
           <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow">
-            <Crown size={13} /> {LIFETIME_LABEL}
+            <BadgeCheck size={13} /> {LIFETIME_LABEL} ativo
           </span>
-          <h2 className="mt-2 text-2xl font-black text-neutral-900 dark:text-white">Acesso para sempre. Sem mensalidade. 👑</h2>
-          <p className="mx-auto mt-1 max-w-xl text-xs text-neutral-500 dark:text-neutral-300">
-            Sua empresa está blindada: OS e técnicos ilimitados, sem cobrança recorrente, sem tela de expirado.
+          <h2 className="mt-3 text-2xl font-black text-neutral-900 sm:text-3xl dark:text-white">Você é Pioneiro. Para sempre. 👑</h2>
+          <p className="mx-auto mt-1.5 max-w-xl text-xs text-neutral-500 sm:text-sm dark:text-neutral-300">
+            OS ilimitadas · técnicos ilimitados · zero mensalidade · zero tela de expirado. Sua blindagem já está valendo.
           </p>
-        </div>
-      ) : (
-        <div className="relative overflow-hidden rounded-3xl border border-amber-300/60 bg-gradient-to-br from-neutral-950 via-amber-950/60 to-neutral-950 p-6 text-center text-white shadow-2xl sm:p-7">
-          <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-amber-400/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -right-12 h-60 w-60 rounded-full bg-orange-500/20 blur-3xl" />
-          <div className="relative">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow-lg">
-              <Crown size={13} /> Oferta fundadora · {LIFETIME_LABEL}
-            </span>
-            <h2 className="mx-auto mt-3 max-w-2xl text-2xl font-black leading-tight sm:text-3xl">
-              Pague uma vez. Use para sempre. 👑
-            </h2>
-            <p className="mx-auto mt-2 max-w-xl text-xs text-amber-100/90 sm:text-sm">
-              {LIFETIME_PLAN.tagline} · {LIFETIME_PLAN.features[0]} · {LIFETIME_PLAN.features[3]}.
-              O Master custa {formatBRL(197)}/mês — o vitalício se paga em 4 meses.
-            </p>
-            <div className="mt-3 flex items-end justify-center gap-2">
-              <span className="pb-1.5 text-sm text-neutral-400 line-through">{formatBRL(197 * 12)}/ano no Master</span>
-              <span className="bg-gradient-to-r from-amber-200 to-orange-200 bg-clip-text text-5xl font-black tracking-tight text-transparent">{formatBRL(LIFETIME_PRICE)}</span>
-              <span className="pb-2 text-xs text-amber-200">pagamento único</span>
-            </div>
-            <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <Button
-                size="lg"
-                disabled={busy === 'lifetime'}
-                onClick={handleLifetime}
-                className="!bg-gradient-to-r !from-amber-400 !to-orange-500 !text-neutral-900 font-black shadow-xl shadow-orange-500/30 hover:brightness-110"
-              >
-                <Crown size={18} /> {busy === 'lifetime' ? 'Gerando...' : 'Quero ser Pioneiro Vitalício'}
-              </Button>
-              <span className="text-[11px] font-bold text-amber-200/80">PIX, boleto ou cartão · liberação automática via Asaas</span>
-            </div>
+          <div className="mx-auto mt-4 flex max-w-md items-center justify-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+            <ShieldCheck size={15} /> Conta vitalícia verificada — nenhum plano consegue te cobrar de novo.
           </div>
         </div>
+      ) : (
+        <section className="relative overflow-hidden rounded-[28px] border border-amber-200/60 bg-neutral-950 text-white shadow-[0_30px_80px_-20px_rgba(245,158,11,.45)] dark:border-amber-400/30">
+          <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-400/25 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -right-20 h-80 w-80 rounded-full bg-orange-600/25 blur-3xl" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/80 to-transparent" />
+          <div className="relative grid min-w-0 grid-cols-1 gap-5 p-4 xs:p-6 sm:p-8 lg:grid-cols-[1.15fr_.85fr] lg:gap-8">
+            <div className="min-w-0 text-left">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-300 to-orange-400 px-3.5 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-950 shadow-lg">
+                  <Crown size={13} /> Lote fundador
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-amber-100">
+                  <Timer size={12} /> Fecha quando lotar — sem reabrir
+                </span>
+              </div>
+              <h2 className="mt-4 break-words text-2xl font-black leading-[1.08] tracking-tight xs:text-[26px] sm:text-4xl">
+                Pague <span className="bg-gradient-to-r from-amber-200 via-yellow-300 to-orange-300 bg-clip-text text-transparent">1 vez.</span>
+                <br />Use o ClimaPro para sempre.
+              </h2>
+              <p className="mt-2.5 max-w-lg text-[13px] leading-relaxed text-neutral-300 sm:text-sm">
+                O {LIFETIME_LABEL} é para quem fundou o jogo com a gente: tudo do Master, sem mensalidade, sem renovação, sem pegadinha.
+              </p>
+              <ul className="mt-5 space-y-2.5">
+                {[
+                  { icon: <InfinityIcon size={15} />, t: 'OS ilimitadas para sempre', d: 'sem teto mensal' },
+                  { icon: <Users size={15} />, t: 'Técnicos ilimitados', d: 'traga a equipe toda' },
+                  { icon: <Gem size={15} />, t: 'Selo Pioneiro no app', d: 'status vitalício na conta' },
+                  { icon: <ShieldCheck size={15} />, t: 'Garantia de 7 dias', d: '100% de volta, sem perguntas' },
+                ].map((f) => (
+                  <li key={f.t} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.06] px-3.5 py-2.5 backdrop-blur-sm">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 text-neutral-950 shadow">
+                      {f.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-extrabold">{f.t}</span>
+                      <span className="block text-[11px] text-neutral-400">{f.d}</span>
+                    </span>
+                    <Check size={16} className="ml-auto shrink-0 text-emerald-400" />
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-neutral-300">
+                <span className="flex items-center gap-1.5"><Star size={12} className="text-amber-300" /> Se paga com 1 higienização</span>
+                <span className="flex items-center gap-1.5"><Zap size={12} className="text-amber-300" /> Liberação automática via Asaas</span>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="relative overflow-hidden rounded-3xl border border-amber-200/50 bg-gradient-to-b from-white to-amber-50 p-5 text-neutral-900 shadow-2xl sm:p-6 dark:border-amber-300/30 dark:from-neutral-900 dark:to-amber-950/40 dark:text-white">
+                <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-amber-400/30 blur-2xl" />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-neutral-500 dark:text-neutral-300">Oferta única</span>
+                  <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-black uppercase text-white">-70% vs 5 anos de Master</span>
+                </div>
+                <div className="mt-3 space-y-1.5 rounded-2xl bg-neutral-100/80 p-3 text-xs font-bold text-neutral-500 dark:bg-white/10 dark:text-neutral-300">
+                  <div className="flex justify-between"><span>Master · 1 ano</span><span className="line-through">{formatBRL(197 * 12)}</span></div>
+                  <div className="flex justify-between"><span>Master · 5 anos</span><span className="line-through">{formatBRL(197 * 12 * 5)}</span></div>
+                  <div className="flex justify-between border-t border-neutral-200 pt-1.5 text-neutral-900 dark:border-white/10 dark:text-white">
+                    <span>Pioneiro · para sempre</span><span className="text-emerald-600 dark:text-emerald-300">{formatBRL(LIFETIME_PRICE)} único</span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-end justify-center gap-1.5">
+                  <span className="pb-2 text-xs font-bold text-neutral-400">12x ou à vista por</span>
+                </div>
+                <div className="-mt-1 break-words text-center text-4xl font-black tracking-tight xs:text-5xl sm:text-6xl">
+                  {formatBRL(LIFETIME_PRICE)}
+                </div>
+                <p className="mt-1 text-center text-[11px] font-bold uppercase tracking-wider text-neutral-400">pagamento único · sem mensalidade</p>
+                <Button
+                  full
+                  size="lg"
+                  disabled={busy === 'lifetime'}
+                  onClick={handleLifetime}
+                  className="mt-4 !bg-gradient-to-r !from-amber-400 !to-orange-500 !text-neutral-950 text-base font-black shadow-xl shadow-orange-500/40 hover:brightness-110 active:scale-[.99]"
+                >
+                  <Crown size={19} /> {busy === 'lifetime' ? 'Gerando pagamento...' : 'Quero ser Pioneiro'}
+                </Button>
+                <p className="mt-2.5 text-center text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
+                  {method === 'pix' ? 'PIX com aprovação imediata' : method === 'boleto' ? 'Boleto à vista' : 'Cartão em até 12x'} · após pagar clique em <b>Já paguei</b>
+                </p>
+                <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                  <ShieldCheck size={13} /> 7 dias de garantia incondicional
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ── CARDS ── */}
@@ -322,7 +384,7 @@ export default function Planos() {
           🎯 Pela sua pesquisa, o ideal para você é o <b>{PLANS.find((x) => x.key === getRecommendedPlan())?.name}</b> — destacado abaixo.
         </div>
       )}
-      <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3 md:gap-5">
+      <div className="grid min-w-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {PLANS.map((p) => {
           const st = PLAN_STYLE[p.key];
           const current = plan.key === p.key && !isTrial;
@@ -333,18 +395,18 @@ export default function Planos() {
               key={p.key}
               className={`relative flex flex-col rounded-3xl border bg-white p-5 transition-all dark:bg-neutral-900 sm:p-6 ${
                 hl
-                  ? 'border-transparent bg-gradient-to-b from-primary-600 via-primary-600 to-primary-700 p-[2px] shadow-2xl shadow-primary-500/40 md:-my-3 md:scale-[1.03]'
+                  ? 'border-transparent bg-gradient-to-b from-primary-600 via-primary-600 to-primary-700 p-[2px] shadow-2xl shadow-primary-500/40 lg:-my-3 lg:scale-[1.03]'
                   : 'border-neutral-200 dark:border-neutral-700'
               }`}
             >
               <div className={hl ? 'flex h-full flex-col rounded-[22px] bg-neutral-950 p-5 text-white sm:p-6' : 'flex h-full flex-col'}>
                 {recommended && !current && (
-                  <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg">
+                  <span className="absolute -top-3.5 left-1/2 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1 truncate rounded-full bg-emerald-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg">
                     🎯 Ideal para você
                   </span>
                 )}
                 {hl && !recommended && (
-                  <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 animate-pulse items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow-lg">
+                  <span className="absolute -top-3.5 left-1/2 flex max-w-[calc(100%-2rem)] -translate-x-1/2 animate-pulse items-center gap-1 truncate rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-[11px] font-black uppercase tracking-wider text-neutral-900 shadow-lg">
                     <Crown size={12} /> Mais escolhido
                   </span>
                 )}
@@ -464,6 +526,7 @@ export default function Planos() {
       {pix && (
         <PixModal
           pix={pix}
+          lifetime={pix.lifetime === true}
           onClose={() => setPix(null)}
         />
       )}

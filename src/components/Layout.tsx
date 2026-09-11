@@ -133,7 +133,7 @@ export function Layout() {
           ⚠️ Sem internet — você pode ver, mas mudanças sincronizam ao voltar.
         </div>
       )}
-      <div className="hidden md:flex">
+      <div className="hidden lg:flex">
         <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col overflow-hidden bg-gradient-to-b from-[#071f4c] via-[#0b3d91] to-[#0a2a63] text-white shadow-2xl xl:w-64">
           <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-sky-400/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
@@ -203,7 +203,7 @@ export function Layout() {
         </main>
       </div>
 
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <header className="sticky top-0 z-20 flex items-center justify-between bg-gradient-to-r from-[#071f4c] via-[#0b3d91] to-[#123f86] px-4 py-3 text-white shadow-lg">
           <Logo light />
           <div className="flex items-center gap-2">
