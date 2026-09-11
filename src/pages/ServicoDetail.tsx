@@ -187,6 +187,7 @@ export default function ServicoDetail() {
   const [obs, setObs] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { preview, openPdf, close, download } = usePdfPreview();
 
   useEffect(() => {
@@ -283,8 +284,6 @@ export default function ServicoDetail() {
       setPayBusy(false);
     }
   }
-
-  const [pdfBusy, setPdfBusy] = useState(false);
 
   async function buildPdfDoc() {
     const { generateServiceOrderPdf } = await import('../lib/pdf/serviceOrderPdf');
