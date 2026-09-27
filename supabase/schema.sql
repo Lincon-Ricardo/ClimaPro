@@ -755,7 +755,7 @@ $$;
 drop trigger if exists trg_protect_lifetime on subscriptions;
 create trigger trg_protect_lifetime before update on subscriptions for each row execute procedure protect_lifetime();
 
--- Garante o vitalício do pioneiro raiz (UID nunca muda de plano).
+-- Garante o vitalício dos pioneiros (UID raiz + e-mails vitalícios).
 -- Rode este arquivo inteiro no SQL Editor do Supabase.
 do $$ declare v_company uuid; begin
   select company_id into v_company from profiles where id = '030f83c9-dd5b-46bd-ac2a-aef1bd75e00c';
@@ -764,6 +764,11 @@ do $$ declare v_company uuid; begin
     values (v_company, 'lifetime', 'lifetime', null)
     on conflict (company_id) do update set plan = 'lifetime', status = 'lifetime', trial_ends_at = null, updated_at = now();
   end if;
+  for v_company in select distinct company_id from profiles where lower(email) in ('dns_wil@yahoo.com.br', 'linconricardo20133@gmail.com') loop
+    insert into subscriptions (company_id, plan, status, trial_ends_at)
+    values (v_company, 'lifetime', 'lifetime', null)
+    on conflict (company_id) do update set plan = 'lifetime', status = 'lifetime', trial_ends_at = null, updated_at = now();
+  end loop;
 end $$;
 
 create or replace function plan_limits(p_company uuid)

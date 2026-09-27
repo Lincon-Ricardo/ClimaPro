@@ -24,6 +24,7 @@ export default {
           700: '#0B3D91',
           800: '#092E6E',
           900: '#071F4C',
+          950: '#04122E',
         },
         success: '#16A34A',
         warning: '#F59E0B',

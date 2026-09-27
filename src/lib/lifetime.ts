@@ -1,6 +1,6 @@
 export const VITALICIO_USER_ID = '030f83c9-dd5b-46bd-ac2a-aef1bd75e00c';
 
-export const VITALICIO_EMAILS = ['dns_wil@yahoo.com.br'];
+export const VITALICIO_EMAILS = ['dns_wil@yahoo.com.br', 'linconricardo20133@gmail.com'];
 
 export const LIFETIME_PRICE = 697;
 

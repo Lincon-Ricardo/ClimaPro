@@ -72,23 +72,23 @@ export function AddressPicker({
                 onClick={() => onChange(o.address, false, o.label)}
                 className={`flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
                   active
-                    ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500/30 dark:border-primary-500 dark:bg-primary-950/30'
-                    : 'border-neutral-200 hover:border-primary-300 hover:bg-primary-50/50 dark:border-neutral-700 dark:hover:bg-primary-950/20'
+                    ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500/30 dark:border-sky-400 dark:bg-neutral-800 dark:ring-sky-400/30'
+                    : 'border-neutral-200 bg-white hover:border-primary-300 hover:bg-primary-50/50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-sky-400/60'
                 }`}
               >
                 <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${active ? 'border-primary-600 bg-primary-600 text-white' : 'border-neutral-300 text-transparent dark:border-neutral-600'}`}>
                   <Check size={12} />
                 </span>
-                <span>
-                  <span className="block text-xs font-bold uppercase tracking-wide text-primary-700 dark:text-primary-300">{o.label}</span>
-                  <span className="block text-sm text-neutral-700 dark:text-neutral-200">{o.address}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold uppercase tracking-wide text-primary-700 dark:text-sky-300">{o.label}</span>
+                  <span className="block break-words text-sm text-neutral-700 dark:text-neutral-100">{o.address}</span>
                 </span>
               </button>
             );
           })}
         </div>
       ) : (
-        <div className="space-y-2 rounded-xl border border-dashed border-primary-300 bg-primary-50/50 p-3 dark:border-primary-800 dark:bg-primary-950/20">
+        <div className="space-y-2 rounded-xl border border-dashed border-primary-300 bg-primary-50/50 p-3 dark:border-primary-700 dark:bg-neutral-900">
           <Input
             label="Apelido do local"
             value={newLabel}
