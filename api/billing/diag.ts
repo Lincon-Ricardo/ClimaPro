@@ -32,6 +32,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
     hasSupabase,
     asaasReachable,
     asaasDetail,
-    webhookUrl: 'https://clima-pro-chi.vercel.app/api/billing/webhook',
+    webhookUrl: `https://${request.headers.host || 'clima-pro-chi.vercel.app'}/api/billing/webhook`,
   });
 }

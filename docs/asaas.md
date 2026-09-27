@@ -62,8 +62,19 @@ Eventos principais:
 
 ## Fluxo
 
-1. O administrador escolhe um plano em `/app/planos`.
+1. O administrador escolhe um plano em `/app/planos` (somente dono; técnicos veem aviso).
 2. A Vercel valida a sessão e cria a assinatura no Asaas.
 3. O cliente é enviado para a primeira cobrança.
 4. O Asaas chama o webhook após cada mudança.
 5. Somente o webhook altera o status da assinatura no Supabase.
+
+## Detalhes de cada meio
+
+- **PIX (padrão):** gera QR Code na hora; o botão "Já paguei" chama `/api/billing/sync`.
+- **Cartão:** criado como `UNDEFINED` — o cliente informa o cartão na página
+  segura do Asaas (`invoiceUrl`). A API do Asaas rejeita `CREDIT_CARD` sem os
+  dados do cartão, por isso não enviamos esse tipo direto.
+- **Boleto:** fatura `BOLETO` com `invoiceUrl` para impressão.
+- Se o link não voltar do Asaas, a tela salva a pendência ("Continuar pagamento")
+  e lista tudo em "Minhas cobranças" (`/api/billing/invoices`).
+- Diagnóstico sem segredos: `https://<seu-dominio>/api/billing/diag`.

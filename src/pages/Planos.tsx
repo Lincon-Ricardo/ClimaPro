@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Check, Sparkles, Snowflake, Wind, Tornado, Crown, Zap, ShieldCheck,
   X, ChevronDown, Flame, BadgePercent, Headset, Infinity as InfinityIcon,
-  Users, Timer, Gem, BadgeCheck, Star,
+  Users, Timer, Gem, BadgeCheck, Star, Receipt, RefreshCw, ExternalLink,
 } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { PLANS, formatLimit, trialDaysLeft } from '../lib/plans';
@@ -12,7 +13,11 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useToast } from '../components/Toast';
 import { formatBRL } from '../lib/utils';
-import { startCheckout, type CheckoutMethod } from '../lib/billing';
+import { startCheckout, fetchInvoices, verifyPayment, type CheckoutMethod, type Invoice } from '../lib/billing';
+import {
+  checkoutError, savePendingCheckout, loadPendingCheckout, clearPendingCheckout,
+  invoiceStatus, type PendingCheckout,
+} from '../lib/billingErrors';
 import { errMsg } from '../lib/errors';
 import { getRecommendedPlan } from '../lib/plans';
 import type { ReactNode } from 'react';
@@ -81,6 +86,7 @@ function PixModal({ pix, onClose, lifetime = false }: { pix: { qr: string | null
       if (body.synced) {
         const { track } = await import('../lib/analytics');
         track('checkout_paid');
+        clearPendingCheckout();
         toast('success', 'Pagamento confirmado! Acesso liberado.');
         window.location.assign('/app');
       } else {
@@ -124,6 +130,52 @@ function PixModal({ pix, onClose, lifetime = false }: { pix: { qr: string | null
   );
 }
 
+function PendingModal({ pending, onClose, onPaid }: { pending: PendingCheckout; onClose: () => void; onPaid: () => void }) {
+  const toast = useToast();
+  const [checking, setChecking] = useState(false);
+
+  async function checkPayment() {
+    setChecking(true);
+    try {
+      const result = await verifyPayment();
+      if (result.synced) {
+        const { track } = await import('../lib/analytics');
+        track('checkout_paid');
+        clearPendingCheckout();
+        toast('success', 'Pagamento confirmado! Acesso liberado.');
+        onPaid();
+      } else {
+        toast('info', result.message || 'Ainda não identificamos o pagamento. Aguarde 30s e tente de novo.');
+      }
+    } catch (e: unknown) {
+      toast('error', errMsg(e, 'Não foi possível verificar.'));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/70 p-3 sm:items-center sm:p-4" onClick={onClose}>
+      <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-3xl bg-white p-5 text-center sm:p-6 dark:bg-neutral-900" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Conclua seu pagamento</h3>
+        <p className="mt-1 text-xs text-neutral-500">
+          Cobrança <b>{pending.subscriptionId.slice(0, 12)}…</b> criada no Asaas.
+          {pending.checkoutUrl ? ' Abra a página de pagamento e, depois de pagar, clique em Já paguei.' : ' Conclua na página do Asaas e clique em Já paguei.'}
+        </p>
+        <div className="mt-4 grid gap-2">
+          {pending.checkoutUrl && (
+            <Button variant="outline" onClick={() => window.open(pending.checkoutUrl || '', '_blank')}>
+              <ExternalLink size={15} /> Abrir página de pagamento
+            </Button>
+          )}
+          <Button disabled={checking} onClick={checkPayment}>{checking ? 'Verificando…' : 'Já paguei'}</Button>
+        </div>
+        <button type="button" onClick={onClose} className="mt-2 w-full py-2 text-xs text-neutral-400 hover:underline">Fechar (continuo depois)</button>
+      </div>
+    </div>
+  );
+}
+
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -143,13 +195,20 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 export default function Planos() {
   const toast = useToast();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { sub, plan, isTrial } = useSubscription();
   const lifetime = isLifetimeSub(sub) || isVitalicioUser(user);
+  const isAdmin = user?.role === 'admin';
   const [busy, setBusy] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
-  const [method, setMethod] = useState<CheckoutMethod>('card');
+  // PIX primeiro: aprovação imediata e maior conversão no Brasil.
+  const [method, setMethod] = useState<CheckoutMethod>('pix');
   const [pix, setPix] = useState<{ qr: string | null; code: string | null; url: string | null; lifetime?: boolean } | null>(null);
+  const [pending, setPending] = useState<PendingCheckout | null>(() => loadPendingCheckout());
+  const [pendingOpen, setPendingOpen] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
 
   const left = sub ? trialDaysLeft(sub) : 0;
   const trialPct = Math.max(0, Math.min(100, ((14 - left) / 14) * 100));
@@ -158,21 +217,62 @@ export default function Planos() {
     return annual ? p * 0.8 : p;
   }
 
+  function rememberPending(subscriptionId: string, planKey: string, cycle: string, checkoutUrl: string | null, openModal: boolean) {
+    const record: PendingCheckout = {
+      subscriptionId, planKey, cycle, method, checkoutUrl, createdAt: new Date().toISOString(),
+    };
+    savePendingCheckout(record);
+    setPending(record);
+    if (openModal) setPendingOpen(true);
+  }
+
+  function handleCheckoutError(error: unknown) {
+    const code = (error as { code?: string })?.code;
+    const mapped = checkoutError(code, errMsg(error, 'Não foi possível iniciar o pagamento.'));
+    toast('error', mapped.text);
+    if (mapped.action === 'empresa') navigate('/app/empresa');
+  }
+
+  async function loadInvoices() {
+    if (!isAdmin) return;
+    setInvoicesLoading(true);
+    try {
+      setInvoices(await fetchInvoices());
+    } catch {
+      setInvoices(null);
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    setInvoicesLoading(true);
+    fetchInvoices().then(setInvoices).catch(() => setInvoices(null)).finally(() => setInvoicesLoading(false));
+  }, [isAdmin]);
+
   async function handleLifetime() {
+    if (!isAdmin) { toast('info', 'Só o dono da conta pode assinar. Peça ao dono para concluir.'); return; }
     setBusy('lifetime');
     try {
       const { track } = await import('../lib/analytics');
       track('checkout_start', { plan: 'lifetime', cycle: 'lifetime', method });
       const result = await startCheckout('lifetime', 'lifetime', method);
       if (result.pixQr || result.pixCode) {
+        rememberPending(result.subscriptionId, 'lifetime', 'lifetime', result.checkoutUrl, false);
         setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl, lifetime: true });
         toast('success', result.message || 'QR Code vitalício gerado! Pague e clique em Já paguei.');
         return;
       }
-      if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
-      else toast('info', 'Cobrança vitalícia criada. Conclua no Asaas e clique em Já paguei.');
+      if (result.checkoutUrl) {
+        rememberPending(result.subscriptionId, 'lifetime', 'lifetime', result.checkoutUrl, false);
+        window.location.assign(result.checkoutUrl);
+        return;
+      }
+      rememberPending(result.subscriptionId, 'lifetime', 'lifetime', null, true);
+      toast('info', result.message || 'Cobrança criada. Conclua o pagamento para virar vitalício.');
     } catch (error: unknown) {
-      toast('error', errMsg(error, 'Não foi possível iniciar o pagamento.'));
+      handleCheckoutError(error);
     } finally {
       setBusy(null);
     }
@@ -180,12 +280,15 @@ export default function Planos() {
 
   async function handleSubscribe(planKey: string) {
     if (lifetime) { toast('info', 'Você já é Pioneiro Vitalício. Nada a pagar. 👑'); return; }
+    if (!isAdmin) { toast('info', 'Só o dono da conta pode assinar. Peça ao dono para concluir.'); return; }
     setBusy(planKey);
     try {
+      const cycle = annual ? 'yearly' : 'monthly';
       const { track } = await import('../lib/analytics');
-      track('checkout_start', { plan: planKey, cycle: annual ? 'yearly' : 'monthly', method });
-      const result = await startCheckout(planKey, annual ? 'yearly' : 'monthly', method);
+      track('checkout_start', { plan: planKey, cycle, method });
+      const result = await startCheckout(planKey, cycle, method);
       if (method === 'pix' && (result.pixQr || result.pixCode)) {
+        rememberPending(result.subscriptionId, planKey, cycle, result.checkoutUrl, false);
         setPix({ qr: result.pixQr, code: result.pixCode, url: result.checkoutUrl });
         toast('success', result.message || 'QR Code PIX gerado! Escaneie para pagar e depois clique em Já paguei.');
         return;
@@ -194,12 +297,14 @@ export default function Planos() {
         toast('info', result.message);
       }
       if (result.checkoutUrl) {
+        rememberPending(result.subscriptionId, planKey, cycle, result.checkoutUrl, false);
         window.location.assign(result.checkoutUrl);
       } else {
-        toast('info', 'Assinatura criada. A primeira cobrança está sendo preparada pelo Asaas.');
+        rememberPending(result.subscriptionId, planKey, cycle, null, true);
+        toast('info', result.message || 'Assinatura criada. Conclua o pagamento para liberar o acesso.');
       }
     } catch (error: unknown) {
-      toast('error', errMsg(error, 'Não foi possível iniciar o pagamento.'));
+      handleCheckoutError(error);
     } finally {
       setBusy(null);
     }
@@ -269,12 +374,33 @@ export default function Planos() {
                 onClick={() => setMethod(m)}
                 className={`rounded-full px-3 py-2 text-[11px] font-black uppercase transition xs:px-4 xs:text-xs sm:px-5 ${method === m ? 'bg-white text-neutral-900 shadow' : 'text-neutral-300 hover:text-white'}`}
               >
-                {m === 'pix' ? 'PIX' : m === 'card' ? 'Cartão ★' : 'Boleto'}
+                {m === 'pix' ? 'PIX ⚡' : m === 'card' ? 'Cartão' : 'Boleto'}
               </button>
             ))}
           </div>
         </div>
       </div>
+
+      {!isAdmin && !lifetime && (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-xs font-bold text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
+          👤 Você entrou como técnico: só o <b>dono da conta</b> pode assinar. Peça ao dono para concluir a compra.
+        </div>
+      )}
+
+      {pending && !lifetime && (
+        <button
+          type="button"
+          onClick={() => setPendingOpen(true)}
+          className="flex w-full items-center justify-between gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30"
+        >
+          <span className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-200">
+            <Timer size={15} /> Você tem um pagamento em aberto — clique para continuar
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-xs font-black text-amber-700 dark:text-amber-300">
+            Continuar <ExternalLink size={13} />
+          </span>
+        </button>
+      )}
 
       {lifetime ? (
         <div className="relative overflow-hidden rounded-3xl border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-amber-100 p-6 text-center shadow-xl sm:p-8 dark:border-amber-500/40 dark:from-amber-950/50 dark:via-neutral-900 dark:to-amber-950/30">
@@ -360,11 +486,12 @@ export default function Planos() {
                 <Button
                   full
                   size="lg"
-                  disabled={busy === 'lifetime'}
+                  disabled={busy === 'lifetime' || !isAdmin}
+                  title={!isAdmin ? 'Somente o dono pode assinar' : undefined}
                   onClick={handleLifetime}
                   className="mt-4 !bg-gradient-to-r !from-amber-400 !to-orange-500 !text-neutral-950 text-base font-black shadow-xl shadow-orange-500/40 hover:brightness-110 active:scale-[.99]"
                 >
-                  <Crown size={19} /> {busy === 'lifetime' ? 'Gerando pagamento...' : 'Quero ser Pioneiro'}
+                  <Crown size={19} /> {busy === 'lifetime' ? 'Gerando pagamento...' : !isAdmin ? 'Só o dono pode assinar' : 'Quero ser Pioneiro'}
                 </Button>
                 <p className="mt-2.5 text-center text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
                   {method === 'pix' ? 'PIX com aprovação imediata' : method === 'boleto' ? 'Boleto à vista' : 'Cartão em até 12x'} · após pagar clique em <b>Já paguei</b>
@@ -446,16 +573,69 @@ export default function Planos() {
                   full
                   variant={hl ? 'light' : 'outline'}
                   className={`mt-5 font-black ${hl ? 'shadow-lg shadow-primary-500/30' : ''}`}
-                  disabled={busy === p.key || current || lifetime}
+                  disabled={busy === p.key || current || lifetime || !isAdmin}
+                  title={!isAdmin && !lifetime ? 'Somente o dono pode assinar' : undefined}
                   onClick={() => handleSubscribe(p.key)}
                 >
-                  {lifetime ? '👑 Incluso no vitalício' : current ? '✓ Seu plano atual' : busy === p.key ? 'Abrindo...' : p.cta}
+                  {lifetime ? '👑 Incluso no vitalício' : current ? '✓ Seu plano atual' : busy === p.key ? 'Abrindo...' : !isAdmin ? 'Só o dono pode assinar' : p.cta}
                 </Button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ── MINHAS COBRANÇAS ── */}
+      {isAdmin && !lifetime && (
+        <Card>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-base font-black text-neutral-900 dark:text-white">
+              <Receipt size={18} /> Minhas cobranças
+            </h2>
+            <button
+              type="button"
+              onClick={loadInvoices}
+              disabled={invoicesLoading}
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-950/40"
+            >
+              <RefreshCw size={13} className={invoicesLoading ? 'animate-spin' : ''} />
+              {invoicesLoading ? 'Atualizando…' : 'Atualizar'}
+            </button>
+          </div>
+          {!invoices || invoices.length === 0 ? (
+            <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+              {invoicesLoading ? 'Buscando cobranças no Asaas…' : 'Nenhuma cobrança encontrada. Ao assinar, sua fatura aparece aqui para pagar ou reemitir.'}
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {invoices.map((inv) => {
+                const st = invoiceStatus(inv.status);
+                return (
+                  <li key={inv.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2.5 dark:border-neutral-700">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-black ${
+                      st.tone === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                      : st.tone === 'overdue' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                      : st.tone === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                      : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300'
+                    }`}>
+                      {st.label}
+                    </span>
+                    <span className="text-sm font-black text-neutral-900 dark:text-white">{formatBRL(inv.value)}</span>
+                    {inv.dueDate && <span className="text-[11px] text-neutral-500">vence {inv.dueDate.split('-').reverse().join('/')}</span>}
+                    <span className="ml-auto flex gap-2">
+                      {inv.payUrl && (
+                        <Button size="sm" variant="outline" onClick={() => window.open(inv.payUrl || '', '_blank')}>
+                          <ExternalLink size={13} /> Pagar
+                        </Button>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      )}
 
       {/* ── COMPARATIVO ── */}
       <Card className="overflow-hidden p-0">
@@ -528,6 +708,14 @@ export default function Planos() {
           pix={pix}
           lifetime={pix.lifetime === true}
           onClose={() => setPix(null)}
+        />
+      )}
+
+      {pendingOpen && pending && (
+        <PendingModal
+          pending={pending}
+          onClose={() => setPendingOpen(false)}
+          onPaid={() => { setPending(null); setPendingOpen(false); window.location.assign('/app'); }}
         />
       )}
     </div>
